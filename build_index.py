@@ -21,7 +21,7 @@ def build():
     svg_css = """
 /* Silkscreen & Board SVG Typography */
 .silkscreen-title {
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
   font-size: 13px;
   font-weight: 800;
   fill: var(--silkscreen);
@@ -38,10 +38,10 @@ def build():
 }
 .silkscreen-text.mini {
   font-size: 8.5px;
-  fill: rgba(220, 235, 220, 0.75);
+  fill: rgba(220, 240, 225, 0.8);
 }
 .brand-silkscreen {
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
   font-size: 16px;
   font-weight: 800;
   fill: #ffffff;
@@ -51,7 +51,7 @@ def build():
   font-family: var(--font-mono);
   font-size: 20px;
   font-weight: 900;
-  fill: #f59e0b;
+  fill: var(--accent-amber);
   letter-spacing: 2px;
 }
 .brand-silkscreen.small {
@@ -69,16 +69,16 @@ def build():
   cursor: crosshair;
 }
 .jack-group:hover circle:nth-child(2) {
-  filter: drop-shadow(0 0 6px rgba(255, 230, 100, 0.9));
+  filter: drop-shadow(0 0 6px rgba(255, 230, 100, 0.95));
 }
 .switch-group:hover rect:first-child {
-  stroke: #7dd3fc;
+  stroke: var(--accent-teal);
 }
 .pushbutton-group:hover circle:nth-child(3) {
-  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.85));
 }
 .knob-group:hover circle:nth-child(8) {
-  stroke: #7dd3fc;
+  stroke: var(--accent-teal);
 }
 
 .patch-cord-group {
@@ -111,7 +111,7 @@ def build():
   <title>DIT 9005 Digital IC Trainer Simulator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
 {tokens_css}
 {svg_css}
@@ -121,16 +121,36 @@ def build():
   <!-- Header Bar -->
   <header class="app-header">
     <div class="brand-section">
-      <span class="brand-badge">HI-TECH</span>
-      <h1 class="brand-title">DIT 9005 <span style="font-weight: 400; color: #94a3b8; font-size: 14px;">Digital IC Trainer Simulator</span></h1>
-      <span class="brand-subtitle">Digital Systems Lab</span>
+      <div class="logo-badge">DS</div>
+      <div class="brand-titles">
+        <h1 class="brand-title">
+          HI-TECH DIT 9005
+          <span class="pill-badge">TTL 74-SERIES</span>
+          <span class="pill-badge" style="color: var(--accent-amber); border-color: rgba(245, 158, 11, 0.3);">PUNE-30</span>
+        </h1>
+        <span class="brand-subtitle">DIGITAL SYSTEMS SIMULATION SUITE</span>
+      </div>
     </div>
 
     <div class="header-controls">
+      <!-- Fast Experiment Switcher -->
+      <select id="header-exp-select" style="width: 170px; padding: 4px 8px; font-size: 11px;">
+        <option value="exp1">Exp 1: Logic Gates</option>
+        <option value="exp3">Exp 3: MUX 74153</option>
+        <option value="exp4">Exp 4: DEMUX 74138</option>
+        <option value="exp5">Exp 5: Adder 7483</option>
+        <option value="exp6">Exp 6: Comparator 7485</option>
+        <option value="exp7">Exp 7: Counter 7490</option>
+        <option value="exp8">Exp 8: Counter 74191</option>
+      </select>
+
+      <button class="btn" id="btn-open-guide" title="Open Lab Guide & Controls">📖 Guide</button>
+      <button class="btn" id="btn-open-manual" title="View Datasheet Reference">📋 Manual</button>
+      <button class="btn" id="btn-reset-trainer" title="Reset all patch cords and switches">↺ Reset</button>
+
       <!-- Wire Color Palette -->
       <div class="wire-palette">
-        <span class="wire-palette-label">Wire:</span>
-        <div class="color-swatch active" data-color="#facc15" style="background: #facc15;" title="Yellow Wire (Default)"></div>
+        <div class="color-swatch active" data-color="#f5c518" style="background: #f5c518;" title="Yellow Wire (Default)"></div>
         <div class="color-swatch" data-color="#ef4444" style="background: #ef4444;" title="Red (+5V / VCC)"></div>
         <div class="color-swatch" data-color="#1f2937" style="background: #1f2937;" title="Black (GND)"></div>
         <div class="color-swatch" data-color="#38bdf8" style="background: #38bdf8;" title="Blue (Signals)"></div>
@@ -140,7 +160,6 @@ def build():
 
       <button class="btn" id="btn-undo-wire" title="Undo Last Wire (Ctrl+Z)">⤺ Undo</button>
       <button class="btn" id="btn-delete-mode" title="Click wire to remove">✕ Delete Wire</button>
-      <button class="btn btn-danger" id="btn-clear-wires" title="Remove all patch cords">Clear Wires</button>
 
       <!-- Master Power Switch in Header -->
       <button class="master-power-btn on" id="master-pwr-header" title="Master 230V Mains Power">
@@ -152,18 +171,28 @@ def build():
 
   <!-- Sub-bar: Patch field navigation & quick status -->
   <div class="sub-bar">
-    <div class="view-tabs">
-      <span style="font-size: 11px; color: var(--text-dim); margin-right: 6px; font-weight: 600;">PATCH FIELD:</span>
-      <button class="view-tab-btn active" data-view="full">Full Board</button>
-      <button class="view-tab-btn" data-view="zif">ZIF Sockets (U1–U4)</button>
-      <button class="view-tab-btn" data-view="inputs">Inputs & Power</button>
-      <button class="view-tab-btn" data-view="outputs">Outputs & 7-Seg</button>
-      <button class="view-tab-btn" data-view="u5">40-Pin ZIF (U5)</button>
+    <div class="subbar-left">
+      <span class="subbar-label">PATCH FIELD</span>
+      <div class="view-tabs">
+        <button class="view-tab-btn active" data-view="full">Full Board</button>
+        <button class="view-tab-btn" data-view="zif">ZIF Sockets (U1–U4)</button>
+        <button class="view-tab-btn" data-view="inputs">Inputs & Power</button>
+        <button class="view-tab-btn" data-view="outputs">Outputs & 7-Seg</button>
+        <button class="view-tab-btn" data-view="u5">40-Pin ZIF (U5)</button>
+      </div>
     </div>
 
-    <div class="subbar-status">
-      <span class="status-pill" id="status-wire-count">0 Wires</span>
-      <span class="status-pill" id="status-alarm-pill">✓ Healthy</span>
+    <div class="subbar-right">
+      <span class="status-chip healthy" id="status-netlist-chip">● Netlist: Healthy</span>
+      <span class="status-chip" id="status-counters">0 cords · 0 ICs</span>
+      <span class="status-chip" id="clock-readout" style="color: var(--accent-amber);">CLK: 1Hz (LO)</span>
+
+      <!-- Zoom Controls -->
+      <div class="zoom-controls">
+        <button class="zoom-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+        <button class="zoom-btn" id="btn-zoom-in" title="Zoom In">+</button>
+        <button class="zoom-btn fit" id="btn-zoom-fit" title="Fit to Screen">Fit</button>
+      </div>
     </div>
   </div>
 
@@ -177,11 +206,11 @@ def build():
       <div class="probe-hud" id="probe-hud" style="opacity: 0;">
         <div class="probe-dot" id="probe-dot"></div>
         <div>
-          <div style="font-size: 10px; color: var(--text-muted);">PROBE TEST POINT</div>
+          <div style="font-size: 10px; color: #8b949e;">PROBE TEST POINT</div>
           <div style="font-weight: 700; color: #fff;" id="probe-jack-name">--</div>
         </div>
         <div style="border-left: 1px solid var(--border-strong); padding-left: 10px;">
-          <div style="font-size: 10px; color: var(--text-muted);" id="probe-state">--</div>
+          <div style="font-size: 10px; color: #8b949e;" id="probe-state">--</div>
           <div style="font-weight: 700; color: #38bdf8;" id="probe-voltage">0.00 V</div>
         </div>
       </div>
@@ -190,6 +219,39 @@ def build():
     <!-- Laboratory Console Sidebar -->
     <aside class="console-panel" id="laboratory-console"></aside>
   </main>
+
+  <!-- Quick Guide Modal Dialog -->
+  <div class="modal-overlay" id="guide-modal">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+        <h2 style="font-size: 16px; color: #fff; display: flex; align-items: center; gap: 8px;">
+          📖 DIT 9005 Trainer Quick Guide
+        </h2>
+        <button class="btn btn-danger" id="btn-close-guide" style="padding: 2px 8px;">✕ Close</button>
+      </div>
+
+      <div style="font-size: 12.5px; line-height: 1.6; color: #cbd5e1; display: flex; flex-direction: column; gap: 10px;">
+        <p><b>Welcome to the DIT 9005 Digital IC Trainer Simulator!</b> This virtual lab operates just like the physical hardware at your university lab bench.</p>
+
+        <h3 style="color: var(--accent-amber); font-size: 13px; margin-top: 4px;">Wiring Circuits with Patch Cords:</h3>
+        <ul style="padding-left: 18px;">
+          <li><b>Connect a Cord:</b> Click any brass jack terminal, then click the destination jack. A realistic sagging wire will connect them.</li>
+          <li><b>Delete a Cord:</b> Right-click any wire or banana plug, or toggle the <b>✕ Delete Wire</b> mode button in the header.</li>
+          <li><b>Undo Wire:</b> Press <b>Ctrl+Z</b> or click the <b>⤺ Undo</b> button.</li>
+          <li><b>Wire Colors:</b> Choose Yellow (default), Red (Power), Black (GND), Blue (Signals), or Green (Clock) from the header palette.</li>
+        </ul>
+
+        <h3 style="color: var(--accent-teal); font-size: 13px; margin-top: 4px;">Hardware Operation:</h3>
+        <ul style="padding-left: 18px;">
+          <li><b>Pan & Zoom:</b> Use the mouse wheel to zoom in/out. Hold <b>Space + Drag</b> to pan around the board. Click <b>Fit</b> in the sub-bar to reset.</li>
+          <li><b>Data Inputs:</b> Click any of the 12 metal toggle switches (C3–C0, B3–B0, A3–A0) to flip between 0 (Down) and 1 (Up).</li>
+          <li><b>Strict Power Mode:</b> By default, ICs require patch cords from <b>+5V</b> to the IC's VCC pin and from <b>GND</b> to the GND pin.</li>
+          <li><b>Auto-Wire Demo:</b> In the right console, click <b>"⚡ Auto-Wire Circuit"</b> to immediately load and wire any of the 8 syllabus experiments!</li>
+          <li><b>Verify Truth Table:</b> Click <b>"✓ Verify Truth Table"</b> to automatically test all input combinations and verify your circuit.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
   <script>
 {data_ics}
@@ -210,4 +272,3 @@ def build():
 
 if __name__ == "__main__":
     build()
-
