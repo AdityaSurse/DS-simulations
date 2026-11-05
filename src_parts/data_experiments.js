@@ -1011,28 +1011,28 @@ const EXPERIMENTS = [
           { from: "U2.J14", to: "OUT.Y1", color: "#f59e0b" }
         ],
         truthTable: {
-          inputs: ["Bin (A2)", "B (A1)", "A (A0)"],
+          inputs: ["A (A2)", "B (A1)", "Bin (A0)"],
           outputs: ["Diff (Y0)", "Borrow (Y1)"],
           rows: [
             { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 0 } },
-            { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+            { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 1 } },
             { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 1 } },
-            { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 0 } },
-            { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 1 } },
+            { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
             { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 0 } },
-            { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 0 } },
             { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 1 } }
           ]
         },
-        tableHeaders: ["Bin", "B", "A", "Expected Diff", "Expected Borrow", "Observed"],
+        tableHeaders: ["A (A2)", "B (A1)", "Bin (A0)", "Expected Diff", "Expected Borrow", "Observed"],
         tableRows: [
           { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 0 } },
-          { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+          { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 1 } },
           { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 1 } },
-          { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 0 } },
-          { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 1 } },
+          { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
           { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 0 } },
-          { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 0 } },
           { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 1 } }
         ]
       }
@@ -1480,6 +1480,8 @@ const EXPERIMENTS = [
           { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
           { from: "PWR.GND_2", to: "U1.J2", color: "#1e293b" },
           { from: "PWR.GND_3", to: "U1.J3", color: "#1e293b" },
+          { from: "PWR.GND_4", to: "U1.J6", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
           { from: "U1.J18", to: "U1.J1", color: "#22c55e" },
           { from: "CLK.POS", to: "U1.J20", color: "#f5c518" },
           { from: "U1.J18", to: "OUT.Y0", color: "#38bdf8" },
@@ -1492,6 +1494,8 @@ const EXPERIMENTS = [
           { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
           { from: "PWR.GND_2", to: "U1.J2", color: "#1e293b" },
           { from: "PWR.GND_3", to: "U1.J3", color: "#1e293b" },
+          { from: "PWR.GND_4", to: "U1.J6", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
           { from: "U1.J18", to: "U1.J1", color: "#22c55e" },
           { from: "CLK.POS", to: "U1.J20", color: "#f5c518" },
           { from: "U1.J18", to: "OUT.Y0", color: "#38bdf8" },
@@ -1527,7 +1531,35 @@ const EXPERIMENTS = [
           { inputs: { "Pulse": 7 }, expected: { "QD": 0, "QC": 1, "QB": 1, "QA": 1 } },
           { inputs: { "Pulse": 8 }, expected: { "QD": 1, "QC": 0, "QB": 0, "QA": 0 } },
           { inputs: { "Pulse": 9 }, expected: { "QD": 1, "QC": 0, "QB": 0, "QA": 1 } }
-        ]
+        ],
+        checker: (testEngine) => {
+          testEngine.resetAllFlipFlops();
+          const expectedDigits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+          const observed = [];
+          const rowResults = [];
+          let pass = true;
+          const failingRows = [];
+
+          for (let step = 0; step < 11; step++) {
+            const qa = testEngine.outputs["OUT.Y0"] || 0;
+            const qb = testEngine.outputs["OUT.Y1"] || 0;
+            const qc = testEngine.outputs["OUT.Y2"] || 0;
+            const qd = testEngine.outputs["OUT.Y3"] || 0;
+            const digit = (qd * 8) + (qc * 4) + (qb * 2) + qa;
+            observed.push(digit);
+            const ok = (digit === expectedDigits[step]);
+            rowResults.push(ok);
+            if (!ok) { pass = false; failingRows.push(step); }
+
+            // Clock pulse: High then Low (Falling edge trigger)
+            testEngine.clock.pos = 1; testEngine.clock.neg = 0;
+            testEngine.evaluate();
+            testEngine.clock.pos = 0; testEngine.clock.neg = 1;
+            testEngine.evaluate();
+          }
+
+          return { pass, failingRows, rowResults, totalRows: 11, details: pass ? "BCD Decade counter sequence 0..9 verified." : `Failed at steps [${failingRows.join(",")}], observed: [${observed.join(",")}]` };
+        }
       }
     },
     procedure: [
@@ -1899,6 +1931,8 @@ const EXPERIMENTS = [
       { from: "PWR.5V_2", to: "U1.J3", color: "#ef4444" },
       { from: "PWR.GND_2", to: "U1.J4", color: "#1e293b" },
       { from: "PWR.GND_3", to: "U1.J2", color: "#1e293b" },
+      { from: "IN.A0", to: "U1.J14", color: "#f5c518" },
+      { from: "IN.B0", to: "U1.J13", color: "#3b82f6" },
       { from: "U1.J5", to: "OUT.Y0", color: "#38bdf8" },
       { from: "U1.J6", to: "OUT.Y1", color: "#38bdf8" },
       { from: "U1.J7", to: "OUT.Y2", color: "#38bdf8" }
@@ -1909,6 +1943,8 @@ const EXPERIMENTS = [
       { from: "PWR.5V_2", to: "U1.J3", color: "#ef4444" },
       { from: "PWR.GND_2", to: "U1.J4", color: "#1e293b" },
       { from: "PWR.GND_3", to: "U1.J2", color: "#1e293b" },
+      { from: "IN.A0", to: "U1.J14", color: "#f5c518" },
+      { from: "IN.B0", to: "U1.J13", color: "#3b82f6" },
       { from: "U1.J5", to: "OUT.Y0", color: "#38bdf8" },
       { from: "U1.J6", to: "OUT.Y1", color: "#38bdf8" },
       { from: "U1.J7", to: "OUT.Y2", color: "#38bdf8" }

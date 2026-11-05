@@ -724,6 +724,259 @@ select:focus, input[type="text"]:focus {
   transform-box: fill-box;
 }
 
+/* ===== Phase 9: Laboratory Console Layout & Components ===== */
+
+/* Diagnostics Header Badge */
+.diag-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: 4px;
+}
+.diag-count-badge.error {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+.diag-count-badge.warn {
+  background: #f59e0b;
+  color: #000;
+}
+.diag-count-badge.ok {
+  background: #10b981;
+  color: #fff;
+}
+
+/* 1. IC Inventory Row (Small cards for U1..U5) */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.inventory-card {
+  background: var(--bg-panel-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 8px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 64px;
+}
+
+.inventory-card:hover {
+  background: #1c2533;
+  border-color: #3b4d66;
+  transform: translateY(-1px);
+}
+
+.inventory-card.selected {
+  border: 2px solid var(--accent-amber) !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.45) !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+}
+
+.inventory-card.drag-over {
+  border: 2px dashed var(--accent-teal) !important;
+  box-shadow: 0 0 14px rgba(20, 184, 166, 0.6) !important;
+  background: rgba(20, 184, 166, 0.15) !important;
+  transform: scale(1.04);
+}
+
+/* 2. Selected Socket Box */
+.selected-socket-box {
+  background: #090d16;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+/* 3. Choose a Chip Search & List */
+.chip-search-wrapper {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.chip-search-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: #090c10;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chip-search-input:focus {
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 8px var(--accent-teal-glow);
+}
+
+.chip-list-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chip-list-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.chip-list-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+.chip-card {
+  background: var(--bg-panel-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 10px;
+  cursor: grab;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.chip-card:hover {
+  background: #192332;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.chip-card:active {
+  cursor: grabbing;
+}
+
+.chip-card.dragging {
+  opacity: 0.5;
+  border: 1.5px dashed var(--accent-teal);
+}
+
+.chip-tag-exp {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: #fde047;
+  background: rgba(234, 179, 8, 0.2);
+  border: 1px solid rgba(234, 179, 8, 0.45);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.chip-tag-basic {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* 4. Diagnostics Cards & Badges */
+.diag-card {
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.diag-card.severity-red {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.diag-card.severity-amber {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fde047;
+}
+
+.diag-card.severity-blue {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #bae6fd;
+}
+
+.btn-jump-jack {
+  align-self: flex-start;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid currentColor;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-jump-jack:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.04);
+}
+
+/* 5. Apparatus Checklist (AIM Tab) */
+.apparatus-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.apparatus-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  border: 1px solid var(--border-subtle);
+  background: #090d16;
+  transition: all 0.15s ease;
+}
+
+.apparatus-item.seated {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.08);
+  color: #86efac;
+}
+
+.apparatus-item.missing {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.06);
+  color: #fde047;
+}
+
 /* Printable Observation Sheet */
 #observation-sheet-printable {
   display: none;

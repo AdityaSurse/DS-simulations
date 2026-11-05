@@ -284,6 +284,13 @@ class BoardRenderer {
         return;
       }
 
+      // 6.5 Click on socket -> select socket in IC Drawer
+      const sockElem = e.target.closest(".zif-socket-group") || e.target.closest(".inserted-ic-group");
+      if (sockElem && sockElem.dataset.socket && window.consolePanel) {
+        window.consolePanel.selectedSocket = sockElem.dataset.socket;
+        window.consolePanel.render();
+      }
+
       // 7. Clicked on empty board background -> deselect
       if (this.selectedCordId) {
         this.selectedCordId = null;
@@ -293,6 +300,33 @@ class BoardRenderer {
         this.selectedJack = null;
         this.tempMousePos = null;
         this.updateRubberBand();
+      }
+    });
+
+    // Drag & Drop IC Chip onto PCB Sockets
+    this.svg.addEventListener("dragover", (e) => {
+      const sockTarget = e.target.closest(".zif-socket-group") || e.target.closest(".inserted-ic-group");
+      if (sockTarget) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+      }
+    });
+
+    this.svg.addEventListener("drop", (e) => {
+      const sockTarget = e.target.closest(".zif-socket-group") || e.target.closest(".inserted-ic-group");
+      if (!sockTarget) return;
+      e.preventDefault();
+      const sId = sockTarget.dataset.socket;
+      const chip = e.dataTransfer.getData("application/x-dit-chip") || e.dataTransfer.getData("text/plain");
+      if (sId && chip && typeof IC_LIBRARY !== "undefined" && IC_LIBRARY[chip]) {
+        this.engine.setSocketLever(sId, false);
+        this.engine.insertChip(sId, chip, "left");
+        this.engine.setSocketLever(sId, true);
+        this.render();
+        if (window.consolePanel) {
+          window.consolePanel.selectedSocket = sId;
+          window.consolePanel.render();
+        }
       }
     });
 
@@ -623,7 +657,8 @@ class BoardRenderer {
           chipName: this.engine.sockets.U5.chip,
           marking: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.marking || ("SN" + this.engine.sockets.U5.chip + "N")) : "",
           socketX: 130, socketY: 120, socketW: 140, socketH: 840,
-          icPinCount: 40, alignment: "left"
+          icPinCount: 40, alignment: "left",
+          backwards: !!this.engine.sockets.U5.backwards
         })}
       </g>
     `;
@@ -922,7 +957,8 @@ class BoardRenderer {
           marking: icDef.marking || ("SN" + sData.chip + "N"),
           socketX: cell.x, socketY: cell.y - zifH / 2, socketW: zifW, socketH: zifH,
           icPinCount: icDef.pinCount,
-          alignment: sData.alignment
+          alignment: sData.alignment,
+          backwards: !!sData.backwards
         });
       }
 

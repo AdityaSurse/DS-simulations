@@ -62,6 +62,9 @@ class TTLEngine {
     this.segDigits = [0, 0]; // High nibble (Y7..Y4), Low nibble (Y3..Y0)
     this.diagnostics = {
       shorts: [],
+      missingPower: [],
+      unconnectedOutputs: [],
+      backwardsICs: [],
       floatingInputs: [],
       oscillations: []
     };
@@ -345,6 +348,7 @@ class TTLEngine {
     if (this.sockets[socketId]) {
       this.sockets[socketId].chip = chipName;
       this.sockets[socketId].alignment = alignment;
+      this.sockets[socketId].backwards = false;
       this.sockets[socketId].state = {};
       this.sockets[socketId].lastOutputs = null;
       this.evaluate();
@@ -356,7 +360,18 @@ class TTLEngine {
   removeChip(socketId) {
     if (this.sockets[socketId]) {
       this.sockets[socketId].chip = null;
+      this.sockets[socketId].backwards = false;
       this.sockets[socketId].state = {};
+      this.sockets[socketId].lastOutputs = null;
+      this.evaluate();
+      this.notify();
+      this.autoSave();
+    }
+  }
+
+  flipChip(socketId) {
+    if (this.sockets[socketId] && this.sockets[socketId].chip) {
+      this.sockets[socketId].backwards = !this.sockets[socketId].backwards;
       this.sockets[socketId].lastOutputs = null;
       this.evaluate();
       this.notify();
@@ -372,6 +387,18 @@ class TTLEngine {
       this.notify();
       this.autoSave();
     }
+  }
+
+  setLever(socketId, locked) {
+    return this.setSocketLever(socketId, locked);
+  }
+
+  getJackLevel(jackId) {
+    if (this.outputs && this.outputs[jackId] !== undefined) {
+      return this.outputs[jackId];
+    }
+    const net = this.netMap ? this.netMap.get(jackId) : null;
+    return net ? net.val : undefined;
   }
 
   // Socket Jack <-> IC Pin Mapping
@@ -726,9 +753,16 @@ class TTLEngine {
   }
 
   // Simulation Evaluation & Multi-Pass Settle Loop
+  settle() {
+    return this.evaluate();
+  }
+
   evaluate() {
     this.diagnostics = {
       shorts: [],
+      missingPower: [],
+      unconnectedOutputs: [],
+      backwardsICs: [],
       floatingInputs: [],
       oscillations: []
     };
@@ -881,6 +915,22 @@ class TTLEngine {
         const icDef = IC_LIBRARY[sData.chip];
         if (!icDef) continue;
 
+        if (sData.backwards) {
+          const diagKey = `${sId}_backwards`;
+          if (!this.diagnostics.backwardsICs.some(b => b.key === diagKey)) {
+            const pin1Jack = this.getJackForICPin(sId, 1, icDef.pinCount, sData.alignment);
+            this.diagnostics.backwardsICs.push({
+              key: diagKey,
+              socket: sId,
+              chip: sData.chip,
+              jacks: [pin1Jack],
+              message: `Socket ${sId} (${sData.chip}): IC inserted BACKWARDS! Inverted pinout prevents operation.`
+            });
+          }
+          sData.lastOutputs = {};
+          continue;
+        }
+
         let isPowered = true;
         if (this.strictPowerMode) {
           const vccJack = this.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, sData.alignment);
@@ -891,6 +941,37 @@ class TTLEngine {
           const hasVcc = vccNet && vccNet.val === 1;
           const hasGnd = gndNet && gndNet.val === 0;
           isPowered = (hasVcc && hasGnd);
+
+          if (!hasVcc) {
+            const diagKey = `${sId}_VCC`;
+            if (!this.diagnostics.missingPower.some(p => p.key === diagKey)) {
+              this.diagnostics.missingPower.push({
+                key: diagKey,
+                socket: sId,
+                pin: icDef.vccPin,
+                jack: vccJack,
+                chip: sData.chip,
+                jacks: [vccJack],
+                rail: "VCC (+5V)",
+                message: `Socket ${sId} (${sData.chip}): Missing +5V on VCC pin ${icDef.vccPin} (${vccJack}) in Strict Mode`
+              });
+            }
+          }
+          if (!hasGnd) {
+            const diagKey = `${sId}_GND`;
+            if (!this.diagnostics.missingPower.some(p => p.key === diagKey)) {
+              this.diagnostics.missingPower.push({
+                key: diagKey,
+                socket: sId,
+                pin: icDef.gndPin,
+                jack: gndJack,
+                chip: sData.chip,
+                jacks: [gndJack],
+                rail: "GND (0V)",
+                message: `Socket ${sId} (${sData.chip}): Missing 0V on GND pin ${icDef.gndPin} (${gndJack}) in Strict Mode`
+              });
+            }
+          }
         } else {
           isPowered = (this.masterPower && sData.leverLocked);
         }
@@ -907,12 +988,17 @@ class TTLEngine {
           const net = this.netMap.get(jack);
           if (!net || net.val === "Z") {
             const diagKey = `${sId}_P${pinNum}`;
+            const pinName = (icDef.pinNames && icDef.pinNames[pinNum]) || `Pin ${pinNum}`;
             if (!this.diagnostics.floatingInputs.some(f => f.key === diagKey)) {
               this.diagnostics.floatingInputs.push({
                 key: diagKey,
                 socket: sId,
                 pin: pinNum,
-                message: `Floating input on ${sId} Pin ${pinNum} (reads as TTL Logic 1)`
+                pinName,
+                chip: sData.chip,
+                jack,
+                jacks: [jack],
+                message: `Floating input on ${jack} (Pin ${pinNum}: ${pinName} on ${sData.chip}) — reads as TTL Logic 1`
               });
             }
             return 1; // TTL Rule: floating input reads as 1
@@ -987,6 +1073,130 @@ class TTLEngine {
                       this.outputs["OUT.Y0"];
 
     this.segDigits = [highNibble, lowNibble];
+
+    // 4. Diagnostic check for unconnected IC outputs
+    for (const [sId, sData] of Object.entries(this.sockets)) {
+      if (!sData.chip || !sData.leverLocked || sData.backwards) continue;
+      const icDef = IC_LIBRARY[sData.chip];
+      if (!icDef || !sData.lastOutputs) continue;
+      for (const [pinStr, outVal] of Object.entries(sData.lastOutputs)) {
+        const pin = parseInt(pinStr, 10);
+        const outJack = this.getJackForICPin(sId, pin, icDef.pinCount, sData.alignment);
+        const isWired = this.wires.some(w => w.from === outJack || w.to === outJack);
+        if (!isWired) {
+          const diagKey = `${sId}_out_${pin}`;
+          const pinName = (icDef.pinNames && icDef.pinNames[pin]) || `Pin ${pin}`;
+          if (!this.diagnostics.unconnectedOutputs.some(u => u.key === diagKey)) {
+            this.diagnostics.unconnectedOutputs.push({
+              key: diagKey,
+              socket: sId,
+              pin,
+              pinName,
+              chip: sData.chip,
+              jack: outJack,
+              jacks: [outJack],
+              message: `Unconnected output on ${sId}.${outJack} (Pin ${pin}: ${pinName} on ${sData.chip})`
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Comprehensive Live Diagnostics (Phase 9)
+  getDiagnostics() {
+    const items = [];
+
+    // 1. Short Circuits (Severity: Red)
+    for (const s of this.shorts) {
+      const match = s.match(/\[(.*?)\]/);
+      let jacks = [];
+      if (match) {
+        jacks = match[1].split(",").map(j => j.trim()).filter(j => j.length > 0 && !j.includes(" "));
+      }
+      items.push({
+        id: `short_${items.length}`,
+        type: "short",
+        severity: "red",
+        title: "Short Circuit / Logic Contention",
+        message: s,
+        jacks
+      });
+    }
+
+    // 2. Missing Power Rails (Severity: Red)
+    for (const p of this.diagnostics.missingPower) {
+      items.push({
+        id: `power_${p.key}`,
+        type: "power",
+        severity: "red",
+        title: "Missing Power Supply (Strict Mode)",
+        message: p.message,
+        jacks: p.jacks || [p.jack]
+      });
+    }
+
+    // 3. Backwards ICs (Severity: Red)
+    for (const b of this.diagnostics.backwardsICs) {
+      items.push({
+        id: `backwards_${b.socket}`,
+        type: "backwards",
+        severity: "red",
+        title: "IC Inserted Backwards",
+        message: b.message,
+        socketId: b.socket,
+        jacks: b.jacks || []
+      });
+    }
+
+    // 4. Feedback Oscillations (Severity: Red)
+    for (const o of this.diagnostics.oscillations) {
+      items.push({
+        id: `osc_${items.length}`,
+        type: "oscillation",
+        severity: "red",
+        title: "Feedback Oscillation Detected",
+        message: o,
+        jacks: []
+      });
+    }
+
+    // 5. Floating TTL Inputs (Severity: Amber)
+    for (const f of this.diagnostics.floatingInputs) {
+      items.push({
+        id: `floating_${f.key}`,
+        type: "floating",
+        severity: "amber",
+        title: "Floating TTL Input",
+        message: f.message,
+        jacks: f.jacks || [f.jack]
+      });
+    }
+
+    // 6. Unconnected IC Outputs (Severity: Blue)
+    for (const u of this.diagnostics.unconnectedOutputs) {
+      items.push({
+        id: `unused_${u.key}`,
+        type: "unused_output",
+        severity: "blue",
+        title: "Unconnected IC Output",
+        message: u.message,
+        jacks: u.jacks || [u.jack]
+      });
+    }
+
+    const criticalCount = items.filter(i => i.severity === "red").length;
+    const warningCount = items.filter(i => i.severity === "amber").length;
+    const infoCount = items.filter(i => i.severity === "blue").length;
+
+    return {
+      items,
+      criticalCount,
+      warningCount,
+      infoCount,
+      totalCount: items.length,
+      isHealthy: criticalCount === 0 && warningCount === 0
+    };
   }
 
   probeJack(jackId) {
@@ -1309,6 +1519,7 @@ class TTLEngine {
         chip: sock.chip,
         alignment: sock.alignment,
         leverLocked: sock.leverLocked,
+        backwards: !!sock.backwards,
         state: sock.state ? JSON.parse(JSON.stringify(sock.state)) : {},
         lastOutputs: sock.lastOutputs ? { ...sock.lastOutputs } : null
       };
