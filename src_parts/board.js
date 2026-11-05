@@ -269,6 +269,32 @@ class BoardRenderer {
         const pulserNum = parseInt(btnGroup.dataset.pulser, 10);
         this.engine.setPulser(pulserNum, true);
         e.preventDefault();
+        return;
+      }
+
+      // 12-Bit Data Input Toggle Switch (instant toggle on mousedown irrespective of kit power state)
+      const switchGroup = e.target.closest(".switch-group");
+      if (switchGroup) {
+        const swId = switchGroup.dataset.switch;
+        this.lastSwitchToggleTime = Date.now();
+        this.engine.toggleInput(swId);
+        e.preventDefault();
+        return;
+      }
+
+      // ZIF Socket Lever Toggle on mousedown
+      const zifLever = (e.target && typeof e.target.closest === "function")
+        ? (e.target.closest(".zif-lever") || e.target.closest(".zif-lever-badge"))
+        : null;
+      if (zifLever) {
+        const sId = zifLever.dataset.socket;
+        this.lastLeverToggleTime = Date.now();
+        const curLocked = this.engine.sockets[sId].leverLocked;
+        this.engine.setSocketLever(sId, !curLocked);
+        if (window.consolePanel) window.consolePanel.render();
+        this.render();
+        e.preventDefault();
+        return;
       }
     });
 
@@ -310,6 +336,10 @@ class BoardRenderer {
       // 3. Toggle Switch
       const switchGroup = e.target.closest(".switch-group");
       if (switchGroup) {
+        if (this.lastSwitchToggleTime && Date.now() - this.lastSwitchToggleTime < 350) {
+          return;
+        }
+        this.lastSwitchToggleTime = Date.now();
         const swId = switchGroup.dataset.switch;
         this.engine.toggleInput(swId);
         return;
@@ -320,6 +350,10 @@ class BoardRenderer {
         ? (e.target.closest(".zif-lever") || e.target.closest(".zif-lever-badge"))
         : null;
       if (zifLever) {
+        if (this.lastLeverToggleTime && Date.now() - this.lastLeverToggleTime < 350) {
+          return;
+        }
+        this.lastLeverToggleTime = Date.now();
         const sId = zifLever.dataset.socket;
         const curLocked = this.engine.sockets[sId].leverLocked;
         this.engine.setSocketLever(sId, !curLocked);

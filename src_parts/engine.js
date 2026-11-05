@@ -345,7 +345,9 @@ class TTLEngine {
       }
     }
 
-    this.notify();
+    if (edgesThisFrame > 0) {
+      this.notify();
+    }
   }
 
   // Display smoothing: time-weighted average for high frequencies
