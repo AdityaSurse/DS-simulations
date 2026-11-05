@@ -15,6 +15,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // 1. Core Engine
   const engine = new TTLEngine();
 
+  // Expose engine and board globally for direct console testing if desired
+  window.ditEngine = engine;
+  window.board = engine.board;
+
   // 2. Logic Probe Hover Handler
   const handleJackHover = (jackId, mouseEvent) => {
     if (!jackId) {
@@ -58,7 +62,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 4. Update UI Status on Engine State Changes
   const updateStatusBar = () => {
-    // Count active seated ICs
     let icCount = 0;
     for (const s of Object.values(engine.sockets)) {
       if (s.chip) icCount++;
@@ -79,7 +82,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (clockReadout) {
-      clockReadout.textContent = `CLK: ${engine.clock.freq}Hz (${engine.clock.state === 1 ? 'HI' : 'LO'})`;
+      const runStatus = engine.clock.running ? "RUN" : "PAUSED";
+      const overrunBadge = engine.sim.overrun ? ' <span style="color:#ef4444; font-weight:700;">[OVERRUN]</span>' : '';
+      clockReadout.innerHTML = `CLK: ${engine.formatClockFreq()} (${runStatus})${overrunBadge}`;
     }
 
     const masterPwrBtn = document.getElementById("master-pwr-header");
@@ -95,7 +100,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // 5. Header Control Bindings
-  // Wire Color Palette
   const colorSwatches = document.querySelectorAll(".color-swatch");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
@@ -105,13 +109,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Undo Wire
   const btnUndo = document.getElementById("btn-undo-wire");
   if (btnUndo) {
     btnUndo.addEventListener("click", () => engine.undoWire());
   }
 
-  // Clear / Reset
   const btnReset = document.getElementById("btn-reset-trainer");
   if (btnReset) {
     btnReset.addEventListener("click", () => {
@@ -124,7 +126,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Delete Wire Mode Toggle
   const btnDeleteMode = document.getElementById("btn-delete-mode");
   if (btnDeleteMode) {
     btnDeleteMode.addEventListener("click", () => {
@@ -135,7 +136,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Top Bar Experiments Dropdown
   const headerExpSelect = document.getElementById("header-exp-select");
   if (headerExpSelect) {
     headerExpSelect.addEventListener("change", (e) => {
@@ -147,7 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Guide Modal
   const btnGuide = document.getElementById("btn-open-guide");
   const btnCloseGuide = document.getElementById("btn-close-guide");
   if (btnGuide && guideModal) {
@@ -162,7 +161,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // PDF Manual button
   const btnManual = document.getElementById("btn-open-manual");
   if (btnManual) {
     btnManual.addEventListener("click", () => {
@@ -170,7 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Master Power
   const headerPwrBtn = document.getElementById("master-pwr-header");
   if (headerPwrBtn) {
     headerPwrBtn.addEventListener("click", () => {
@@ -188,7 +185,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Zoom Controls
   const btnZoomIn = document.getElementById("btn-zoom-in");
   const btnZoomOut = document.getElementById("btn-zoom-out");
   const btnZoomFit = document.getElementById("btn-zoom-fit");

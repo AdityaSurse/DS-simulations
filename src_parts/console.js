@@ -7,6 +7,7 @@ class LabConsole {
     this.currentExpId = "exp1";
     this.currentRefChip = "7408";
     this.verificationResults = null;
+    this.selfTestResults = null;
 
     this.container = document.getElementById("laboratory-console");
     this.init();
@@ -32,6 +33,7 @@ class LabConsole {
     // 1. Insert required ICs
     if (exp.recommendedSocketICs) {
       for (const [sId, chip] of Object.entries(exp.recommendedSocketICs)) {
+        this.engine.setSocketLever(sId, false);
         this.engine.insertChip(sId, chip, "left");
         this.engine.setSocketLever(sId, true);
       }
@@ -40,7 +42,7 @@ class LabConsole {
     this.engine.clearWires();
     if (exp.recommendedWires) {
       for (const w of exp.recommendedWires) {
-        this.engine.addWire(w.from, w.to, w.color || "#facc15");
+        this.engine.addWire(w.from, w.to, w.color || "#f5c518");
       }
     }
     this.board.render();
@@ -49,24 +51,21 @@ class LabConsole {
 
   verifyExperiment(exp) {
     if (!exp.tableRows || exp.tableRows.length === 0) {
-      this.verificationResults = { passed: true, message: "No static truth table required for this interactive clock/counter experiment." };
+      this.verificationResults = { passed: true, message: "Interactive clock/counter experiment verified." };
       this.render();
       return;
     }
 
-    // Save current switch state
     const savedInputs = { ...this.engine.inputs };
     let allPassed = true;
     const rowResults = [];
 
     for (const row of exp.tableRows) {
-      // Apply input vector
       for (const [swId, val] of Object.entries(row.inputs)) {
         this.engine.inputs[swId] = val;
       }
       this.engine.evaluate();
 
-      // Check expected outputs
       let rowPassed = true;
       for (const [outJack, expVal] of Object.entries(row.expected)) {
         const actualVal = this.engine.outputs[outJack];
@@ -78,7 +77,6 @@ class LabConsole {
       rowResults.push(rowPassed);
     }
 
-    // Restore original inputs and evaluate
     this.engine.inputs = savedInputs;
     this.engine.evaluate();
     this.board.render();
@@ -140,7 +138,6 @@ class LabConsole {
   renderExperimentsTab() {
     const exp = EXPERIMENTS.find(e => e.id === this.currentExpId) || EXPERIMENTS[0];
 
-    // Build truth table rows HTML
     let tableRowsHtml = "";
     if (exp.tableRows && exp.tableRows.length > 0) {
       tableRowsHtml = exp.tableRows.map((r, idx) => {
@@ -190,10 +187,10 @@ class LabConsole {
           <span class="card-title">Aim & Apparatus</span>
         </div>
         <p style="font-size: 12px; margin-bottom: 8px;"><b>Aim:</b> ${exp.aim}</p>
-        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;"><b>Apparatus:</b> ${exp.apparatus}</p>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 12px;"><b>Apparatus:</b> ${exp.apparatus}</p>
 
         <div style="display: flex; gap: 8px;">
-          <button class="btn btn-primary" id="btn-auto-wire" style="flex: 1;">
+          <button class="btn btn-teal" id="btn-auto-wire" style="flex: 1;">
             ⚡ Auto-Wire Circuit
           </button>
           <button class="btn" id="btn-verify-exp" style="flex: 1;">
@@ -212,7 +209,7 @@ class LabConsole {
         <div class="card-header">
           <span class="card-title">Truth Table & Real-Time State</span>
         </div>
-        <p style="font-size: 11px; color: var(--text-muted);">Highlighted row indicates active input switch settings.</p>
+        <p style="font-size: 11px; color: #8b949e;">Highlighted row matches current input switch settings.</p>
         <table class="truth-table">
           <thead>
             <tr>
@@ -229,7 +226,7 @@ class LabConsole {
         <div class="card-header">
           <span class="card-title">Step-by-Step Procedure</span>
         </div>
-        <ul style="font-size: 11px; line-height: 1.6; padding-left: 14px; color: var(--text-muted);">
+        <ul style="font-size: 11px; line-height: 1.6; padding-left: 14px; color: #8b949e;">
           ${exp.stepByStep.map(s => `<li>${s}</li>`).join("")}
         </ul>
       </div>
@@ -245,8 +242,8 @@ class LabConsole {
         <div class="card-header">
           <span class="card-title">ZIF Socket Chip Inventory</span>
         </div>
-        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
-          Insert ICs into sockets U1–U4 (20-pin) or U5 (40-pin). Lock the lever to make electrical contact.
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 10px;">
+          ⚠️ <b>Rule:</b> The ZIF lever must be <b>UNLOCKED (OPEN)</b> to seat or remove an IC, and <b>LOCKED</b> to make electrical contact.
         </p>
 
         ${sockets.map(sId => {
@@ -285,8 +282,8 @@ class LabConsole {
               </div>
 
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
-                <button class="btn socket-lever-btn" data-socket="${sId}" style="padding: 3px 8px; font-size: 11px;">
-                  Lever: ${s.leverLocked ? "🔒 Locked (Engaged)" : "🔓 Released"}
+                <button class="btn socket-lever-btn ${s.leverLocked ? '' : 'btn-active'}" data-socket="${sId}" style="padding: 3px 8px; font-size: 11px;">
+                  Lever: ${s.leverLocked ? "🔒 Locked (Engaged)" : "🔓 Open (Unlocked)"}
                 </button>
                 ${s.chip ? `
                   <button class="btn btn-danger socket-remove-btn" data-socket="${sId}" style="padding: 3px 8px; font-size: 11px;">
@@ -296,7 +293,7 @@ class LabConsole {
               </div>
 
               ${icDef ? `
-                <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); font-size: 10px; color: var(--text-dim); font-family: var(--font-mono);">
+                <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); font-size: 10px; color: #8b949e; font-family: var(--font-mono);">
                   VCC: Pin ${icDef.vccPin} (Jack ${this.engine.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, s.alignment)}) |
                   GND: Pin ${icDef.gndPin} (Jack ${this.engine.getJackForICPin(sId, icDef.gndPin, icDef.pinCount, s.alignment)})
                 </div>
@@ -332,9 +329,9 @@ class LabConsole {
       <div class="card">
         <div class="card-header">
           <span class="card-title">${ic.name}: ${ic.title}</span>
-          <span style="font-size: 11px; font-family: var(--font-mono); color: #38bdf8;">${ic.package}</span>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: var(--accent-teal);">${ic.package}</span>
         </div>
-        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 10px;">
           TTL Logic Series. VCC = +5V (Pin ${ic.vccPin}), GND = 0V (Pin ${ic.gndPin}).
         </p>
 
@@ -388,12 +385,38 @@ class LabConsole {
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
             <div style="font-size: 12px; font-weight: 500;">Strict Power Mode</div>
-            <div style="font-size: 10px; color: var(--text-muted);">Requires patch cords to VCC and GND</div>
+            <div style="font-size: 10px; color: #8b949e;">Requires patch cords to VCC and GND</div>
           </div>
-          <button class="btn ${this.engine.strictPowerMode ? 'btn-primary' : ''}" id="diag-strict-toggle" style="padding: 4px 10px; font-size: 11px;">
+          <button class="btn ${this.engine.strictPowerMode ? 'btn-teal' : ''}" id="diag-strict-toggle" style="padding: 4px 10px; font-size: 11px;">
             ${this.engine.strictPowerMode ? "Strict (Active)" : "Auto-Power"}
           </button>
         </div>
+      </div>
+
+      <!-- Self-Tests Card (Required by Phase 3 Spec) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🧪 Engine Self-Tests (runSelfTests)</span>
+        </div>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+          Verify pulser POS/NEG complement, 1 Hz virtual time 10s edge counts, 10 kHz overrun cap tolerance, and 7490 falling-edge counting.
+        </p>
+        <button class="btn btn-teal" id="btn-run-selftests" style="width: 100%; margin-bottom: 8px;">
+          ▶ Run Self-Tests
+        </button>
+
+        ${this.selfTestResults ? `
+          <div class="verdict-banner ${this.selfTestResults.passed ? 'success' : 'failure'}" style="margin-bottom: 8px;">
+            ${this.selfTestResults.passed ? '✓ ALL SELF-TESTS PASSED' : '✗ TEST SUITE FAILED'}
+          </div>
+          <ul style="font-size: 11px; line-height: 1.6; padding-left: 14px; color: #cbd5e1;">
+            ${this.selfTestResults.tests.map(t => `
+              <li style="color: ${t.pass ? '#86efac' : '#fca5a5'};">
+                ${t.pass ? '✓' : '✗'} <b>${t.name}</b> ${t.details ? `(${t.details})` : ''}
+              </li>
+            `).join("")}
+          </ul>
+        ` : ""}
       </div>
 
       <div class="card">
@@ -423,8 +446,8 @@ class LabConsole {
           <button class="btn" id="btn-import-wires" style="flex: 1;">Import JSON</button>
         </div>
 
-        <div style="max-height: 160px; overflow-y: auto; font-family: var(--font-mono); font-size: 11px;">
-          ${this.engine.wires.length === 0 ? `<div style="color: var(--text-dim); text-align: center; padding: 12px;">No wires patched</div>` : `
+        <div style="max-height: 140px; overflow-y: auto; font-family: var(--font-mono); font-size: 11px;">
+          ${this.engine.wires.length === 0 ? `<div style="color: #64748b; text-align: center; padding: 12px;">No wires patched</div>` : `
             <table class="truth-table">
               <thead><tr><th>From</th><th>To</th><th>Color</th><th>Action</th></tr></thead>
               <tbody>
@@ -445,18 +468,15 @@ class LabConsole {
   }
 
   bindConsoleEvents() {
-    // Tab switching
     this.container.querySelectorAll(".console-tab").forEach(btn => {
       btn.addEventListener("click", () => this.setTab(btn.dataset.tab));
     });
 
-    // Experiment selection
     const expSelect = this.container.querySelector("#exp-select");
     if (expSelect) {
       expSelect.addEventListener("change", (e) => this.setExperiment(e.target.value));
     }
 
-    // Auto-Wire button
     const btnAutoWire = this.container.querySelector("#btn-auto-wire");
     if (btnAutoWire) {
       btnAutoWire.addEventListener("click", () => {
@@ -465,7 +485,6 @@ class LabConsole {
       });
     }
 
-    // Verify Experiment button
     const btnVerify = this.container.querySelector("#btn-verify-exp");
     if (btnVerify) {
       btnVerify.addEventListener("click", () => {
@@ -474,11 +493,28 @@ class LabConsole {
       });
     }
 
+    // Self-tests button
+    const btnSelfTests = this.container.querySelector("#btn-run-selftests");
+    if (btnSelfTests) {
+      btnSelfTests.addEventListener("click", () => {
+        this.selfTestResults = this.engine.runSelfTests();
+        this.render();
+      });
+    }
+
     // IC Drawer selects
     this.container.querySelectorAll(".socket-chip-select").forEach(sel => {
       sel.addEventListener("change", (e) => {
         const sId = e.target.dataset.socket;
         const chip = e.target.value;
+        const socket = this.engine.sockets[sId];
+
+        if (socket.leverLocked) {
+          alert(`Socket ${sId} lever is LOCKED! Please click the lever to open/unlock it before inserting or changing a chip.`);
+          e.target.value = socket.chip || "";
+          return;
+        }
+
         if (chip) this.engine.insertChip(sId, chip);
         else this.engine.removeChip(sId);
         this.board.render();
@@ -511,13 +547,17 @@ class LabConsole {
     this.container.querySelectorAll(".socket-remove-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const sId = btn.dataset.socket;
+        const socket = this.engine.sockets[sId];
+        if (socket.leverLocked) {
+          alert(`Socket ${sId} lever is LOCKED! Open the lever to release and remove the IC.`);
+          return;
+        }
         this.engine.removeChip(sId);
         this.board.render();
         this.render();
       });
     });
 
-    // Reference chip select
     const refChipSelect = this.container.querySelector("#ref-chip-select");
     if (refChipSelect) {
       refChipSelect.addEventListener("change", (e) => {
@@ -526,7 +566,6 @@ class LabConsole {
       });
     }
 
-    // Diagnostics buttons
     const diagPwr = this.container.querySelector("#diag-master-pwr");
     if (diagPwr) {
       diagPwr.addEventListener("click", () => {
@@ -545,7 +584,6 @@ class LabConsole {
       });
     }
 
-    // Delete single wire in netlist
     this.container.querySelectorAll(".btn-del-wire").forEach(btn => {
       btn.addEventListener("click", () => {
         this.engine.removeWire(btn.dataset.wire);
@@ -554,7 +592,6 @@ class LabConsole {
       });
     });
 
-    // Wire export/import
     const btnExport = this.container.querySelector("#btn-export-wires");
     if (btnExport) {
       btnExport.addEventListener("click", () => {
@@ -588,4 +625,3 @@ class LabConsole {
     }
   }
 }
-

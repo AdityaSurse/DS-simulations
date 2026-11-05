@@ -1,6 +1,5 @@
 /* ===== COMPONENTS ===== */
 const SVG_COMPONENTS = {
-  // Generate SVG Definitions (Gradients, Filters, Shadows, Patterns)
   renderDefs() {
     return `
       <defs>
@@ -43,6 +42,23 @@ const SVG_COMPONENTS = {
           <stop offset="100%" stop-color="#2a2510" />
         </radialGradient>
 
+        <!-- Metallic terminal gradients -->
+        <radialGradient id="termRed" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#f87171" />
+          <stop offset="50%" stop-color="#dc2626" />
+          <stop offset="100%" stop-color="#7f1d1d" />
+        </radialGradient>
+        <radialGradient id="termBlack" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#475569" />
+          <stop offset="60%" stop-color="#1e293b" />
+          <stop offset="100%" stop-color="#020617" />
+        </radialGradient>
+        <radialGradient id="termAmber" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#fde68a" />
+          <stop offset="50%" stop-color="#d97706" />
+          <stop offset="100%" stop-color="#78350f" />
+        </radialGradient>
+
         <!-- Screw head metallic gradient -->
         <radialGradient id="screwHead" cx="35%" cy="35%" r="65%">
           <stop offset="0%" stop-color="#f5f5f5" />
@@ -72,17 +88,35 @@ const SVG_COMPONENTS = {
           <stop offset="100%" stop-color="#450a0a" />
         </radialGradient>
 
-        <!-- Red LED glows -->
+        <!-- LED dome gradients (Red, Green, Yellow, Blue) -->
         <radialGradient id="ledOff" cx="35%" cy="35%" r="65%">
-          <stop offset="0%" stop-color="#7f1d1d" />
-          <stop offset="60%" stop-color="#450a0a" />
-          <stop offset="100%" stop-color="#1c0404" />
+          <stop offset="0%" stop-color="#6b1d1d" />
+          <stop offset="60%" stop-color="#3d0a0a" />
+          <stop offset="100%" stop-color="#180404" />
         </radialGradient>
-        <radialGradient id="ledOn" cx="40%" cy="35%" r="65%">
+        <radialGradient id="ledOnRed" cx="40%" cy="35%" r="65%">
           <stop offset="0%" stop-color="#ffffff" />
           <stop offset="25%" stop-color="#ff9999" />
           <stop offset="60%" stop-color="#ff2222" />
           <stop offset="100%" stop-color="#cc0000" />
+        </radialGradient>
+        <radialGradient id="ledOnGreen" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="25%" stop-color="#a7f3d0" />
+          <stop offset="60%" stop-color="#10b981" />
+          <stop offset="100%" stop-color="#047857" />
+        </radialGradient>
+        <radialGradient id="ledOnAmber" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="25%" stop-color="#fef08a" />
+          <stop offset="60%" stop-color="#eab308" />
+          <stop offset="100%" stop-color="#a16207" />
+        </radialGradient>
+        <radialGradient id="ledOnBlue" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="25%" stop-color="#bae6fd" />
+          <stop offset="60%" stop-color="#0ea5e9" />
+          <stop offset="100%" stop-color="#0369a1" />
         </radialGradient>
 
         <!-- Knob gradient -->
@@ -118,7 +152,7 @@ const SVG_COMPONENTS = {
           <feDropShadow dx="2" dy="5" stdDeviation="4" flood-color="#000" flood-opacity="0.8"/>
         </filter>
         <filter id="ledGlowFilter" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -142,14 +176,22 @@ const SVG_COMPONENTS = {
     `;
   },
 
-  renderBrassJack(id, label, cx, cy, labelSide = "top") {
+  // 1. drawJack: metallic ring, dark hole, hover glow, label under it, drop target highlight
+  drawJack(opts) {
+    const { id, label, cx, cy, labelSide = "top", isTarget = false, isSelected = false } = opts;
     let lx = cx, ly = cy - 14;
     if (labelSide === "bottom") ly = cy + 18;
     else if (labelSide === "left") { lx = cx - 18; ly = cy + 4; }
     else if (labelSide === "right") { lx = cx + 18; ly = cy + 4; }
 
+    const targetRing = (isTarget || isSelected) ? `
+      <circle r="14" fill="none" stroke="var(--accent-teal)" stroke-width="2.5" class="jack-selection-ring" opacity="1" />
+    ` : `
+      <circle r="13" fill="none" stroke="var(--accent-teal)" stroke-width="2" class="jack-selection-ring" opacity="0" />
+    `;
+
     return `
-      <g class="jack-group" data-jack="${id}" id="jack-${id.replace('.', '_')}" transform="translate(${cx}, ${cy})">
+      <g class="jack-group" data-jack="${id}" id="jack-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})">
         <circle r="18" fill="transparent" class="jack-hitbox" />
         <circle r="11" fill="url(#brassJack)" filter="url(#shadowJack)" />
         <circle r="11" fill="none" stroke="#3d2c02" stroke-width="0.75" />
@@ -157,15 +199,21 @@ const SVG_COMPONENTS = {
         <circle r="6" fill="url(#jackHole)" />
         <circle r="4.5" fill="#050505" />
         <circle r="4.2" fill="none" stroke="#c99700" stroke-width="0.8" opacity="0.75" />
-        <circle r="13" fill="none" stroke="var(--accent-teal)" stroke-width="2" class="jack-selection-ring" opacity="0" />
+        ${targetRing}
       </g>
       ${label ? `<text x="${lx}" y="${ly}" class="silkscreen-text" text-anchor="middle">${label}</text>` : ""}
     `;
   },
+  renderBrassJack(id, label, cx, cy, labelSide = "top") {
+    return this.drawJack({ id, label, cx, cy, labelSide });
+  },
 
-  renderToggleSwitch(id, label, cx, cy, isHigh) {
+  // 2. drawToggleSwitch: 3D bat lever that animates between UP (1) and DOWN (0)
+  drawToggleSwitch(opts) {
+    const { id, label, cx, cy, isHigh = false } = opts;
     const batY = isHigh ? -14 : 14;
     const batAngle = isHigh ? -18 : 18;
+
     return `
       <g class="switch-group" data-switch="${id}" transform="translate(${cx}, ${cy})">
         <rect x="-14" y="-22" width="28" height="44" rx="4" fill="#242830" stroke="#4a5260" stroke-width="1" filter="url(#shadowBevel)" />
@@ -181,73 +229,51 @@ const SVG_COMPONENTS = {
         </g>
         <rect x="-16" y="-24" width="32" height="48" fill="transparent" class="switch-hitbox" />
       </g>
-      <text x="${cx}" y="${cy - 28}" class="silkscreen-text bold" text-anchor="middle">${label}</text>
+      ${label ? `<text x="${cx}" y="${cy - 28}" class="silkscreen-text bold" text-anchor="middle">${label}</text>` : ""}
     `;
   },
-
-  renderPushButton(id, label, cx, cy, isPressed) {
-    const btnFill = isPressed ? "url(#redBtnPressed)" : "url(#redBtn)";
-    const rOffset = isPressed ? 1 : 0;
-    return `
-      <g class="pushbutton-group" data-pulser="${id}" transform="translate(${cx}, ${cy})">
-        <circle cx="0" cy="0" r="19" fill="url(#screwHead)" filter="url(#shadowBevel)" />
-        <circle cx="0" cy="0" r="15" fill="#181818" />
-        <circle cx="0" cy="${rOffset}" r="14" fill="${btnFill}" filter="url(#shadowBevel)" />
-        <ellipse cx="-4" cy="${-5 + rOffset}" rx="6" ry="3.5" fill="#ffffff" opacity="${isPressed ? 0.3 : 0.65}" transform="rotate(-20, -4, ${-5 + rOffset})" />
-        <circle cx="0" cy="0" r="22" fill="transparent" class="btn-hitbox" />
-      </g>
-      <text x="${cx}" y="${cy + 34}" class="silkscreen-text" text-anchor="middle">${label}</text>
-    `;
+  renderToggleSwitch(id, label, cx, cy, isHigh) {
+    return this.drawToggleSwitch({ id, label, cx, cy, isHigh });
   },
 
-  renderLed(id, label, cx, cy, isOn, labelPos = "top") {
+  // 3. drawLED: glass dome with radial gradient, supports configurable colors & continuous brightness
+  drawLED(opts) {
+    const { id, label, cx, cy, isOn = false, brightness = null, color = "red", labelPos = "top" } = opts;
     let lx = cx, ly = cy - 12;
     if (labelPos === "bottom") ly = cy + 16;
-    const fill = isOn ? "url(#ledOn)" : "url(#ledOff)";
-    const glow = isOn ? `
-      <circle cx="${cx}" cy="${cy}" r="12" fill="#ff1a1a" opacity="0.45" filter="url(#ledGlowFilter)" />
-      <circle cx="${cx}" cy="${cy}" r="7" fill="#ff5555" opacity="0.7" />
+
+    const b = brightness !== null ? brightness : (isOn ? 1.0 : 0.0);
+    const gradMap = {
+      red: "url(#ledOnRed)",
+      green: "url(#ledOnGreen)",
+      amber: "url(#ledOnAmber)",
+      blue: "url(#ledOnBlue)"
+    };
+    const fill = b > 0.05 ? (gradMap[color] || "url(#ledOnRed)") : "url(#ledOff)";
+    const glowColor = color === "green" ? "#10b981" : (color === "amber" ? "#f59e0b" : "#ff1a1a");
+
+    const glowSvg = b > 0.05 ? `
+      <circle cx="${cx}" cy="${cy}" r="${10 + b * 4}" fill="${glowColor}" opacity="${0.45 * b}" filter="url(#ledGlowFilter)" />
+      <circle cx="${cx}" cy="${cy}" r="7" fill="${glowColor}" opacity="${0.7 * b}" />
     ` : "";
 
     return `
       <g class="led-group" data-led="${id}">
         <circle cx="${cx}" cy="${cy}" r="7" fill="#1a1e24" stroke="#333" stroke-width="0.5" />
-        ${glow}
+        ${glowSvg}
         <circle cx="${cx}" cy="${cy}" r="5.5" fill="${fill}" />
-        <circle cx="${cx - 1.8}" cy="${cy - 1.8}" r="1.5" fill="#ffffff" opacity="${isOn ? 0.9 : 0.35}" />
+        <circle cx="${cx - 1.8}" cy="${cy - 1.8}" r="1.5" fill="#ffffff" opacity="${Math.max(0.2, b * 0.9)}" />
       </g>
       ${label ? `<text x="${lx}" y="${ly}" class="silkscreen-text" text-anchor="middle">${label}</text>` : ""}
     `;
   },
-
-  renderKnob(id, label, cx, cy, freq) {
-    const freqMap = { 1: -120, 5: -72, 10: -24, 50: 24, 100: 72, 500: 120 };
-    const angle = freqMap[freq] || -120;
-
-    return `
-      <g class="knob-group" data-knob="${id}" transform="translate(${cx}, ${cy})">
-        <circle cx="0" cy="0" r="32" fill="none" stroke="#3e4a5c" stroke-width="1.5" stroke-dasharray="2, 6" />
-        <text x="-28" y="24" class="silkscreen-text mini" text-anchor="middle">1Hz</text>
-        <text x="-34" y="-8" class="silkscreen-text mini" text-anchor="middle">5Hz</text>
-        <text x="-16" y="-34" class="silkscreen-text mini" text-anchor="middle">10Hz</text>
-        <text x="16" y="-34" class="silkscreen-text mini" text-anchor="middle">50Hz</text>
-        <text x="34" y="-8" class="silkscreen-text mini" text-anchor="middle">100Hz</text>
-        <text x="28" y="24" class="silkscreen-text mini" text-anchor="middle">500Hz</text>
-
-        <circle cx="0" cy="0" r="26" fill="#0f1115" stroke="#222" stroke-width="1" filter="url(#shadowBevel)" />
-        <circle cx="0" cy="0" r="22" fill="url(#knobBody)" filter="url(#shadowBevel)" />
-        <circle cx="0" cy="0" r="18" fill="none" stroke="#121418" stroke-width="3" stroke-dasharray="4, 4" />
-        <g transform="rotate(${angle}, 0, 0)">
-          <line x1="0" y1="-8" x2="0" y2="-21" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
-        </g>
-        <circle cx="0" cy="0" r="8" fill="#181b21" stroke="#333" stroke-width="0.5" />
-        <circle cx="0" cy="0" r="30" fill="transparent" class="knob-hitbox" />
-      </g>
-      <text x="${cx}" y="${cy + 46}" class="silkscreen-text bold" text-anchor="middle">${label}</text>
-    `;
+  renderLed(id, label, cx, cy, isOn, labelPos = "top") {
+    return this.drawLED({ id, label, cx, cy, isOn, labelPos });
   },
 
-  renderSevenSegmentDisplay(id, x, y, digits = [0, 0]) {
+  // 4. drawSevenSeg: red segments with ghost segments when off, BCD/hex decoding
+  drawSevenSeg(opts) {
+    const { id, x, y, digits = [0, 0] } = opts;
     const SEG_MAP = {
       0: [1,1,1,1,1,1,0],
       1: [0,1,1,0,0,0,0],
@@ -259,17 +285,17 @@ const SVG_COMPONENTS = {
       7: [1,1,1,0,0,0,0],
       8: [1,1,1,1,1,1,1],
       9: [1,1,1,1,0,1,1],
-      10: [1,1,1,0,1,1,1],
-      11: [0,0,1,1,1,1,1],
-      12: [1,0,0,1,1,1,0],
-      13: [0,1,1,1,1,0,1],
-      14: [1,0,0,1,1,1,1],
-      15: [1,0,0,0,1,1,1]
+      10: [1,1,1,0,1,1,1], // A
+      11: [0,0,1,1,1,1,1], // b
+      12: [1,0,0,1,1,1,0], // C
+      13: [0,1,1,1,1,0,1], // d
+      14: [1,0,0,1,1,1,1], // E
+      15: [1,0,0,0,1,1,1]  // F
     };
 
     const renderDigit = (dx, dy, val) => {
       const segs = SEG_MAP[val] || SEG_MAP[0];
-      const sColor = (idx) => segs[idx] ? "#ff2a2a" : "#2a0606";
+      const sColor = (idx) => segs[idx] ? "#ff2a2a" : "#220404";
       const sGlow = (idx) => segs[idx] ? "filter='url(#ledGlowFilter)'" : "";
 
       return `
@@ -282,7 +308,7 @@ const SVG_COMPONENTS = {
           <polygon points="7,32 5,51 1,47 3,30" fill="${sColor(4)}" ${sGlow(4)} />
           <polygon points="7,24 3,26 1,9 5,5" fill="${sColor(5)}" ${sGlow(5)} />
           <polygon points="9,26 27,26 29,28 27,30 9,30 7,28" fill="${sColor(6)}" ${sGlow(6)} />
-          <circle cx="34" cy="52" r="1.5" fill="#2a0606" />
+          <circle cx="34" cy="52" r="1.5" fill="#220404" />
         </g>
       `;
     };
@@ -296,8 +322,103 @@ const SVG_COMPONENTS = {
       </g>
     `;
   },
+  renderSevenSegmentDisplay(id, x, y, digits) {
+    return this.drawSevenSeg({ id, x, y, digits });
+  },
 
-  renderZIFSocket(socketId, x, y, width, height, pinCount = 20, leverLocked = true) {
+  // 5. drawPushButton: press animation + latching indicator LED (Manual Pulser)
+  drawPushButton(opts) {
+    const { id, label, cx, cy, isPressed = false } = opts;
+    const btnFill = isPressed ? "url(#redBtnPressed)" : "url(#redBtn)";
+    const rOffset = isPressed ? 1.5 : 0;
+    const shadowOpacity = isPressed ? "0.3" : "0.7";
+
+    return `
+      <g class="pushbutton-group" data-pulser="${id}" transform="translate(${cx}, ${cy})">
+        <circle cx="0" cy="0" r="19" fill="url(#screwHead)" filter="url(#shadowBevel)" />
+        <circle cx="0" cy="0" r="15" fill="#181818" />
+        <circle cx="0" cy="${rOffset}" r="14" fill="${btnFill}" opacity="${shadowOpacity}" filter="url(#shadowBevel)" />
+        <circle cx="0" cy="${rOffset}" r="14" fill="${btnFill}" />
+        <ellipse cx="-4" cy="${-5 + rOffset}" rx="6" ry="3.5" fill="#ffffff" opacity="${isPressed ? 0.3 : 0.65}" transform="rotate(-20, -4, ${-5 + rOffset})" />
+        <!-- Small debounced latching pilot LED ring -->
+        <circle cx="0" cy="0" r="16.5" fill="none" stroke="${isPressed ? '#ff3333' : '#334155'}" stroke-width="1.2" opacity="${isPressed ? '1' : '0.4'}" />
+        <circle cx="0" cy="0" r="22" fill="transparent" class="btn-hitbox" />
+      </g>
+      ${label ? `<text x="${cx}" y="${cy + 34}" class="silkscreen-text" text-anchor="middle">${label}</text>` : ""}
+    `;
+  },
+  renderPushButton(id, label, cx, cy, isPressed) {
+    return this.drawPushButton({ id, label, cx, cy, isPressed });
+  },
+
+  // 6. drawClockKnob: knurled black 3D knob with white pointer line and tick marks (0.5 Hz .. 10 kHz)
+  drawClockKnob(opts) {
+    const { id, label, cx, cy, freq = 1.0, knobT = 0.0768, running = true } = opts;
+    // Map knobT in [0, 1] to angle: 0 deg to 270 deg (offset by -135 deg to point from bottom-left to bottom-right)
+    const angle = -135 + knobT * 270;
+
+    return `
+      <g class="knob-group" data-knob="${id}" transform="translate(${cx}, ${cy})">
+        <!-- Radial scale graduation ticks and labels -->
+        <circle cx="0" cy="0" r="34" fill="none" stroke="#3e4a5c" stroke-width="1.5" stroke-dasharray="2, 6" />
+        <text x="-32" y="22" class="silkscreen-text mini" text-anchor="middle">0.5Hz</text>
+        <text x="-38" y="-4" class="silkscreen-text mini" text-anchor="middle">1Hz</text>
+        <text x="-26" y="-28" class="silkscreen-text mini" text-anchor="middle">10Hz</text>
+        <text x="0" y="-38" class="silkscreen-text mini" text-anchor="middle">100Hz</text>
+        <text x="26" y="-28" class="silkscreen-text mini" text-anchor="middle">1kHz</text>
+        <text x="38" y="-4" class="silkscreen-text mini" text-anchor="middle">5kHz</text>
+        <text x="32" y="22" class="silkscreen-text mini" text-anchor="middle">10kHz</text>
+
+        <!-- Base skirt -->
+        <circle cx="0" cy="0" r="26" fill="#0f1115" stroke="#222" stroke-width="1" filter="url(#shadowBevel)" />
+        <!-- Knurled body -->
+        <circle cx="0" cy="0" r="22" fill="url(#knobBody)" filter="url(#shadowBevel)" />
+        <!-- Grip notches -->
+        <circle cx="0" cy="0" r="18" fill="none" stroke="#121418" stroke-width="3" stroke-dasharray="4, 4" />
+        <!-- Pointer line -->
+        <g transform="rotate(${angle}, 0, 0)">
+          <line x1="0" y1="-8" x2="0" y2="-21" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+        </g>
+        <circle cx="0" cy="0" r="8" fill="#181b21" stroke="#333" stroke-width="0.5" />
+        <circle cx="0" cy="0" r="32" fill="transparent" class="knob-hitbox" />
+      </g>
+      ${label ? `<text x="${cx}" y="${cy + 46}" class="silkscreen-text bold" text-anchor="middle">${label}</text>` : ""}
+    `;
+  },
+  renderKnob(id, label, cx, cy, freq) {
+    return this.drawClockKnob({ id, label, cx, cy, freq });
+  },
+
+  // 7. drawTerminal: Binding post terminals for power (+5V red, GND black, +12V amber)
+  drawTerminal(opts) {
+    const { id, type = "5V", cx, cy, label = null } = opts;
+    const gradMap = {
+      "5V": "url(#termRed)",
+      "GND": "url(#termBlack)",
+      "12V": "url(#termAmber)"
+    };
+    const fill = gradMap[type] || "url(#termRed)";
+
+    return `
+      <g class="jack-group terminal-group" data-jack="${id}" id="term-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})">
+        <!-- Colored insulator washer -->
+        <circle r="14" fill="${fill}" filter="url(#shadowJack)" stroke="#111" stroke-width="1" />
+        <!-- Brass hexagonal binding nut -->
+        <polygon points="10,0 5,8.6 -5,8.6 -10,0 -5,-8.6 5,-8.6" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.6" />
+        <!-- Center banana jack hole -->
+        <circle r="5.5" fill="url(#jackHole)" />
+        <circle r="4.2" fill="#0a0a0a" />
+        <circle r="3.8" fill="none" stroke="#c99700" stroke-width="0.7" opacity="0.8" />
+        <circle r="16" fill="none" stroke="var(--accent-teal)" stroke-width="2" class="jack-selection-ring" opacity="0" />
+        <circle r="18" fill="transparent" class="jack-hitbox" />
+      </g>
+      ${label ? `<text x="${cx}" y="${cy + 22}" class="silkscreen-text" text-anchor="middle">${label}</text>` : ""}
+    `;
+  },
+
+  // 8. drawZIFSocket: cyan body with bevel, lever on side that animates open/closed (20-pin & 40-pin)
+  drawZIFSocket(opts) {
+    const { socketId, x, y, width, height, pinCount = 20, leverLocked = true } = opts;
     const is40 = (pinCount === 40);
     const pinsPerRow = pinCount / 2;
     const pinPitch = (width - 40) / (pinsPerRow - 1);
@@ -342,24 +463,31 @@ const SVG_COMPONENTS = {
         <rect x="${x + 8}" y="${y + 8}" width="${width - 16}" height="${height - 16}" rx="3" fill="#10345c" stroke="#0b2440" stroke-width="1" />
         ${pinHoles}
         <polygon points="${x + 14},${is40 ? y + 16 : y + height - 12} ${x + 20},${is40 ? y + 22 : y + height - 6} ${x + 8},${is40 ? y + 22 : y + height - 6}" fill="#93c5fd" opacity="0.6" />
-        <g class="zif-lever" transform="translate(${leverX}, ${leverY}) ${leverTransform}">
+        <g class="zif-lever" data-socket="${socketId}" transform="translate(${leverX}, ${leverY}) ${leverTransform}" style="cursor: pointer;">
           <rect x="${is40 ? -3 : -24}" y="${is40 ? 0 : -3}" width="${is40 ? 6 : 28}" height="${is40 ? 28 : 6}" rx="2" fill="url(#screwHead)" stroke="#333" stroke-width="0.5" />
           <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="7" fill="#1d4ed8" stroke="#93c5fd" stroke-width="1" />
         </g>
       </g>
     `;
   },
+  renderZIFSocket(socketId, x, y, width, height, pinCount, leverLocked) {
+    return this.drawZIFSocket({ socketId, x, y, width, height, pinCount, leverLocked });
+  },
 
-  renderInsertedIC(socketId, chipName, socketX, socketY, socketW, socketH, icPinCount = 14, alignment = "left") {
+  // 9. drawICChip: black epoxy body with highlights, silver gold-ish pins, notch + pin-1 dot, printed part # & date code
+  drawICChip(opts) {
+    const { socketId, chipName, socketX, socketY, socketW, socketH, icPinCount = 14, alignment = "left" } = opts;
     if (!chipName) return "";
     const is40 = (socketId === "U5");
+
     if (is40) {
       return `
-        <g class="inserted-ic-group" transform="translate(${socketX + 16}, ${socketY + 12})">
-          <rect x="0" y="0" width="${socketW - 32}" height="${socketH - 24}" rx="3" fill="url(#icBody)" stroke="#333" stroke-width="1" filter="url(#shadowBevel)" />
-          <path d="M ${(socketW - 32)/2 - 8} 0 A 8 8 0 0 0 ${(socketW - 32)/2 + 8} 0 Z" fill="#111" />
-          <circle cx="10" cy="14" r="2.5" fill="#000" />
-          <text x="${(socketW - 32)/2}" y="${(socketH - 24)/2}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="12" font-weight="700" letter-spacing="1" text-anchor="middle" transform="rotate(-90, ${(socketW - 32)/2}, ${(socketH - 24)/2})">${chipName}</text>
+        <g class="inserted-ic-group" data-socket="${socketId}" style="cursor: pointer;">
+          <rect x="${socketX + 16}" y="${socketY + 12}" width="${socketW - 32}" height="${socketH - 24}" rx="3" fill="url(#icBody)" stroke="#333" stroke-width="1" filter="url(#shadowBevel)" />
+          <path d="M ${socketX + 16 + (socketW - 32)/2 - 8} ${socketY + 12} A 8 8 0 0 0 ${socketX + 16 + (socketW - 32)/2 + 8} ${socketY + 12} Z" fill="#111" />
+          <circle cx="${socketX + 26}" cy="${socketY + 26}" r="2.5" fill="#000" />
+          <text x="${socketX + 16 + (socketW - 32)/2}" y="${socketY + 12 + (socketH - 24)/2}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="12" font-weight="700" letter-spacing="1" text-anchor="middle" transform="rotate(-90, ${socketX + 16 + (socketW - 32)/2}, ${socketY + 12 + (socketH - 24)/2})">${chipName}</text>
+          <text x="${socketX + 16 + (socketW - 32)/2 + 12}" y="${socketY + 12 + (socketH - 24)/2}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle" transform="rotate(-90, ${socketX + 16 + (socketW - 32)/2 + 12}, ${socketY + 12 + (socketH - 24)/2})">2418</text>
         </g>
       `;
     }
@@ -385,15 +513,18 @@ const SVG_COMPONENTS = {
     }
 
     return `
-      <g class="inserted-ic-group">
+      <g class="inserted-ic-group" data-socket="${socketId}" style="cursor: pointer;">
         ${pinsSvg}
         <rect x="${icX}" y="${icY}" width="${icWidth}" height="${icHeight}" rx="3" fill="url(#icBody)" stroke="#3f4553" stroke-width="1" filter="url(#shadowBevel)" />
         <path d="M ${icX} ${icY + icHeight/2 - 7} A 7 7 0 0 0 ${icX} ${icY + icHeight/2 + 7} Z" fill="#111317" />
         <circle cx="${icX + 10}" cy="${icY + icHeight - 10}" r="2.2" fill="#0a0c0e" stroke="#252930" stroke-width="0.5" />
-        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 4}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="11" font-weight="700" letter-spacing="1" text-anchor="middle">${chipName}</text>
-        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 14}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle">SN${chipName}N</text>
+        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 3}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="11" font-weight="700" letter-spacing="1" text-anchor="middle">SN${chipName}N</text>
+        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 13}" fill="#94a3b8" font-family="var(--font-mono)" font-size="7.5" text-anchor="middle">MALAYSIA 2418</text>
       </g>
     `;
+  },
+  renderInsertedIC(socketId, chipName, socketX, socketY, socketW, socketH, icPinCount, alignment) {
+    return this.drawICChip({ socketId, chipName, socketX, socketY, socketW, socketH, icPinCount, alignment });
   },
 
   renderPatchCord(wire, p1, p2) {
@@ -408,7 +539,6 @@ const SVG_COMPONENTS = {
 
     const pathData = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`;
     const shadowPath = `M ${p1.x} ${p1.y + 6} Q ${midX} ${midY + 12} ${p2.x} ${p2.y + 6}`;
-
     const color = wire.color || "#f5c518";
 
     const renderBananaPlug = (pt) => `

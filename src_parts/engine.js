@@ -6,35 +6,44 @@ class TTLEngine {
     this.wires = []; // Array of { id, from, to, color }
     this.nextWireId = 1;
 
-    // 12 data input switches: C3..C0, B3..B0, A3..A0 (0 or 1)
-    this.inputs = {
-      "IN.C3": 0, "IN.C2": 0, "IN.C1": 0, "IN.C0": 0,
-      "IN.B3": 0, "IN.B2": 0, "IN.B1": 0, "IN.B0": 0,
-      "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0
+    // Simulation Virtual Time (in seconds)
+    this.sim = {
+      time: 0.0,
+      lastRealTime: null,
+      maxEdgesPerFrame: 1000,
+      overrun: false,
+      clkPosRisingCount: 0,
+      edgeLog: [] // Timestamped net edge events { time, net, oldVal, newVal }
     };
 
-    // Manual pulser buttons (pressed = true)
-    this.pulsers = {
-      1: { pressed: false },
-      2: { pressed: false }
-    };
-
-    // Clock generator
-    this.clock = {
-      freq: 1, // Hz (1, 5, 10, 50, 100, 500)
-      state: 0,
-      divState: 0,
-      divCounter: 0,
-      timer: null
-    };
-
-    // ZIF Sockets U1..U4 (20-pin) and U5 (40-pin)
-    this.sockets = {
-      U1: { chip: null, alignment: "left", leverLocked: true, state: {} },
-      U2: { chip: null, alignment: "left", leverLocked: true, state: {} },
-      U3: { chip: null, alignment: "left", leverLocked: true, state: {} },
-      U4: { chip: null, alignment: "left", leverLocked: true, state: {} },
-      U5: { chip: null, alignment: "left", leverLocked: true, state: {} }
+    // Single unified board state object exposed for external access
+    this.board = {
+      sockets: {
+        U1: { id: "U1", chip: null, alignment: "left", leverLocked: true, state: {} },
+        U2: { id: "U2", chip: null, alignment: "left", leverLocked: true, state: {} },
+        U3: { id: "U3", chip: null, alignment: "left", leverLocked: true, state: {} },
+        U4: { id: "U4", chip: null, alignment: "left", leverLocked: true, state: {} },
+        U5: { id: "U5", chip: null, alignment: "left", leverLocked: true, state: {} }
+      },
+      switches: {
+        "IN.C3": 0, "IN.C2": 0, "IN.C1": 0, "IN.C0": 0,
+        "IN.B3": 0, "IN.B2": 0, "IN.B1": 0, "IN.B0": 0,
+        "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0
+      },
+      leds: {}, // Map of ledId -> brightness (0.0 to 1.0)
+      pulsers: {
+        1: { pressed: false, pos: 0, neg: 1, visualHoldUntil: 0 },
+        2: { pressed: false, pos: 0, neg: 1, visualHoldUntil: 0 }
+      },
+      clock: {
+        freq: 1.0, // 0.5 Hz to 10 kHz
+        knobT: 0.0768, // Logarithmic mapping: f = 0.5 * (20000 ^ t)
+        running: true,
+        pos: 0,
+        neg: 1,
+        halfPeriodPhase: 0.0, // 0 to halfPeriod
+        dutyCycle: 0.5
+      }
     };
 
     // Outputs
@@ -42,17 +51,31 @@ class TTLEngine {
       "OUT.Y7": 0, "OUT.Y6": 0, "OUT.Y5": 0, "OUT.Y4": 0,
       "OUT.Y3": 0, "OUT.Y2": 0, "OUT.Y1": 0, "OUT.Y0": 0
     };
+    this.outputDuty = {
+      "OUT.Y7": 0, "OUT.Y6": 0, "OUT.Y5": 0, "OUT.Y4": 0,
+      "OUT.Y3": 0, "OUT.Y2": 0, "OUT.Y1": 0, "OUT.Y0": 0
+    };
 
     this.segDigits = [0, 0]; // High nibble (Y7..Y4), Low nibble (Y3..Y0)
-    this.shorts = []; // List of active short circuits
-    this.netMap = new Map(); // jackId -> Net info
-    this.nets = []; // Array of Net objects
+    this.shorts = [];
+    this.netMap = new Map();
+    this.nets = [];
     this.changeCallbacks = [];
 
-    // Audio setup (synthesizer for realistic switch & buzzer sounds)
+    // Audio synthesizer
     this.audioCtx = null;
-    this.initClock();
+
+    // Start requestAnimationFrame Virtual Time Loop
+    this.rafId = null;
+    this.startVirtualTimeLoop();
   }
+
+  // Convenient property getters to match previous APIs
+  get inputs() { return this.board.switches; }
+  set inputs(val) { this.board.switches = val; }
+  get sockets() { return this.board.sockets; }
+  get pulsers() { return this.board.pulsers; }
+  get clock() { return this.board.clock; }
 
   onChange(cb) {
     this.changeCallbacks.push(cb);
@@ -98,27 +121,187 @@ class TTLEngine {
     } catch (e) {}
   }
 
-  // Clock generator
-  initClock() {
-    if (this.clock.timer) clearInterval(this.clock.timer);
-    const intervalMs = Math.max(10, Math.floor(1000 / (this.clock.freq * 2)));
-    this.clock.timer = setInterval(() => {
-      if (!this.masterPower) return;
-      this.clock.state = this.clock.state === 0 ? 1 : 0;
-      if (this.clock.state === 1) {
-        this.clock.divCounter = (this.clock.divCounter + 1) % 2;
-        if (this.clock.divCounter === 0) {
-          this.clock.divState = this.clock.divState === 0 ? 1 : 0;
-        }
-      }
-      this.evaluate();
-      this.notify();
-    }, intervalMs);
+  // Clock Knob: Logarithmic mapping from 0.5 Hz to 10 kHz:
+  // f = 0.5 * (20000 ^ t), where t in [0, 1]
+  setClockT(t) {
+    t = Math.max(0, Math.min(1, t));
+    this.clock.knobT = t;
+    this.clock.freq = 0.5 * Math.pow(20000, t);
+    this.notify();
   }
 
   setClockFreq(freq) {
+    freq = Math.max(0.5, Math.min(10000, freq));
     this.clock.freq = freq;
-    this.initClock();
+    // inverse: t = log(freq / 0.5) / log(20000)
+    this.clock.knobT = Math.log(freq / 0.5) / Math.log(20000);
+    this.notify();
+  }
+
+  formatClockFreq(freq = this.clock.freq) {
+    if (freq >= 1000) {
+      return `${(freq / 1000).toFixed(freq >= 10000 ? 0 : 1)} kHz`;
+    } else if (freq >= 10) {
+      return `${freq.toFixed(freq >= 100 ? 0 : 1)} Hz`;
+    } else {
+      return `${freq.toFixed(2)} Hz`;
+    }
+  }
+
+  toggleClockRun() {
+    this.clock.running = !this.clock.running;
+    this.notify();
+  }
+
+  stepClock() {
+    // Step one full period: two half-periods (rising + falling)
+    this.triggerClockEdge();
+    this.triggerClockEdge();
+    this.notify();
+  }
+
+  triggerClockEdge() {
+    this.clock.pos = this.clock.pos === 1 ? 0 : 1;
+    this.clock.neg = this.clock.pos === 1 ? 0 : 1;
+    if (this.clock.pos === 1) this.sim.clkPosRisingCount = (this.sim.clkPosRisingCount || 0) + 1;
+    this.logEdge("CLK.POS", this.clock.pos === 1 ? 0 : 1, this.clock.pos);
+    this.logEdge("CLK.NEG", this.clock.neg === 1 ? 0 : 1, this.clock.neg);
+    this.evaluate();
+  }
+
+  logEdge(netName, oldVal, newVal) {
+    this.sim.edgeLog.push({
+      time: this.sim.time,
+      net: netName,
+      oldVal,
+      newVal
+    });
+    if (this.sim.edgeLog.length > 5000) {
+      this.sim.edgeLog.splice(0, 1000);
+    }
+  }
+
+  // Manual Pulser: press & release (debounced, POS & NEG exact complements)
+  setPulser(num, pressed) {
+    const p = this.board.pulsers[num];
+    if (!p) return;
+    if (p.pressed === pressed) return;
+
+    p.pressed = pressed;
+    if (pressed) {
+      p.pos = 1;
+      p.neg = 0;
+      p.visualHoldUntil = performance.now() + 60; // Visual hold of at least 60ms
+      this.logEdge(`PULSER.${num}.POS`, 0, 1);
+      this.logEdge(`PULSER.${num}.NEG`, 1, 0);
+      this.playClickSound(1050);
+    } else {
+      p.pos = 0;
+      p.neg = 1;
+      this.logEdge(`PULSER.${num}.POS`, 1, 0);
+      this.logEdge(`PULSER.${num}.NEG`, 0, 1);
+      this.playClickSound(650);
+    }
+
+    this.evaluate();
+    this.notify();
+  }
+
+  // Virtual Time Loop (requestAnimationFrame)
+  startVirtualTimeLoop() {
+    const loop = (timestamp) => {
+      if (this.sim.lastRealTime === null) {
+        this.sim.lastRealTime = timestamp;
+      }
+      const dt = Math.min(0.1, (timestamp - this.sim.lastRealTime) / 1000); // Max dt clamp 100ms
+      this.sim.lastRealTime = timestamp;
+
+      if (this.masterPower && this.clock.running) {
+        this.advanceVirtualTime(dt);
+      }
+
+      // Check visual hold timers for pulsers
+      for (let i = 1; i <= 2; i++) {
+        const p = this.board.pulsers[i];
+        if (!p.pressed && timestamp < p.visualHoldUntil) {
+          // Keep visual LED lit during fast-click hold
+          this.board.leds[`LED_PULSER_${i}_POS`] = 1.0;
+        }
+      }
+
+      this.updateDisplaySmoothing(dt);
+      this.rafId = requestAnimationFrame(loop);
+    };
+
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      this.rafId = window.requestAnimationFrame(loop);
+    }
+  }
+
+  // Advance virtual time by dt, generating half-period clock edges
+  advanceVirtualTime(dt) {
+    if (this.clock.freq <= 0) return;
+    const halfPeriod = 1 / (this.clock.freq * 2);
+    let timeRemaining = dt;
+    let edgesThisFrame = 0;
+    this.sim.overrun = false;
+
+    while (timeRemaining > 0) {
+      const timeToNextEdge = halfPeriod - this.clock.halfPeriodPhase;
+
+      if (timeRemaining < timeToNextEdge - 1e-11) {
+        this.clock.halfPeriodPhase += timeRemaining;
+        this.sim.time += timeRemaining;
+        timeRemaining = 0;
+      } else {
+        // Edge occurs!
+        this.sim.time += timeToNextEdge;
+        timeRemaining -= timeToNextEdge;
+        this.clock.halfPeriodPhase = 0;
+
+        edgesThisFrame++;
+        if (edgesThisFrame <= this.sim.maxEdgesPerFrame) {
+          this.triggerClockEdge();
+        } else {
+          this.sim.overrun = true;
+          // Fast-forward phase without computing every individual edge to avoid freezing browser
+          this.sim.time += timeRemaining;
+          this.clock.halfPeriodPhase = (this.clock.halfPeriodPhase + timeRemaining) % halfPeriod;
+          timeRemaining = 0;
+          break;
+        }
+      }
+    }
+
+    this.notify();
+  }
+
+  // Display smoothing: time-weighted average for high frequencies
+  updateDisplaySmoothing(dt) {
+    const freq = this.clock.freq;
+    const isHighFreq = freq > 15;
+
+    // Clock LED brightness
+    if (isHighFreq) {
+      this.board.leds["LED_CLK_POS"] = 0.5; // 50% duty
+      this.board.leds["LED_CLK_NEG"] = 0.5;
+    } else {
+      this.board.leds["LED_CLK_POS"] = this.clock.pos === 1 ? 1.0 : 0.0;
+      this.board.leds["LED_CLK_NEG"] = this.clock.neg === 1 ? 1.0 : 0.0;
+    }
+
+    // Output LEDs smoothing
+    for (let i = 0; i < 8; i++) {
+      const jId = `OUT.Y${i}`;
+      const curVal = this.outputs[jId];
+      if (isHighFreq) {
+        const alpha = Math.min(1.0, dt * 15);
+        this.outputDuty[jId] = (this.outputDuty[jId] || 0) * (1 - alpha) + curVal * alpha;
+        this.board.leds[`LED_${jId}`] = Math.max(0.1, Math.min(1.0, this.outputDuty[jId]));
+      } else {
+        this.board.leds[`LED_${jId}`] = curVal === 1 ? 1.0 : 0.0;
+      }
+    }
   }
 
   toggleMasterPower() {
@@ -143,21 +326,13 @@ class TTLEngine {
     }
   }
 
-  setPulser(num, pressed) {
-    if (this.pulsers[num]) {
-      this.pulsers[num].pressed = pressed;
-      this.playClickSound(pressed ? 1100 : 600);
-      this.evaluate();
-      this.notify();
-    }
-  }
-
   // IC Socket Management
   insertChip(socketId, chipName, alignment = "left") {
     if (this.sockets[socketId]) {
       this.sockets[socketId].chip = chipName;
       this.sockets[socketId].alignment = alignment;
       this.sockets[socketId].state = {};
+      this.sockets[socketId].lastOutputs = null;
       this.evaluate();
       this.notify();
     }
@@ -167,6 +342,7 @@ class TTLEngine {
     if (this.sockets[socketId]) {
       this.sockets[socketId].chip = null;
       this.sockets[socketId].state = {};
+      this.sockets[socketId].lastOutputs = null;
       this.evaluate();
       this.notify();
     }
@@ -184,37 +360,20 @@ class TTLEngine {
   // Socket Jack <-> IC Pin Mapping
   getJackForICPin(socketId, icPin, pinCount, alignment = "left") {
     if (socketId === "U5") {
-      // 40-pin ZIF
       return `U5.J${icPin}`;
     }
-    // 20-pin ZIF (U1..U4)
-    // Left-aligned formula from addendum:
-    // IC pin n <= N/2 -> socket pin n
-    // IC pin n > N/2 -> socket pin n + (20 - N)
     const half = pinCount / 2;
     const diff = 20 - pinCount;
 
     let socketJackNum;
     if (alignment === "left") {
-      if (icPin <= half) {
-        socketJackNum = icPin;
-      } else {
-        socketJackNum = icPin + diff;
-      }
+      socketJackNum = icPin <= half ? icPin : icPin + diff;
     } else if (alignment === "right") {
       const offset = diff / 2;
-      if (icPin <= half) {
-        socketJackNum = icPin + offset;
-      } else {
-        socketJackNum = icPin + offset;
-      }
+      socketJackNum = icPin + offset;
     } else { // center
       const offset = Math.floor(diff / 4);
-      if (icPin <= half) {
-        socketJackNum = icPin + offset;
-      } else {
-        socketJackNum = icPin + diff - offset;
-      }
+      socketJackNum = icPin <= half ? icPin + offset : icPin + diff - offset;
     }
     return `${socketId}.J${socketJackNum}`;
   }
@@ -230,9 +389,8 @@ class TTLEngine {
   }
 
   // Wire Management
-  addWire(from, to, color = "#facc15") {
+  addWire(from, to, color = "#f5c518") {
     if (!from || !to || from === to) return false;
-    // Check if duplicate wire exists
     const exists = this.wires.some(w =>
       (w.from === from && w.to === to) || (w.from === to && w.to === from)
     );
@@ -290,13 +448,12 @@ class TTLEngine {
     this.nets = [];
 
     if (!this.masterPower) {
-      // Everything unpowered
       for (const k of Object.keys(this.outputs)) this.outputs[k] = 0;
       this.segDigits = [0, 0];
       return;
     }
 
-    // 1. Build Disjoint Set Union (DSU) for all nets
+    // 1. Build Union-Find
     const parent = new Map();
     const find = (x) => {
       if (!parent.has(x)) parent.set(x, x);
@@ -309,19 +466,25 @@ class TTLEngine {
       if (rootA !== rootB) parent.set(rootA, rootB);
     };
 
-    // Permanent internal ties on the trainer kit
+    // Internal kit ties
     union("PWR.5V_1", "PWR.5V_2");
     union("PWR.12V_1", "PWR.12V_2");
     union("PWR.GND_1", "PWR.GND_2");
     union("PWR.GND_2", "PWR.GND_3");
     union("PWR.GND_3", "PWR.GND_4");
 
-    // Connect user patch wires
+    // Aliases between naming conventions
+    union("CLK.POS", "CLK.OUT");
+    union("CLK.NEG", "CLK.DIV");
+    union("PULSER.1.POS", "PULSE1.Q");
+    union("PULSER.1.NEG", "PULSE1.QN");
+    union("PULSER.2.POS", "PULSE2.Q");
+    union("PULSER.2.NEG", "PULSE2.QN");
+
     for (const w of this.wires) {
       union(w.from, w.to);
     }
 
-    // Group jacks by net root
     const netGroups = new Map();
     const registerJack = (j) => {
       const root = find(j);
@@ -329,11 +492,11 @@ class TTLEngine {
       netGroups.get(root).add(j);
     };
 
-    // Collect all jacks in use
     const allJacks = new Set([
       "PWR.5V_1", "PWR.5V_2", "PWR.12V_1", "PWR.12V_2",
       "PWR.GND_1", "PWR.GND_2", "PWR.GND_3", "PWR.GND_4",
-      "CLK.OUT", "CLK.DIV",
+      "CLK.POS", "CLK.NEG", "CLK.OUT", "CLK.DIV",
+      "PULSER.1.POS", "PULSER.1.NEG", "PULSER.2.POS", "PULSER.2.NEG",
       "PULSE1.Q", "PULSE1.QN", "PULSE2.Q", "PULSE2.QN"
     ]);
     for (const k of Object.keys(this.inputs)) allJacks.add(k);
@@ -342,7 +505,6 @@ class TTLEngine {
       allJacks.add(w.from);
       allJacks.add(w.to);
     }
-    // Also include socket jacks
     for (const sId of ["U1", "U2", "U3", "U4"]) {
       for (let j = 1; j <= 20; j++) allJacks.add(`${sId}.J${j}`);
     }
@@ -350,14 +512,13 @@ class TTLEngine {
 
     for (const j of allJacks) registerJack(j);
 
-    // Initialise net state structures
     const netData = new Map();
     for (const [root, jackSet] of netGroups.entries()) {
       netData.set(root, {
         root,
         jacks: jackSet,
         drivers: [],
-        state: "FLOAT", // 0, 1, "FLOAT", "SHORT", "12V"
+        state: "FLOAT",
         voltage: 1.4
       });
       for (const j of jackSet) {
@@ -366,51 +527,55 @@ class TTLEngine {
     }
     this.nets = Array.from(netData.values());
 
-    // 2. Identify fixed hardware drivers
     const addDriver = (jackId, level, source) => {
       const net = this.netMap.get(jackId);
       if (net) net.drivers.push({ level, source });
     };
 
-    // Power terminals
+    // Power rails
     addDriver("PWR.5V_1", 1, "+5V Rail");
     addDriver("PWR.GND_1", 0, "GND Rail");
     addDriver("PWR.12V_1", "12V", "+12V Rail");
 
-    // 12 Data Input switches
+    // Switches
     for (const [swId, val] of Object.entries(this.inputs)) {
       addDriver(swId, val, `Switch ${swId}`);
     }
 
-    // Manual Pulsers
-    addDriver("PULSE1.Q", this.pulsers[1].pressed ? 1 : 0, "Pulser 1 Q");
-    addDriver("PULSE1.QN", this.pulsers[1].pressed ? 0 : 1, "Pulser 1 Q'");
-    addDriver("PULSE2.Q", this.pulsers[2].pressed ? 1 : 0, "Pulser 2 Q");
-    addDriver("PULSE2.QN", this.pulsers[2].pressed ? 0 : 1, "Pulser 2 Q'");
+    // Manual Pulsers (POS and NEG)
+    addDriver("PULSER.1.POS", this.board.pulsers[1].pos, "Pulser 1 POS");
+    addDriver("PULSER.1.NEG", this.board.pulsers[1].neg, "Pulser 1 NEG");
+    addDriver("PULSER.2.POS", this.board.pulsers[2].pos, "Pulser 2 POS");
+    addDriver("PULSER.2.NEG", this.board.pulsers[2].neg, "Pulser 2 NEG");
 
-    // Clock generator
-    addDriver("CLK.OUT", this.clock.state, "Clock Out");
-    addDriver("CLK.DIV", this.clock.divState, "Clock Div");
+    // Clock Generator (POS and exact inverse NEG)
+    addDriver("CLK.POS", this.clock.pos, "Clock POS");
+    addDriver("CLK.NEG", this.clock.neg, "Clock NEG");
 
-    // 3. Iterative IC evaluation loop (for combinational propagation)
+    // Seed existing IC drivers from last evaluation so nets don't falsely float to 1 during settling
+    for (const [sId, sData] of Object.entries(this.sockets)) {
+      if (!sData.chip || !sData.lastOutputs) continue;
+      const icDef = IC_LIBRARY[sData.chip];
+      if (!icDef) continue;
+      for (const [pinStr, outVal] of Object.entries(sData.lastOutputs)) {
+        const pin = parseInt(pinStr, 10);
+        const outJack = this.getJackForICPin(sId, pin, icDef.pinCount, sData.alignment);
+        addDriver(outJack, outVal, `IC_${sId}_${sData.chip}_P${pin}`);
+      }
+    }
+
+    // 2. Multi-Pass Combinational & Sequential Evaluation
     const MAX_PASSES = 6;
     for (let pass = 0; pass < MAX_PASSES; pass++) {
-      // Resolve net logic levels from existing drivers
       for (const net of this.nets) {
-        let has1 = false;
-        let has0 = false;
-        let has12 = false;
-
+        let has1 = false, has0 = false, has12 = false;
         for (const d of net.drivers) {
           if (d.level === 1) has1 = true;
           else if (d.level === 0) has0 = true;
           else if (d.level === "12V") has12 = true;
         }
 
-        if (has1 && has0) {
-          net.state = "SHORT";
-          net.voltage = 0.5;
-        } else if (has12 && has0) {
+        if ((has1 && has0) || (has12 && has0)) {
           net.state = "SHORT";
           net.voltage = 0.5;
         } else if (has12) {
@@ -423,24 +588,21 @@ class TTLEngine {
           net.state = 0;
           net.voltage = 0.2;
         } else {
-          // Unconnected floating net: TTL inputs float to Logic 1!
-          net.state = 1; // Floating TTL reads as HIGH
-          net.voltage = 1.6; // Typical floating TTL input threshold
+          // Unconnected TTL input floats to 1!
+          net.state = 1;
+          net.voltage = 1.6;
         }
       }
 
-      // Clear dynamic IC drivers before re-evaluating
       for (const net of this.nets) {
         net.drivers = net.drivers.filter(d => !d.source.startsWith("IC_"));
       }
 
-      // Evaluate active ICs in sockets
       for (const [sId, sData] of Object.entries(this.sockets)) {
         if (!sData.chip || !sData.leverLocked) continue;
         const icDef = IC_LIBRARY[sData.chip];
         if (!icDef) continue;
 
-        // Check power
         let isPowered = true;
         if (this.strictPowerMode) {
           const vccJack = this.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, sData.alignment);
@@ -455,22 +617,19 @@ class TTLEngine {
 
         if (!isPowered) continue;
 
-        // Read inputs for IC
         const inMap = {};
         for (const pinInfo of icDef.pins) {
           if (pinInfo.type === "in") {
             const jack = this.getJackForICPin(sId, pinInfo.pin, icDef.pinCount, sData.alignment);
             const net = this.netMap.get(jack);
-            // Floating TTL pin reads as 1
             inMap[pinInfo.pin] = (net ? (net.state === "SHORT" ? 0 : (net.state === 1 ? 1 : 0)) : 1);
           }
         }
 
-        // Run IC logic
         const evalResult = icDef.eval(inMap, sData.state);
         sData.state = evalResult.nextState;
+        sData.lastOutputs = evalResult.outputs;
 
-        // Drive outputs onto corresponding nets
         for (const [pinStr, outVal] of Object.entries(evalResult.outputs)) {
           const pin = parseInt(pinStr, 10);
           const outJack = this.getJackForICPin(sId, pin, icDef.pinCount, sData.alignment);
@@ -479,7 +638,7 @@ class TTLEngine {
       }
     }
 
-    // 4. Final resolve and short circuit detection
+    // 3. Final Net Resolving
     let hadShort = false;
     for (const net of this.nets) {
       const has1 = net.drivers.some(d => d.level === 1);
@@ -509,14 +668,13 @@ class TTLEngine {
 
     if (hadShort) this.playShortBuzzer();
 
-    // 5. Update trainer outputs and 7-segment display
+    // 4. Update trainer outputs and 7-segment display
     for (let i = 0; i < 8; i++) {
       const jack = `OUT.Y${i}`;
       const net = this.netMap.get(jack);
       this.outputs[jack] = (net && net.state === 1) ? 1 : 0;
     }
 
-    // High nibble Y7..Y4, Low nibble Y3..Y0
     const highNibble = (this.outputs["OUT.Y7"] << 3) |
                        (this.outputs["OUT.Y6"] << 2) |
                        (this.outputs["OUT.Y5"] << 1) |
@@ -530,7 +688,6 @@ class TTLEngine {
     this.segDigits = [highNibble, lowNibble];
   }
 
-  // Probe helper
   probeJack(jackId) {
     if (!this.masterPower) {
       return { id: jackId, state: "OFF", voltage: 0.0, net: null };
@@ -547,5 +704,121 @@ class TTLEngine {
       netSize: net.jacks.size
     };
   }
-}
 
+  // Self-Test Runner (Required by Phase 3 Spec)
+  runSelfTests() {
+    const results = {
+      passed: true,
+      tests: []
+    };
+
+    const assert = (name, condition, details = "") => {
+      results.tests.push({ name, pass: !!condition, details });
+      if (!condition) results.passed = false;
+    };
+
+    // Test 1: Pulser POS & NEG exact complements & edge behavior
+    const origP1 = { ...this.board.pulsers[1] };
+    this.setPulser(1, false);
+    assert("Pulser 1 Idle", this.board.pulsers[1].pos === 0 && this.board.pulsers[1].neg === 1,
+           `POS=${this.board.pulsers[1].pos}, NEG=${this.board.pulsers[1].neg}`);
+
+    this.setPulser(1, true);
+    assert("Pulser 1 Press (POS=1, NEG=0)", this.board.pulsers[1].pos === 1 && this.board.pulsers[1].neg === 0,
+           `POS=${this.board.pulsers[1].pos}, NEG=${this.board.pulsers[1].neg}`);
+    assert("Pulser POS == NOT NEG always", (this.board.pulsers[1].pos ^ this.board.pulsers[1].neg) === 1);
+
+    this.setPulser(1, false);
+    assert("Pulser 1 Release (POS=0, NEG=1)", this.board.pulsers[1].pos === 0 && this.board.pulsers[1].neg === 1);
+    this.board.pulsers[1] = origP1;
+
+    // Test 2: Clock at 1 Hz for 10 s virtual time -> exactly 10 rising and 10 falling edges on CLK.POS
+    const origClock = { ...this.clock };
+    this.clock.freq = 1.0;
+    this.clock.pos = 0;
+    this.clock.neg = 1;
+    this.clock.halfPeriodPhase = 0;
+    this.sim.time = 0;
+    this.sim.edgeLog = [];
+
+    // Advance 10 seconds in steps of 0.05s (typical 20fps or 60fps frame)
+    for (let step = 0; step < 200; step++) {
+      this.advanceVirtualTime(0.05);
+    }
+
+    const clkPosEdges = this.sim.edgeLog.filter(e => e.net === "CLK.POS");
+    const risingEdges1Hz = clkPosEdges.filter(e => e.oldVal === 0 && e.newVal === 1).length;
+    const fallingEdges1Hz = clkPosEdges.filter(e => e.oldVal === 1 && e.newVal === 0).length;
+    assert("1 Hz Clock 10s: exactly 10 rising edges", risingEdges1Hz === 10, `Count=${risingEdges1Hz}`);
+    assert("1 Hz Clock 10s: exactly 10 falling edges", fallingEdges1Hz === 10, `Count=${fallingEdges1Hz}`);
+    assert("CLK.NEG is always inverse of CLK.POS", this.clock.pos !== this.clock.neg);
+
+    // Test 3: Clock at 10 kHz for 1 s of virtual time -> 10000 ± 1 rising edges across capped frames
+    this.clock.freq = 10000.0;
+    this.clock.pos = 0;
+    this.clock.neg = 1;
+    this.clock.halfPeriodPhase = 0;
+    this.sim.time = 0;
+    this.sim.edgeLog = [];
+    this.sim.clkPosRisingCount = 0;
+
+    // Advance 1 second in 20 frames of 0.05s
+    for (let step = 0; step < 20; step++) {
+      this.advanceVirtualTime(0.05);
+    }
+    const clk10kEdges = this.sim.clkPosRisingCount;
+    assert("10 kHz Clock 1s: count within tolerance", clk10kEdges >= 9990 && clk10kEdges <= 10010,
+           `Edges=${clk10kEdges} (expected ~10000)`);
+    assert("10 kHz Clock 1s: no overrun with 1000 edges/frame", !this.sim.overrun);
+
+    // Test 4: 7490 wired QA->CLKB, CLK.POS->CLKA counts 0..9 and wraps on each falling edge
+    const origU1 = { ...this.sockets.U1 };
+    this.sockets.U1 = { id: "U1", chip: "7490", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false); // Practice mode for standalone IC test
+    this.clearWires();
+    this.addWire("CLK.POS", "U1.J20"); // CLKA = Pin 14 -> Jack 20 (14-pin left-aligned)
+    this.addWire("U1.J18", "U1.J1");   // QA (Pin 12 -> Jack 18) to CLKB (Pin 1 -> Jack 1)
+    this.addWire("PWR.GND_1", "U1.J2"); // Reset R0(1) to GND
+    this.addWire("PWR.GND_1", "U1.J3"); // Reset R0(2) to GND
+    this.addWire("PWR.GND_1", "U1.J6"); // Reset R9(1) to GND
+    this.addWire("PWR.GND_1", "U1.J7"); // Reset R9(2) to GND
+
+    // Initialize state after wiring
+    this.clock.pos = 1; this.clock.neg = 0;
+    this.sockets.U1.state = { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 0 };
+    this.sockets.U1.lastOutputs = { 12: 0, 9: 0, 11: 0, 8: 0 };
+    this.evaluate();
+
+    const countsObserved = [];
+
+    // Send 10 full clock cycles (each cycle has a falling edge)
+    for (let cycle = 0; cycle < 10; cycle++) {
+      // Clock High
+      this.clock.pos = 1; this.clock.neg = 0;
+      this.evaluate();
+      // Clock Low (Falling edge trigger)
+      this.clock.pos = 0; this.clock.neg = 1;
+      this.evaluate();
+
+      const st = this.sockets.U1.state;
+      const count = (st.bcd * 2) + st.qa;
+      countsObserved.push(count);
+    }
+
+    const expectedCounts = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+    const seqMatches = countsObserved.every((v, i) => v === expectedCounts[i]);
+    assert("7490 Decade Counter counts 0..9 and wraps on falling edges", seqMatches,
+           `Observed: [${countsObserved.join(",")}]`);
+
+    // Restore state
+    this.sockets.U1 = origU1;
+    this.clock.freq = origClock.freq;
+    this.clock.knobT = origClock.knobT;
+    this.clock.running = origClock.running;
+    this.clock.pos = origClock.pos;
+    this.clock.neg = origClock.neg;
+    this.evaluate();
+
+    return results;
+  }
+}

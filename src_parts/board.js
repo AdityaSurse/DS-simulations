@@ -5,22 +5,25 @@ class BoardRenderer {
     this.svg = svgElement;
     this.onJackHover = onJackHover;
 
-    this.jackCoords = {}; // Map of jackId -> { x, y }
-    this.selectedJack = null; // Jack currently clicked for wiring
-    this.tempMousePos = null; // Current mouse coords during wire drag
-    this.activeView = "full"; // full, zif, inputs, outputs, u5
-    this.activeColor = "#f5c518"; // Selected wire color (default yellow)
+    this.jackCoords = {};
+    this.selectedJack = null;
+    this.tempMousePos = null;
+    this.activeView = "full";
+    this.activeColor = "#f5c518";
     this.deleteMode = false;
 
     // Pan & Zoom state
     this.viewBox = { x: 0, y: 0, w: 1600, h: 1160 };
-    this.baseViewBox = { x: 0, y: 0, w: 1600, h: 1160 };
     this.isPanning = false;
     this.panStart = { x: 0, y: 0 };
+
+    // Clock knob dragging state
+    this.isDraggingKnob = false;
 
     this.setupViewPresets();
     this.bindEvents();
     this.bindPanZoom();
+    this.bindKnobDrag();
   }
 
   setupViewPresets() {
@@ -81,15 +84,22 @@ class BoardRenderer {
   bindPanZoom() {
     const container = this.svg.parentElement;
 
-    // Mouse wheel zoom
     container.addEventListener("wheel", (e) => {
+      // If over clock knob, adjust frequency directly with mouse wheel
+      if (e.target.closest(".knob-group")) {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.03 : -0.03;
+        this.engine.setClockT(this.engine.clock.knobT + delta);
+        this.render();
+        return;
+      }
+
       e.preventDefault();
       const coords = this.getSVGCoords(e);
       const factor = e.deltaY > 0 ? 1.12 : 0.89;
       this.zoom(factor, coords);
     }, { passive: false });
 
-    // Middle-click or Space+drag pan
     window.addEventListener("keydown", (e) => {
       if (e.code === "Space" && !e.repeat && document.activeElement.tagName !== "INPUT") {
         container.classList.add("panning");
@@ -122,15 +132,51 @@ class BoardRenderer {
       }
     });
 
-    window.addEventListener("mouseup", (e) => {
-      if (this.isPanning) {
-        this.isPanning = false;
+    window.addEventListener("mouseup", () => {
+      this.isPanning = false;
+    });
+  }
+
+  bindKnobDrag() {
+    const knobCenter = { x: 1220, y: 446 };
+
+    this.svg.addEventListener("mousedown", (e) => {
+      const knobGroup = e.target.closest(".knob-group");
+      if (knobGroup) {
+        this.isDraggingKnob = true;
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (this.isDraggingKnob) {
+        const coords = this.getSVGCoords(e);
+        const dx = coords.x - knobCenter.x;
+        const dy = coords.y - knobCenter.y;
+        // Calculate angle in degrees relative to bottom
+        let angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+        if (angle < 0) angle += 360;
+
+        // Map angle from 45 deg to 315 deg (270 degree span)
+        let t = 0;
+        if (angle <= 45) t = 0;
+        else if (angle >= 315) t = 1;
+        else t = (angle - 45) / 270;
+
+        this.engine.setClockT(t);
+        this.render();
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (this.isDraggingKnob) {
+        this.isDraggingKnob = false;
       }
     });
   }
 
   bindEvents() {
-    // Jack click / wire creation & deletion
+    // Click interactions
     this.svg.addEventListener("click", (e) => {
       // Wire deletion
       const wireGroup = e.target.closest(".patch-cord-group");
@@ -142,7 +188,7 @@ class BoardRenderer {
         }
       }
 
-      // Switch click
+      // Toggle Switch
       const switchGroup = e.target.closest(".switch-group");
       if (switchGroup) {
         const swId = switchGroup.dataset.switch;
@@ -150,12 +196,26 @@ class BoardRenderer {
         return;
       }
 
-      // Knob click (cycle frequency)
-      const knobGroup = e.target.closest(".knob-group");
-      if (knobGroup) {
-        const freqs = [1, 5, 10, 50, 100, 500];
-        const nextIdx = (freqs.indexOf(this.engine.clock.freq) + 1) % freqs.length;
-        this.engine.setClockFreq(freqs[nextIdx]);
+      // ZIF Socket Lever Toggle
+      const zifLever = e.target.closest(".zif-lever");
+      if (zifLever) {
+        const sId = zifLever.dataset.socket;
+        const curLocked = this.engine.sockets[sId].leverLocked;
+        this.engine.setSocketLever(sId, !curLocked);
+        return;
+      }
+
+      // Clock Run/Pause button
+      const clkToggle = e.target.closest("#btn-clk-run-pause");
+      if (clkToggle) {
+        this.engine.toggleClockRun();
+        return;
+      }
+
+      // Clock Step button
+      const clkStep = e.target.closest("#btn-clk-step");
+      if (clkStep) {
+        this.engine.stepClock();
         return;
       }
 
@@ -170,11 +230,9 @@ class BoardRenderer {
         }
 
         if (!this.selectedJack) {
-          // Start wire
           this.selectedJack = jackId;
           this.render();
         } else {
-          // Complete wire
           if (this.selectedJack !== jackId) {
             this.engine.addWire(this.selectedJack, jackId, this.activeColor);
           }
@@ -185,7 +243,7 @@ class BoardRenderer {
         return;
       }
 
-      // Clicked outside -> cancel active wire
+      // Clicked outside on board
       if (this.selectedJack) {
         this.selectedJack = null;
         this.tempMousePos = null;
@@ -198,8 +256,7 @@ class BoardRenderer {
       e.preventDefault();
       const wireGroup = e.target.closest(".patch-cord-group");
       if (wireGroup) {
-        const wireId = wireGroup.dataset.wireId;
-        this.engine.removeWire(wireId);
+        this.engine.removeWire(wireGroup.dataset.wireId);
         return;
       }
       const jackGroup = e.target.closest(".jack-group");
@@ -212,9 +269,9 @@ class BoardRenderer {
       }
     });
 
-    // Mouse move for rubber-band wire and probe HUD
+    // Mouse move for rubber-band wire, probe HUD, and drop target highlight
     this.svg.addEventListener("mousemove", (e) => {
-      if (this.isPanning) return;
+      if (this.isPanning || this.isDraggingKnob) return;
       const coords = this.getSVGCoords(e);
       if (this.selectedJack) {
         this.tempMousePos = coords;
@@ -230,18 +287,19 @@ class BoardRenderer {
       }
     });
 
-    // Manual pulser press and release
+    // Manual Pulser press & release
     this.svg.addEventListener("mousedown", (e) => {
       const btnGroup = e.target.closest(".pushbutton-group");
       if (btnGroup) {
         const pulserNum = parseInt(btnGroup.dataset.pulser, 10);
         this.engine.setPulser(pulserNum, true);
+        e.preventDefault();
       }
     });
 
     window.addEventListener("mouseup", () => {
-      if (this.engine.pulsers[1].pressed) this.engine.setPulser(1, false);
-      if (this.engine.pulsers[2].pressed) this.engine.setPulser(2, false);
+      if (this.engine.board.pulsers[1].pressed) this.engine.setPulser(1, false);
+      if (this.engine.board.pulsers[2].pressed) this.engine.setPulser(2, false);
     });
 
     // Keyboard shortcuts
@@ -255,6 +313,12 @@ class BoardRenderer {
       } else if (e.key === " " && !e.repeat && document.activeElement.tagName !== "INPUT") {
         e.preventDefault();
         this.engine.setPulser(1, true);
+      } else if (e.key === "ArrowUp") {
+        this.engine.setClockT(this.engine.clock.knobT + 0.05);
+        this.render();
+      } else if (e.key === "ArrowDown") {
+        this.engine.setClockT(this.engine.clock.knobT - 0.05);
+        this.render();
       }
     });
 
@@ -304,19 +368,16 @@ class BoardRenderer {
     cursorDot.setAttribute("cy", p2.y);
   }
 
-  // Full SVG Assembly & Render
   render() {
     this.jackCoords = {};
     let svgContent = SVG_COMPONENTS.renderDefs();
 
     // 1. Copper/Wood Outer Frame (1600 x 1160)
     svgContent += `
-      <!-- Beveled Outer Frame -->
       <rect x="0" y="0" width="1600" height="1160" rx="8" fill="url(#copperFrameTop)" stroke="#2d1808" stroke-width="3" />
       <rect x="12" y="12" width="1576" height="1136" rx="6" fill="url(#copperFrameSide)" />
       <rect x="24" y="24" width="1552" height="1112" rx="4" fill="#38200f" />
 
-      <!-- Metallic Corner & Midpoint Screws -->
       ${SVG_COMPONENTS.renderScrew(16, 16)}
       ${SVG_COMPONENTS.renderScrew(1584, 16)}
       ${SVG_COMPONENTS.renderScrew(16, 1144)}
@@ -326,7 +387,6 @@ class BoardRenderer {
       ${SVG_COMPONENTS.renderScrew(16, 580)}
       ${SVG_COMPONENTS.renderScrew(1584, 580)}
 
-      <!-- Dark Green PCB Surface -->
       <rect x="30" y="30" width="1540" height="1100" rx="4" fill="url(#pcbGradient)" stroke="#04160c" stroke-width="2" />
       <rect x="30" y="30" width="1540" height="1100" fill="url(#pcbTracePattern)" opacity="0.35" />
     `;
@@ -338,13 +398,21 @@ class BoardRenderer {
         <text x="200" y="70" class="silkscreen-title" text-anchor="middle">40 PIN ZIF EXPANSION</text>
         <text x="200" y="90" class="silkscreen-text mini" text-anchor="middle">UNIVERSAL MICROCONTROLLER / LSI INTERFACE (U5)</text>
 
-        <!-- 40-Pin ZIF Socket Body -->
-        ${SVG_COMPONENTS.renderZIFSocket("U5", 130, 120, 140, 840, 40, this.engine.sockets.U5.leverLocked)}
-        ${SVG_COMPONENTS.renderInsertedIC("U5", this.engine.sockets.U5.chip, 130, 120, 140, 840, 40, "left")}
+        ${SVG_COMPONENTS.drawZIFSocket({
+          socketId: "U5",
+          x: 130, y: 120, width: 140, height: 840,
+          pinCount: 40,
+          leverLocked: this.engine.sockets.U5.leverLocked
+        })}
+        ${SVG_COMPONENTS.drawICChip({
+          socketId: "U5",
+          chipName: this.engine.sockets.U5.chip,
+          socketX: 130, socketY: 120, socketW: 140, socketH: 840,
+          icPinCount: 40, alignment: "left"
+        })}
       </g>
     `;
 
-    // U5 Jacks: Left column 1..20 (top to bottom), Right column 21..40 (bottom to top)
     const vertPitch = (840 - 50) / 19;
     for (let i = 0; i < 20; i++) {
       const pinLeft = i + 1;
@@ -352,14 +420,20 @@ class BoardRenderer {
       const lx = 92;
       const ly = 145 + i * vertPitch;
       this.jackCoords[jLeftId] = { x: lx, y: ly };
-      svgContent += SVG_COMPONENTS.renderBrassJack(jLeftId, `${pinLeft}`, lx, ly, "left");
+      svgContent += SVG_COMPONENTS.drawJack({
+        id: jLeftId, label: `${pinLeft}`, cx: lx, cy: ly, labelSide: "left",
+        isSelected: this.selectedJack === jLeftId
+      });
 
       const pinRight = 21 + i;
       const jRightId = `U5.J${pinRight}`;
       const rx = 308;
       const ry = 145 + (19 - i) * vertPitch;
       this.jackCoords[jRightId] = { x: rx, y: ry };
-      svgContent += SVG_COMPONENTS.renderBrassJack(jRightId, `${pinRight}`, rx, ry, "right");
+      svgContent += SVG_COMPONENTS.drawJack({
+        id: jRightId, label: `${pinRight}`, cx: rx, cy: ry, labelSide: "right",
+        isSelected: this.selectedJack === jRightId
+      });
     }
 
     // 3. ZONE 2: 12-Bit Data Input (x: 376, y: 42, w: 648, h: 290)
@@ -373,7 +447,6 @@ class BoardRenderer {
         <text x="700" y="66" class="silkscreen-text bold" text-anchor="middle">GROUP B (B3 - B0)</text>
         <text x="916" y="66" class="silkscreen-text bold" text-anchor="middle">GROUP A (A3 - A0)</text>
 
-        <!-- Decorative Buffer ICs -->
         <rect x="444" y="196" width="80" height="24" rx="2" fill="url(#icBody)" stroke="#333" stroke-width="0.8" />
         <text x="484" y="212" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle">74LS244 (C)</text>
         <rect x="660" y="196" width="80" height="24" rx="2" fill="url(#icBody)" stroke="#333" stroke-width="0.8" />
@@ -400,10 +473,19 @@ class BoardRenderer {
 
     for (const ch of inputChannels) {
       const swVal = this.engine.inputs[ch.id] === 1;
-      svgContent += SVG_COMPONENTS.renderToggleSwitch(ch.id, ch.name, ch.x, 110, swVal);
-      svgContent += SVG_COMPONENTS.renderLed(`LED_${ch.id}`, null, ch.x, 168, swVal && this.engine.masterPower);
+      svgContent += SVG_COMPONENTS.drawToggleSwitch({
+        id: ch.id, label: ch.name, cx: ch.x, cy: 110, isHigh: swVal
+      });
+      svgContent += SVG_COMPONENTS.drawLED({
+        id: `LED_${ch.id}`, cx: ch.x, cy: 168,
+        isOn: swVal && this.engine.masterPower,
+        color: "red"
+      });
       this.jackCoords[ch.id] = { x: ch.x, y: 260 };
-      svgContent += SVG_COMPONENTS.renderBrassJack(ch.id, ch.name, ch.x, 260, "bottom");
+      svgContent += SVG_COMPONENTS.drawJack({
+        id: ch.id, label: ch.name, cx: ch.x, cy: 260, labelSide: "bottom",
+        isSelected: this.selectedJack === ch.id
+      });
     }
 
     // 4. ZONE 3: 8-Bit Data Output (x: 1040, y: 42, w: 520, h: 290)
@@ -414,14 +496,16 @@ class BoardRenderer {
         <text x="1170" y="66" class="silkscreen-text" text-anchor="middle">HIGH NIBBLE (Y7-Y4)</text>
         <text x="1430" y="66" class="silkscreen-text" text-anchor="middle">LOW NIBBLE (Y3-Y0)</text>
 
-        <!-- Decorative Decoder ICs -->
         <rect x="1150" y="112" width="60" height="28" rx="2" fill="url(#icBody)" stroke="#333" stroke-width="0.8" />
         <text x="1180" y="130" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle">74LS47 (H)</text>
         <rect x="1380" y="112" width="60" height="28" rx="2" fill="url(#icBody)" stroke="#333" stroke-width="0.8" />
         <text x="1410" y="130" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle">74LS47 (L)</text>
 
-        <!-- Dual 7-Segment Displays -->
-        ${SVG_COMPONENTS.renderSevenSegmentDisplay("output-7seg", 1249, 78, this.engine.segDigits)}
+        ${SVG_COMPONENTS.drawSevenSeg({
+          id: "output-7seg",
+          x: 1249, y: 78,
+          digits: this.engine.segDigits
+        })}
       </g>
     `;
 
@@ -429,11 +513,18 @@ class BoardRenderer {
       const bitNum = 7 - i;
       const jId = `OUT.Y${bitNum}`;
       const jx = 1075 + i * 64;
-      const isOutHigh = this.engine.outputs[jId] === 1;
+      const brightness = this.engine.board.leds[`LED_${jId}`] || (this.engine.outputs[jId] ? 1.0 : 0.0);
 
-      svgContent += SVG_COMPONENTS.renderLed(`LED_${jId}`, `Y${bitNum}`, jx, 185, isOutHigh && this.engine.masterPower, "top");
+      svgContent += SVG_COMPONENTS.drawLED({
+        id: `LED_${jId}`, label: `Y${bitNum}`, cx: jx, cy: 185,
+        brightness: this.engine.masterPower ? brightness : 0.0,
+        color: "red", labelPos: "top"
+      });
       this.jackCoords[jId] = { x: jx, y: 260 };
-      svgContent += SVG_COMPONENTS.renderBrassJack(jId, `Y${bitNum}`, jx, 260, "bottom");
+      svgContent += SVG_COMPONENTS.drawJack({
+        id: jId, label: `Y${bitNum}`, cx: jx, cy: 260, labelSide: "bottom",
+        isSelected: this.selectedJack === jId
+      });
     }
 
     // 5. ZONE 4: Power Supply (x: 376, y: 348, w: 344, h: 204)
@@ -442,15 +533,12 @@ class BoardRenderer {
         <rect x="376" y="348" width="344" height="204" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
         <text x="548" y="370" class="silkscreen-title" text-anchor="middle">POWER SUPPLY</text>
 
-        <!-- 12V Section -->
         <rect x="394" y="386" width="144" height="68" rx="3" fill="none" stroke="var(--silkscreen)" stroke-width="1.2" />
         <text x="466" y="404" class="silkscreen-text bold" text-anchor="middle">+12 V</text>
 
-        <!-- 5V Section -->
         <rect x="554" y="386" width="148" height="68" rx="3" fill="none" stroke="var(--silkscreen)" stroke-width="1.2" />
         <text x="628" y="404" class="silkscreen-text bold" text-anchor="middle">+5 V (VCC)</text>
 
-        <!-- GND Section -->
         <rect x="394" y="466" width="308" height="74" rx="3" fill="none" stroke="var(--silkscreen)" stroke-width="1.2" />
         <text x="548" y="484" class="silkscreen-text bold" text-anchor="middle">GROUND (GND)</text>
       </g>
@@ -458,64 +546,120 @@ class BoardRenderer {
 
     this.jackCoords["PWR.12V_1"] = { x: 436, y: 432 };
     this.jackCoords["PWR.12V_2"] = { x: 496, y: 432 };
-    svgContent += SVG_COMPONENTS.renderBrassJack("PWR.12V_1", null, 436, 432);
-    svgContent += SVG_COMPONENTS.renderBrassJack("PWR.12V_2", null, 496, 432);
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_1", type: "12V", cx: 436, cy: 432 });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_2", type: "12V", cx: 496, cy: 432 });
 
     this.jackCoords["PWR.5V_1"] = { x: 596, y: 432 };
     this.jackCoords["PWR.5V_2"] = { x: 660, y: 432 };
-    svgContent += SVG_COMPONENTS.renderBrassJack("PWR.5V_1", null, 596, 432);
-    svgContent += SVG_COMPONENTS.renderBrassJack("PWR.5V_2", null, 660, 432);
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_1", type: "5V", cx: 596, cy: 432 });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_2", type: "5V", cx: 660, cy: 432 });
 
     const gndX = [436, 510, 584, 660];
     for (let i = 1; i <= 4; i++) {
       const gId = `PWR.GND_${i}`;
       this.jackCoords[gId] = { x: gndX[i - 1], y: 516 };
-      svgContent += SVG_COMPONENTS.renderBrassJack(gId, null, gndX[i - 1], 516);
+      svgContent += SVG_COMPONENTS.drawTerminal({ id: gId, type: "GND", cx: gndX[i - 1], cy: 516 });
     }
 
     // 6. ZONE 5: Manual Pulser (x: 736, y: 348, w: 376, h: 204)
+    // POS (idle 0, active 1) & NEG (idle 1, active 0)
     svgContent += `
       <g id="zone-pulser">
         <rect x="736" y="348" width="376" height="204" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
-        <text x="924" y="370" class="silkscreen-title" text-anchor="middle">MANUAL PULSER</text>
-        <text x="924" y="388" class="silkscreen-text mini" text-anchor="middle">DEBOUNCED SCHMITT-TRIGGER (CD4093)</text>
+        <text x="924" y="368" class="silkscreen-title" text-anchor="middle">MANUAL PULSER</text>
+        <text x="924" y="384" class="silkscreen-text mini" text-anchor="middle">DEBOUNCED SCHMITT-TRIGGER (CD4093)</text>
 
-        ${SVG_COMPONENTS.renderPushButton(1, "PULSER 1", 790, 440, this.engine.pulsers[1].pressed)}
-        ${SVG_COMPONENTS.renderPushButton(2, "PULSER 2", 1058, 440, this.engine.pulsers[2].pressed)}
+        ${SVG_COMPONENTS.drawPushButton({
+          id: 1, label: "PULSER 1", cx: 790, cy: 434,
+          isPressed: this.engine.board.pulsers[1].pressed
+        })}
+        ${SVG_COMPONENTS.drawPushButton({
+          id: 2, label: "PULSER 2", cx: 1058, cy: 434,
+          isPressed: this.engine.board.pulsers[2].pressed
+        })}
 
-        <rect x="894" y="420" width="60" height="36" rx="2" fill="url(#icBody)" stroke="#333" stroke-width="0.8" />
-        <text x="924" y="442" fill="#cbd5e1" font-family="var(--font-mono)" font-size="9" text-anchor="middle">CD4093</text>
+        <rect x="894" y="416" width="60" height="34" rx="2" fill="url(#icBody)" stroke="#333" stroke-width="0.8" />
+        <text x="924" y="438" fill="#cbd5e1" font-family="var(--font-mono)" font-size="9" text-anchor="middle">CD4093</text>
 
-        <path d="M 830 424 L 840 424 L 840 410 L 855 410 L 855 424 L 865 424" fill="none" stroke="var(--silkscreen)" stroke-width="1.5" />
-        <path d="M 983 424 L 993 424 L 993 410 L 1008 410 L 1008 424 L 1018 424" fill="none" stroke="var(--silkscreen)" stroke-width="1.5" />
+        <!-- Silkscreen pulse diagrams (Positive pulse symbol & Inverted pulse symbol) -->
+        <path d="M 836 432 L 844 432 L 844 418 L 856 418 L 856 432 L 864 432" fill="none" stroke="var(--silkscreen)" stroke-width="1.5" />
+        <path d="M 876 418 L 884 418 L 884 432 L 896 432 L 896 418 L 904 418" fill="none" stroke="var(--silkscreen)" stroke-width="1.5" />
+
+        <path d="M 946 432 L 954 432 L 954 418 L 966 418 L 966 432 L 974 432" fill="none" stroke="var(--silkscreen)" stroke-width="1.5" />
+        <path d="M 986 418 L 994 418 L 994 432 L 1006 432 L 1006 418 L 1014 418" fill="none" stroke="var(--silkscreen)" stroke-width="1.5" />
       </g>
     `;
 
-    this.jackCoords["PULSE1.Q"] = { x: 846, y: 494 };
-    this.jackCoords["PULSE1.QN"] = { x: 884, y: 494 };
-    svgContent += SVG_COMPONENTS.renderBrassJack("PULSE1.Q", "Q", 846, 494, "bottom");
-    svgContent += SVG_COMPONENTS.renderBrassJack("PULSE1.QN", "Q'", 884, 494, "bottom");
+    // Pulser 1 Jacks: POS and NEG + LEDs
+    this.jackCoords["PULSER.1.POS"] = { x: 846, y: 494 };
+    this.jackCoords["PULSER.1.NEG"] = { x: 888, y: 494 };
+    this.jackCoords["PULSE1.Q"] = this.jackCoords["PULSER.1.POS"];
+    this.jackCoords["PULSE1.QN"] = this.jackCoords["PULSER.1.NEG"];
 
-    this.jackCoords["PULSE2.Q"] = { x: 964, y: 494 };
-    this.jackCoords["PULSE2.QN"] = { x: 1002, y: 494 };
-    svgContent += SVG_COMPONENTS.renderBrassJack("PULSE2.Q", "Q", 964, 494, "bottom");
-    svgContent += SVG_COMPONENTS.renderBrassJack("PULSE2.QN", "Q'", 1002, 494, "bottom");
+    const p1PosVal = this.engine.board.pulsers[1].pos;
+    const p1NegVal = this.engine.board.pulsers[1].neg;
+    const p1PosB = this.engine.board.leds["LED_PULSER_1_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_1_POS"] : (p1PosVal ? 1.0 : 0.0);
+
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_POS", cx: 846, cy: 468, brightness: p1PosB, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_NEG", cx: 888, cy: 468, brightness: p1NegVal ? 1.0 : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.1.POS", label: "POS ⎍", cx: 846, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.1.POS" });
+    svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.1.NEG", label: "NEG ⎎", cx: 888, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.1.NEG" });
+
+    // Pulser 2 Jacks: POS and NEG + LEDs
+    this.jackCoords["PULSER.2.POS"] = { x: 960, y: 494 };
+    this.jackCoords["PULSER.2.NEG"] = { x: 1002, y: 494 };
+    this.jackCoords["PULSE2.Q"] = this.jackCoords["PULSER.2.POS"];
+    this.jackCoords["PULSE2.QN"] = this.jackCoords["PULSER.2.NEG"];
+
+    const p2PosVal = this.engine.board.pulsers[2].pos;
+    const p2NegVal = this.engine.board.pulsers[2].neg;
+    const p2PosB = this.engine.board.leds["LED_PULSER_2_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_2_POS"] : (p2PosVal ? 1.0 : 0.0);
+
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_POS", cx: 960, cy: 468, brightness: p2PosB, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_NEG", cx: 1002, cy: 468, brightness: p2NegVal ? 1.0 : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.2.POS", label: "POS ⎍", cx: 960, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.2.POS" });
+    svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.2.NEG", label: "NEG ⎎", cx: 1002, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.2.NEG" });
 
     // 7. ZONE 6: Clock Generator (x: 1128, y: 348, w: 432, h: 204)
+    // CLK.POS (square wave) & CLK.NEG (exact inverse)
     svgContent += `
       <g id="zone-clock">
         <rect x="1128" y="348" width="432" height="204" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
-        <text x="1344" y="370" class="silkscreen-title" text-anchor="middle">CLOCK GENERATOR</text>
+        <text x="1344" y="368" class="silkscreen-title" text-anchor="middle">AUTOMATIC CLOCK GENERATOR</text>
+        <text x="1344" y="384" class="silkscreen-text mini" text-anchor="middle">0.5 Hz - 10 kHz VARIABLE OSCILLATOR</text>
 
-        ${SVG_COMPONENTS.renderKnob("clock-knob", "FREQUENCY", 1230, 446, this.engine.clock.freq)}
-        ${SVG_COMPONENTS.renderLed("LED_CLK", "CLK", 1374, 430, this.engine.clock.state === 1 && this.engine.masterPower, "top")}
+        ${SVG_COMPONENTS.drawClockKnob({
+          id: "clock-knob", label: this.engine.formatClockFreq(),
+          cx: 1220, cy: 446,
+          freq: this.engine.clock.freq,
+          knobT: this.engine.clock.knobT,
+          running: this.engine.clock.running
+        })}
+
+        <!-- Clock control buttons (Run/Pause & Step) -->
+        <g id="btn-clk-run-pause" transform="translate(1310, 420)" style="cursor: pointer;">
+          <rect x="-24" y="-12" width="48" height="24" rx="4" fill="${this.engine.clock.running ? '#0f766e' : '#b45309'}" stroke="#38bdf8" stroke-width="0.8" />
+          <text x="0" y="4" fill="#fff" font-family="var(--font-mono)" font-size="10" font-weight="700" text-anchor="middle">${this.engine.clock.running ? 'PAUSE' : 'RUN'}</text>
+        </g>
+        <g id="btn-clk-step" transform="translate(1310, 460)" style="cursor: pointer;">
+          <rect x="-24" y="-12" width="48" height="24" rx="4" fill="#1e293b" stroke="#64748b" stroke-width="0.8" />
+          <text x="0" y="4" fill="#fff" font-family="var(--font-mono)" font-size="10" font-weight="700" text-anchor="middle">STEP ⏯</text>
+        </g>
       </g>
     `;
 
-    this.jackCoords["CLK.OUT"] = { x: 1440, y: 446 };
-    this.jackCoords["CLK.DIV"] = { x: 1506, y: 446 };
-    svgContent += SVG_COMPONENTS.renderBrassJack("CLK.OUT", "CLK OUT", 1440, 446, "bottom");
-    svgContent += SVG_COMPONENTS.renderBrassJack("CLK.DIV", "CLK / 2", 1506, 446, "bottom");
+    this.jackCoords["CLK.POS"] = { x: 1410, y: 446 };
+    this.jackCoords["CLK.NEG"] = { x: 1490, y: 446 };
+    this.jackCoords["CLK.OUT"] = this.jackCoords["CLK.POS"];
+    this.jackCoords["CLK.DIV"] = this.jackCoords["CLK.NEG"];
+
+    const clkPosB = this.engine.board.leds["LED_CLK_POS"] !== undefined ? this.engine.board.leds["LED_CLK_POS"] : (this.engine.clock.pos ? 1.0 : 0.0);
+    const clkNegB = this.engine.board.leds["LED_CLK_NEG"] !== undefined ? this.engine.board.leds["LED_CLK_NEG"] : (this.engine.clock.neg ? 1.0 : 0.0);
+
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_CLK_POS", cx: 1410, cy: 412, brightness: this.engine.masterPower ? clkPosB : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_CLK_NEG", cx: 1490, cy: 412, brightness: this.engine.masterPower ? clkNegB : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawJack({ id: "CLK.POS", label: "CLK.POS", cx: 1410, cy: 446, labelSide: "bottom", isSelected: this.selectedJack === "CLK.POS" });
+    svgContent += SVG_COMPONENTS.drawJack({ id: "CLK.NEG", label: "CLK.NEG", cx: 1490, cy: 446, labelSide: "bottom", isSelected: this.selectedJack === "CLK.NEG" });
 
     // 8. ZONE 7: 2×2 Socket Grid (U1, U2, U3, U4) (x: 376, y: 566, w: 1184, h: 504)
     svgContent += `
@@ -540,16 +684,28 @@ class BoardRenderer {
     for (const cell of socketCells) {
       const sData = this.engine.sockets[cell.id];
       const icDef = sData.chip ? IC_LIBRARY[sData.chip] : null;
+      const leverText = sData.leverLocked ? "🔒 LOCKED" : "🔓 OPEN (UNLOCKED)";
 
       svgContent += `
         <text x="${cell.x + 10}" y="${cell.y - 48}" class="silkscreen-title bold">${cell.label}</text>
-        <text x="${cell.x + 60}" y="${cell.y - 48}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''})` : '[EMPTY 20-PIN ZIF]'}</text>
+        <text x="${cell.x + 60}" y="${cell.y - 48}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''}) - ${leverText}` : `[EMPTY 20-PIN ZIF] - ${leverText}`}</text>
       `;
 
-      svgContent += SVG_COMPONENTS.renderZIFSocket(cell.id, cell.x, cell.y - zifH / 2, zifW, zifH, 20, sData.leverLocked);
+      svgContent += SVG_COMPONENTS.drawZIFSocket({
+        socketId: cell.id,
+        x: cell.x, y: cell.y - zifH / 2, width: zifW, height: zifH,
+        pinCount: 20,
+        leverLocked: sData.leverLocked
+      });
 
       if (sData.chip && icDef) {
-        svgContent += SVG_COMPONENTS.renderInsertedIC(cell.id, sData.chip, cell.x, cell.y - zifH / 2, zifW, zifH, icDef.pinCount, sData.alignment);
+        svgContent += SVG_COMPONENTS.drawICChip({
+          socketId: cell.id,
+          chipName: sData.chip,
+          socketX: cell.x, socketY: cell.y - zifH / 2, socketW: zifW, socketH: zifH,
+          icPinCount: icDef.pinCount,
+          alignment: sData.alignment
+        });
       }
 
       // Top Jack Row: labelled 20 19 18 ... 11 (left to right)
@@ -559,7 +715,10 @@ class BoardRenderer {
         const jx = cell.x + 20 + i * zifPitch;
         const jy = cell.y - 58;
         this.jackCoords[jId] = { x: jx, y: jy };
-        svgContent += SVG_COMPONENTS.renderBrassJack(jId, `${pinNum}`, jx, jy, "top");
+        svgContent += SVG_COMPONENTS.drawJack({
+          id: jId, label: `${pinNum}`, cx: jx, cy: jy, labelSide: "top",
+          isSelected: this.selectedJack === jId
+        });
       }
 
       // Bottom Jack Row: labelled 1 2 3 ... 10 (left to right)
@@ -569,7 +728,10 @@ class BoardRenderer {
         const jx = cell.x + 20 + i * zifPitch;
         const jy = cell.y + 58;
         this.jackCoords[jId] = { x: jx, y: jy };
-        svgContent += SVG_COMPONENTS.renderBrassJack(jId, `${pinNum}`, jx, jy, "bottom");
+        svgContent += SVG_COMPONENTS.drawJack({
+          id: jId, label: `${pinNum}`, cx: jx, cy: jy, labelSide: "bottom",
+          isSelected: this.selectedJack === jId
+        });
       }
     }
 
