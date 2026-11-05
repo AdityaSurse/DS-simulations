@@ -1087,6 +1087,76 @@ const IC_LIBRARY = {
         ["X", 1, "Rise", "Hold / Inhibit Count"]
       ]
     }
+  },
+
+  "74283": {
+    name: "74283",
+    marking: "SN74LS283N",
+    title: "4-Bit Binary Full Adder with Fast Carry",
+    description: "4-bit binary full adder with standard corner power pins (VCC=16, GND=8). Adds two 4-bit binary words A[4:1] (or A[3:0]) and B with carry-in C0, generating sum S and carry-out C4.",
+    package: "DIP-16",
+    pinCount: 16,
+    vccPin: 16,
+    gndPin: 8,
+    pinNames: {
+      1: "S2", 2: "B2", 3: "A2", 4: "S1", 5: "A1", 6: "B1", 7: "C0", 8: "GND",
+      9: "C4", 10: "S4", 11: "B4", 12: "A4", 13: "S3", 14: "A3", 15: "B3", 16: "VCC"
+    },
+    inputs: [2, 3, 5, 6, 7, 11, 12, 14, 15],
+    outputs: [1, 4, 9, 10, 13],
+    pins: [
+      { pin: 1, name: "S2", type: "out" },
+      { pin: 2, name: "B2", type: "in" },
+      { pin: 3, name: "A2", type: "in" },
+      { pin: 4, name: "S1", type: "out" },
+      { pin: 5, name: "A1", type: "in" },
+      { pin: 6, name: "B1", type: "in" },
+      { pin: 7, name: "C0", type: "in" },
+      { pin: 8, name: "GND", type: "gnd" },
+      { pin: 9, name: "C4", type: "out" },
+      { pin: 10, name: "S4", type: "out" },
+      { pin: 11, name: "B4", type: "in" },
+      { pin: 12, name: "A4", type: "in" },
+      { pin: 13, name: "S3", type: "out" },
+      { pin: 14, name: "A3", type: "in" },
+      { pin: 15, name: "B3", type: "in" },
+      { pin: 16, name: "VCC", type: "pwr" }
+    ],
+    eval(inputs, state) {
+      const a1 = inputs[5] !== undefined ? inputs[5] : 1;
+      const b1 = inputs[6] !== undefined ? inputs[6] : 1;
+      const c0 = inputs[7] !== undefined ? inputs[7] : 1;
+      const a2 = inputs[3] !== undefined ? inputs[3] : 1;
+      const b2 = inputs[2] !== undefined ? inputs[2] : 1;
+      const a3 = inputs[14] !== undefined ? inputs[14] : 1;
+      const b3 = inputs[15] !== undefined ? inputs[15] : 1;
+      const a4 = inputs[12] !== undefined ? inputs[12] : 1;
+      const b4 = inputs[11] !== undefined ? inputs[11] : 1;
+
+      const a = (a4 << 3) | (a3 << 2) | (a2 << 1) | a1;
+      const b = (b4 << 3) | (b3 << 2) | (b2 << 1) | b1;
+      const sum = a + b + c0;
+
+      return {
+        outputs: {
+          4: sum & 1,        // S1
+          1: (sum >> 1) & 1, // S2
+          13: (sum >> 2) & 1,// S3
+          10: (sum >> 3) & 1,// S4
+          9: (sum >> 4) & 1  // C4
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["C0", "A[4..1]", "B[4..1]", "Sum S[4..1]", "C4"],
+      rows: [
+        [0, "0000", "0000", "0000", 0],
+        [0, "0011 (3)", "0101 (5)", "1000 (8)", 0],
+        [0, "1111 (15)", "0001 (1)", "0000 (0)", 1],
+        [1, "0010 (2)", "0011 (3)", "0110 (6)", 0]
+      ]
+    }
   }
 };
 
@@ -1096,6 +1166,7 @@ IC_LIBRARY["74LS138"] = IC_LIBRARY["74138"];
 IC_LIBRARY["74LS83"] = IC_LIBRARY["7483"];
 IC_LIBRARY["74LS90"] = IC_LIBRARY["7490"];
 IC_LIBRARY["74LS74"] = IC_LIBRARY["7474"];
+IC_LIBRARY["74LS283"] = IC_LIBRARY["74283"];
 
 if (typeof window !== "undefined") {
   window.IC_LIBRARY = IC_LIBRARY;

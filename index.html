@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DIT 9005 Digital IC Trainer Simulator</title>
+  <title>DS Simulation — IC Trainer Kit Simulation</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f172a'/%3E%3Crect x='6' y='9' width='20' height='14' rx='2.5' fill='%231e293b' stroke='%2338bdf8' stroke-width='1.5'/%3E%3Cline x1='10' y1='4' x2='10' y2='9' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='16' y1='4' x2='16' y2='9' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='22' y1='4' x2='22' y2='9' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='10' y1='23' x2='10' y2='28' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='16' y1='23' x2='16' y2='28' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='22' y1='23' x2='22' y2='28' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%2322c55e'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -858,18 +859,22 @@ select:focus, input[type="text"]:focus {
 .chip-card {
   background: var(--bg-panel-elevated);
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  padding: 10px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
   cursor: grab;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
   user-select: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .chip-card:hover {
-  background: #192332;
-  border-color: #3b82f6;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  background: #17202c;
+  border-color: #38bdf8;
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
 }
 
 .chip-card:active {
@@ -879,6 +884,95 @@ select:focus, input[type="text"]:focus {
 .chip-card.dragging {
   opacity: 0.5;
   border: 1.5px dashed var(--accent-teal);
+}
+
+.chip-card-visual {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: rgba(10, 14, 20, 0.6);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dip-chip-thumb-svg {
+  display: block;
+}
+
+.chip-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.chip-title-bold {
+  font-size: 14px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.chip-marking-pill {
+  font-size: 10px;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.chip-pkg-badge {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.chip-desc-text {
+  font-size: 11px;
+  color: #cbd5e1;
+  margin: 3px 0 6px 0;
+  line-height: 1.35;
+}
+
+.chip-specs-row {
+  display: flex;
+  gap: 10px;
+  font-size: 9.5px;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  margin-bottom: 7px;
+  flex-wrap: wrap;
+}
+
+.chip-specs-row span b {
+  color: #e2e8f0;
+}
+
+.chip-action-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-subtle {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--border-subtle);
+  color: #94a3b8;
+}
+
+.btn-subtle:hover {
+  background: rgba(51, 65, 85, 0.8);
+  color: #ffffff;
+  border-color: #64748b;
+}
+
+.zif-lever {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-box: fill-box;
 }
 
 .chip-tag-exp {
@@ -1350,12 +1444,12 @@ body.high-contrast .patch-cord-path {
   <div id="boot-splash">
     <div class="splash-terminal">
       <div style="font-size: 15px; font-weight: 800; color: #ffffff; margin-bottom: 8px; letter-spacing: 1px;">
-        HI-TECH DIT 9005 DIGITAL IC TRAINER SIMULATOR
+        DS SIMULATION — IC TRAINER KIT SIMULATOR
       </div>
       <div style="font-size: 11px; color: #86efac; line-height: 1.6;">
-        ROM BIOS v2.4 (c) 1988-2026 HI-TECH SYSTEMS PUNE-30<br>
+        ROM BIOS v2.4 (c) 1988-2026 DIGITAL SYSTEMS LAB<br>
         INITIALIZING TTL LOGIC CORES & UNION-FIND MATRIX...<br>
-        TESTING 74-SERIES IC LIBRARY (15 MODELS)... OK<br>
+        TESTING 74-SERIES IC LIBRARY (16 MODELS)... OK<br>
         VERIFYING VOLTAGE REGULATORS (+5V, +12V, GND)... NORMAL<br>
         CALIBRATING TIMEBASE GENERATOR (0.5Hz – 10kHz)... STABLE<br>
         SYSTEM READY.
@@ -1369,14 +1463,26 @@ body.high-contrast .patch-cord-path {
   <!-- Header Bar -->
   <header class="app-header">
     <div class="brand-section">
-      <div class="logo-badge">DS</div>
+      <div class="logo-badge" title="DS Simulation — IC Trainer Kit Simulation">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="5" width="20" height="14" rx="2.5" fill="#1e293b" stroke="#38bdf8" stroke-width="1.3" />
+          <path d="M 2 9 A 2 2 0 0 1 2 15" stroke="#38bdf8" stroke-width="1.2" fill="#0f172a" />
+          <line x1="6" y1="2" x2="6" y2="5" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="12" y1="2" x2="12" y2="5" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="18" y1="2" x2="18" y2="5" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="6" y1="19" x2="6" y2="22" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="12" y1="19" x2="12" y2="22" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="18" y1="19" x2="18" y2="22" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <circle cx="12" cy="12" r="2.2" fill="#22c55e" />
+        </svg>
+      </div>
       <div class="brand-titles">
         <h1 class="brand-title">
-          HI-TECH DIT 9005
-          <span class="pill-badge">TTL 74-SERIES</span>
-          <span class="pill-badge" style="color: var(--accent-amber); border-color: rgba(245, 158, 11, 0.3);">PUNE-30</span>
+          DS SIMULATION
+          <span class="pill-badge">FREE LAB EDITION</span>
+          <span class="pill-badge" style="color: var(--accent-teal); border-color: rgba(20, 184, 166, 0.3);">DIGITAL SYSTEMS</span>
         </h1>
-        <span class="brand-subtitle">DIGITAL SYSTEMS SIMULATION SUITE</span>
+        <span class="brand-subtitle">IC Trainer Kit Simulation</span>
       </div>
     </div>
 
@@ -2622,6 +2728,76 @@ const IC_LIBRARY = {
         ["X", 1, "Rise", "Hold / Inhibit Count"]
       ]
     }
+  },
+
+  "74283": {
+    name: "74283",
+    marking: "SN74LS283N",
+    title: "4-Bit Binary Full Adder with Fast Carry",
+    description: "4-bit binary full adder with standard corner power pins (VCC=16, GND=8). Adds two 4-bit binary words A[4:1] (or A[3:0]) and B with carry-in C0, generating sum S and carry-out C4.",
+    package: "DIP-16",
+    pinCount: 16,
+    vccPin: 16,
+    gndPin: 8,
+    pinNames: {
+      1: "S2", 2: "B2", 3: "A2", 4: "S1", 5: "A1", 6: "B1", 7: "C0", 8: "GND",
+      9: "C4", 10: "S4", 11: "B4", 12: "A4", 13: "S3", 14: "A3", 15: "B3", 16: "VCC"
+    },
+    inputs: [2, 3, 5, 6, 7, 11, 12, 14, 15],
+    outputs: [1, 4, 9, 10, 13],
+    pins: [
+      { pin: 1, name: "S2", type: "out" },
+      { pin: 2, name: "B2", type: "in" },
+      { pin: 3, name: "A2", type: "in" },
+      { pin: 4, name: "S1", type: "out" },
+      { pin: 5, name: "A1", type: "in" },
+      { pin: 6, name: "B1", type: "in" },
+      { pin: 7, name: "C0", type: "in" },
+      { pin: 8, name: "GND", type: "gnd" },
+      { pin: 9, name: "C4", type: "out" },
+      { pin: 10, name: "S4", type: "out" },
+      { pin: 11, name: "B4", type: "in" },
+      { pin: 12, name: "A4", type: "in" },
+      { pin: 13, name: "S3", type: "out" },
+      { pin: 14, name: "A3", type: "in" },
+      { pin: 15, name: "B3", type: "in" },
+      { pin: 16, name: "VCC", type: "pwr" }
+    ],
+    eval(inputs, state) {
+      const a1 = inputs[5] !== undefined ? inputs[5] : 1;
+      const b1 = inputs[6] !== undefined ? inputs[6] : 1;
+      const c0 = inputs[7] !== undefined ? inputs[7] : 1;
+      const a2 = inputs[3] !== undefined ? inputs[3] : 1;
+      const b2 = inputs[2] !== undefined ? inputs[2] : 1;
+      const a3 = inputs[14] !== undefined ? inputs[14] : 1;
+      const b3 = inputs[15] !== undefined ? inputs[15] : 1;
+      const a4 = inputs[12] !== undefined ? inputs[12] : 1;
+      const b4 = inputs[11] !== undefined ? inputs[11] : 1;
+
+      const a = (a4 << 3) | (a3 << 2) | (a2 << 1) | a1;
+      const b = (b4 << 3) | (b3 << 2) | (b2 << 1) | b1;
+      const sum = a + b + c0;
+
+      return {
+        outputs: {
+          4: sum & 1,        // S1
+          1: (sum >> 1) & 1, // S2
+          13: (sum >> 2) & 1,// S3
+          10: (sum >> 3) & 1,// S4
+          9: (sum >> 4) & 1  // C4
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["C0", "A[4..1]", "B[4..1]", "Sum S[4..1]", "C4"],
+      rows: [
+        [0, "0000", "0000", "0000", 0],
+        [0, "0011 (3)", "0101 (5)", "1000 (8)", 0],
+        [0, "1111 (15)", "0001 (1)", "0000 (0)", 1],
+        [1, "0010 (2)", "0011 (3)", "0110 (6)", 0]
+      ]
+    }
   }
 };
 
@@ -2631,6 +2807,7 @@ IC_LIBRARY["74LS138"] = IC_LIBRARY["74138"];
 IC_LIBRARY["74LS83"] = IC_LIBRARY["7483"];
 IC_LIBRARY["74LS90"] = IC_LIBRARY["7490"];
 IC_LIBRARY["74LS74"] = IC_LIBRARY["7474"];
+IC_LIBRARY["74LS283"] = IC_LIBRARY["74283"];
 
 if (typeof window !== "undefined") {
   window.IC_LIBRARY = IC_LIBRARY;
@@ -5183,7 +5360,12 @@ class TTLEngine {
   // Socket Jack <-> IC Pin Mapping
   getJackForICPin(socketId, icPin, pinCount, alignment = "left") {
     if (socketId === "U5") {
-      return `U5.J${icPin}`;
+      const half = Math.floor(pinCount / 2);
+      if (icPin <= half) {
+        return `U5.J${icPin}`;
+      } else {
+        return `U5.J${40 - (pinCount - icPin)}`;
+      }
     }
     const half = pinCount / 2;
     const diff = 20 - pinCount;
@@ -6896,6 +7078,31 @@ const SVG_COMPONENTS = {
           <stop offset="100%" stop-color="#101216" />
         </linearGradient>
 
+        <!-- Metallic silver IC lead pin gradients -->
+        <linearGradient id="silverLeg" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#94a3b8" />
+          <stop offset="25%" stop-color="#f8fafc" />
+          <stop offset="55%" stop-color="#e2e8f0" />
+          <stop offset="80%" stop-color="#cbd5e1" />
+          <stop offset="100%" stop-color="#64748b" />
+        </linearGradient>
+        <linearGradient id="silverLegHoriz" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#94a3b8" />
+          <stop offset="25%" stop-color="#f8fafc" />
+          <stop offset="55%" stop-color="#e2e8f0" />
+          <stop offset="80%" stop-color="#cbd5e1" />
+          <stop offset="100%" stop-color="#64748b" />
+        </linearGradient>
+
+        <!-- Molded epoxy IC body gradient -->
+        <linearGradient id="icEpoxyBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2a2e37" />
+          <stop offset="6%" stop-color="#1e2229" />
+          <stop offset="50%" stop-color="#14171d" />
+          <stop offset="94%" stop-color="#111317" />
+          <stop offset="100%" stop-color="#0a0c0f" />
+        </linearGradient>
+
         <!-- Drop shadow filters -->
         <filter id="shadowBevel" x="-10%" y="-10%" width="120%" height="120%">
           <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
@@ -7049,13 +7256,14 @@ const SVG_COMPONENTS = {
     };
 
     const renderDigit = (dx, dy, val) => {
-      const segs = SEG_MAP[val] || SEG_MAP[0];
-      const sColor = (idx) => segs[idx] ? "#ff2a2a" : "#220404";
+      const isOff = (val === null || val === undefined || val < 0 || val > 15);
+      const segs = isOff ? [0,0,0,0,0,0,0] : (SEG_MAP[val] || [0,0,0,0,0,0,0]);
+      const sColor = (idx) => segs[idx] ? "#ff2a2a" : "#1a0404";
       const sGlow = (idx) => segs[idx] ? "filter='url(#ledGlowFilter)'" : "";
 
       return `
         <g transform="translate(${dx}, ${dy})">
-          <rect x="-1" y="-1" width="38" height="58" rx="3" fill="#100202" stroke="#220404" stroke-width="1" />
+          <rect x="-1" y="-1" width="38" height="58" rx="3" fill="#0d0202" stroke="#1f0404" stroke-width="1" />
           <polygon points="6,4 30,4 27,8 9,8" fill="${sColor(0)}" ${sGlow(0)} />
           <polygon points="31,5 35,9 33,26 29,24" fill="${sColor(1)}" ${sGlow(1)} />
           <polygon points="33,30 35,47 31,51 29,32" fill="${sColor(2)}" ${sGlow(2)} />
@@ -7063,7 +7271,7 @@ const SVG_COMPONENTS = {
           <polygon points="7,32 5,51 1,47 3,30" fill="${sColor(4)}" ${sGlow(4)} />
           <polygon points="7,24 3,26 1,9 5,5" fill="${sColor(5)}" ${sGlow(5)} />
           <polygon points="9,26 27,26 29,28 27,30 9,30 7,28" fill="${sColor(6)}" ${sGlow(6)} />
-          <circle cx="34" cy="52" r="1.5" fill="#220404" />
+          <circle cx="34" cy="52" r="1.5" fill="#1a0404" />
         </g>
       `;
     };
@@ -7181,8 +7389,8 @@ const SVG_COMPONENTS = {
     const leverX = is40 ? x + width / 2 : x - 12;
     const leverY = is40 ? y + height + 6 : y + height / 2;
     const leverTransform = is40
-      ? (leverLocked ? "rotate(0)" : "rotate(-35)")
-      : (leverLocked ? "rotate(0)" : "rotate(-45)");
+      ? (leverLocked ? "rotate(0)" : "rotate(-65)")
+      : (leverLocked ? "rotate(0)" : "rotate(-65)");
 
     let pinHoles = "";
     if (!is40) {
@@ -7218,9 +7426,12 @@ const SVG_COMPONENTS = {
         <rect x="${x + 8}" y="${y + 8}" width="${width - 16}" height="${height - 16}" rx="3" fill="#10345c" stroke="#0b2440" stroke-width="1" />
         ${pinHoles}
         <polygon points="${x + 14},${is40 ? y + 16 : y + height - 12} ${x + 20},${is40 ? y + 22 : y + height - 6} ${x + 8},${is40 ? y + 22 : y + height - 6}" fill="#93c5fd" opacity="0.6" />
-        <g class="zif-lever" data-socket="${socketId}" transform="translate(${leverX}, ${leverY}) ${leverTransform}" style="cursor: pointer;" tabindex="0" role="button" aria-label="ZIF Socket ${socketId} Lever (${leverLocked ? 'Locked' : 'Open'})">
+        <g class="zif-lever" data-socket="${socketId}" transform="translate(${leverX}, ${leverY}) ${leverTransform}" style="cursor: pointer; transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); transform-box: fill-box;" tabindex="0" role="button" aria-label="ZIF Socket ${socketId} Lever (${leverLocked ? 'Locked' : 'Open'})">
+          <title>Click to toggle lever (${leverLocked ? 'Locked' : 'Open'})</title>
+          <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="26" fill="rgba(0,0,0,0.001)" pointer-events="all" />
           <rect x="${is40 ? -3 : -24}" y="${is40 ? 0 : -3}" width="${is40 ? 6 : 28}" height="${is40 ? 28 : 6}" rx="2" fill="url(#screwHead)" stroke="#333" stroke-width="0.5" />
-          <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="7" fill="#1d4ed8" stroke="#93c5fd" stroke-width="1" />
+          <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="8" fill="${leverLocked ? '#1d4ed8' : '#ef4444'}" stroke="#93c5fd" stroke-width="1.2" />
+          <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="3" fill="#ffffff" opacity="0.8" />
         </g>
       </g>
     `;
@@ -7229,7 +7440,7 @@ const SVG_COMPONENTS = {
     return this.drawZIFSocket({ socketId, x, y, width, height, pinCount, leverLocked });
   },
 
-  // 9. drawICChip: black epoxy body with highlights, silver gold-ish pins, notch + pin-1 dot, printed part # & date code
+  // 9. drawICChip: photorealistic black molded epoxy DIP body, silver metallic legs, notch, pin-1 dimple, bold silkscreen
   drawICChip(opts) {
     const { socketId, chipName, marking, socketX, socketY, socketW, socketH, icPinCount = 14, alignment = "left", backwards = false } = opts;
     if (!chipName) return "";
@@ -7237,62 +7448,134 @@ const SVG_COMPONENTS = {
     const is40 = (socketId === "U5");
 
     if (is40) {
-      const notchY = backwards ? (socketY + socketH - 12) : (socketY + 12);
-      const dotY = backwards ? (socketY + socketH - 26) : (socketY + 26);
+      const half = Math.min(20, Math.floor(icPinCount / 2));
+      const vertPitch = (socketH - 50) / 19;
+      const chipHeight = (half - 1) * vertPitch + 34;
+      const chipWidth = socketW - 32;
+      const icX = socketX + 16;
+      const icY = socketY + 12;
+
+      let silverLegs = "";
+      for (let i = 0; i < half; i++) {
+        const py = socketY + 25 + i * vertPitch;
+        // Left leg
+        silverLegs += `
+          <rect x="${socketX + 10}" y="${py - 4}" width="12" height="8" rx="1.5" fill="url(#silverLegHoriz)" stroke="#475569" stroke-width="0.6" filter="url(#shadowBevel)" />
+          <rect x="${socketX + 16}" y="${py - 5}" width="4" height="10" rx="1" fill="url(#silverLegHoriz)" />
+        `;
+        // Right leg
+        silverLegs += `
+          <rect x="${socketX + socketW - 22}" y="${py - 4}" width="12" height="8" rx="1.5" fill="url(#silverLegHoriz)" stroke="#475569" stroke-width="0.6" filter="url(#shadowBevel)" />
+          <rect x="${socketX + socketW - 20}" y="${py - 5}" width="4" height="10" rx="1" fill="url(#silverLegHoriz)" />
+        `;
+      }
+
+      const notchY = backwards ? (icY + chipHeight) : icY;
+      const dotY = backwards ? (icY + chipHeight - 16) : (icY + 16);
       const rot = backwards ? 90 : -90;
+
       return `
-        <g class="inserted-ic-group" data-socket="${socketId}" style="cursor: pointer;">
-          <rect x="${socketX + 16}" y="${socketY + 12}" width="${socketW - 32}" height="${socketH - 24}" rx="3" fill="url(#icBody)" stroke="#333" stroke-width="1" filter="url(#shadowBevel)" />
-          <path d="M ${socketX + 16 + (socketW - 32)/2 - 8} ${notchY} A 8 8 0 0 ${backwards ? 1 : 0} ${socketX + 16 + (socketW - 32)/2 + 8} ${notchY} Z" fill="#111" />
-          <circle cx="${socketX + 26}" cy="${dotY}" r="2.5" fill="#000" />
-          <text x="${socketX + 16 + (socketW - 32)/2}" y="${socketY + 12 + (socketH - 24)/2}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="12" font-weight="700" letter-spacing="1" text-anchor="middle" transform="rotate(${rot}, ${socketX + 16 + (socketW - 32)/2}, ${socketY + 12 + (socketH - 24)/2})">${chipText}</text>
-          <text x="${socketX + 16 + (socketW - 32)/2 + 12}" y="${socketY + 12 + (socketH - 24)/2}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle" transform="rotate(${rot}, ${socketX + 16 + (socketW - 32)/2 + 12}, ${socketY + 12 + (socketH - 24)/2})">${backwards ? 'REVERSED' : '2418'}</text>
+        <g class="inserted-ic-group ${backwards ? 'ic-backwards' : ''}" data-socket="${socketId}" style="cursor: pointer;">
+          ${silverLegs}
+          <rect x="${icX}" y="${icY}" width="${chipWidth}" height="${chipHeight}" rx="4" fill="url(#icEpoxyBody)" stroke="${backwards ? '#ef4444' : '#334155'}" stroke-width="${backwards ? '2' : '1.2'}" filter="url(#shadowBevel)" />
+          <line x1="${icX + 3}" y1="${icY + 2}" x2="${icX + 3}" y2="${icY + chipHeight - 2}" stroke="#475569" stroke-width="1.2" opacity="0.6" />
+          <line x1="${icX + chipWidth - 3}" y1="${icY + 2}" x2="${icX + chipWidth - 3}" y2="${icY + chipHeight - 2}" stroke="#000000" stroke-width="1.5" opacity="0.7" />
+          <!-- Semicircular Notch -->
+          <path d="M ${icX + chipWidth/2 - 9} ${notchY} A 9 9 0 0 ${backwards ? 1 : 0} ${icX + chipWidth/2 + 9} ${notchY} Z" fill="#090c10" stroke="#334155" stroke-width="1" />
+          <!-- Pin 1 Dot -->
+          <circle cx="${icX + 16}" cy="${dotY}" r="3" fill="#090b0e" stroke="#2a303c" stroke-width="0.8" />
+          <!-- Silkscreen Markings -->
+          <text x="${icX + chipWidth/2}" y="${icY + chipHeight/2}" fill="#f8fafc" font-family="var(--font-mono)" font-size="13" font-weight="800" letter-spacing="1.5" text-anchor="middle" transform="rotate(${rot}, ${icX + chipWidth/2}, ${icY + chipHeight/2})">${chipText}</text>
+          <text x="${icX + chipWidth/2 + 14}" y="${icY + chipHeight/2}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8.5" font-weight="600" text-anchor="middle" transform="rotate(${rot}, ${icX + chipWidth/2 + 14}, ${icY + chipHeight/2})">${backwards ? '⚠️ REVERSED' : 'MALAYSIA 2418B'}</text>
         </g>
       `;
     }
 
+    // Horizontal 20-pin ZIF sockets (U1–U4)
     const totalSlots = 10;
     const slotPitch = (socketW - 40) / (totalSlots - 1);
-    const chipSlots = icPinCount / 2;
+    const chipSlots = Math.floor(icPinCount / 2); // 7 for 14-pin, 8 for 16-pin
 
     let startSlot = 0;
     if (alignment === "right") startSlot = totalSlots - chipSlots;
     else if (alignment === "center") startSlot = Math.floor((totalSlots - chipSlots) / 2);
 
-    const icWidth = (chipSlots - 1) * slotPitch + 28;
-    const icX = socketX + 20 + startSlot * slotPitch - 14;
-    const icY = socketY + 18;
-    const icHeight = socketH - 36;
+    const icWidth = (chipSlots - 1) * slotPitch + 30;
+    const icX = socketX + 20 + startSlot * slotPitch - 15;
+    const icY = socketY + 16;
+    const icHeight = 44;
 
+    // Realistic silver metallic legs matching chip's real pin count
     let pinsSvg = "";
     for (let i = 0; i < chipSlots; i++) {
-      const px = icX + 14 + i * slotPitch;
-      pinsSvg += `<rect x="${px - 2}" y="${icY - 6}" width="4" height="6" fill="url(#screwHead)" stroke="#222" stroke-width="0.3" />`;
-      pinsSvg += `<rect x="${px - 2}" y="${icY + icHeight}" width="4" height="6" fill="url(#screwHead)" stroke="#222" stroke-width="0.3" />`;
+      const px = socketX + 20 + (startSlot + i) * slotPitch;
+      // Top Leg: shoulder at IC body, narrow pin entering socket hole
+      pinsSvg += `
+        <g class="ic-leg-top">
+          <!-- Metallic lead drop shadow -->
+          <rect x="${px - 3.5}" y="${icY - 7}" width="7" height="9" fill="rgba(0,0,0,0.3)" />
+          <!-- Pin entering socket contact -->
+          <rect x="${px - 2.5}" y="${icY - 7}" width="5" height="6" rx="0.8" fill="url(#silverLeg)" stroke="#475569" stroke-width="0.5" />
+          <!-- Wider lead shoulder emerging from epoxy body -->
+          <rect x="${px - 3.5}" y="${icY - 2}" width="7" height="4" rx="0.6" fill="url(#silverLeg)" stroke="#334155" stroke-width="0.5" />
+          <line x1="${px}" y1="${icY - 6}" x2="${px}" y2="${icY + 1}" stroke="#ffffff" stroke-width="0.8" opacity="0.6" />
+        </g>
+      `;
+      // Bottom Leg: shoulder at IC body, narrow pin entering bottom socket hole
+      pinsSvg += `
+        <g class="ic-leg-bottom">
+          <!-- Metallic lead drop shadow -->
+          <rect x="${px - 3.5}" y="${icY + icHeight - 2}" width="7" height="9" fill="rgba(0,0,0,0.3)" />
+          <!-- Wider lead shoulder emerging from epoxy body -->
+          <rect x="${px - 3.5}" y="${icY + icHeight - 2}" width="7" height="4" rx="0.6" fill="url(#silverLeg)" stroke="#334155" stroke-width="0.5" />
+          <!-- Pin entering socket contact -->
+          <rect x="${px - 2.5}" y="${icY + icHeight + 1}" width="5" height="6" rx="0.8" fill="url(#silverLeg)" stroke="#475569" stroke-width="0.5" />
+          <line x1="${px}" y1="${icY + icHeight - 1}" x2="${px}" y2="${icY + icHeight + 6}" stroke="#ffffff" stroke-width="0.8" opacity="0.6" />
+        </g>
+      `;
     }
 
+    // Notch on the pin-1 end (left side for normal, right side for backwards)
     const notchSvg = backwards
-      ? `<path d="M ${icX + icWidth} ${icY + icHeight/2 - 7} A 7 7 0 0 1 ${icX + icWidth} ${icY + icHeight/2 + 7} Z" fill="#111317" />`
-      : `<path d="M ${icX} ${icY + icHeight/2 - 7} A 7 7 0 0 0 ${icX} ${icY + icHeight/2 + 7} Z" fill="#111317" />`;
+      ? `<path d="M ${icX + icWidth} ${icY + icHeight/2 - 9} A 9 9 0 0 1 ${icX + icWidth} ${icY + icHeight/2 + 9} Z" fill="#090c10" stroke="${backwards ? '#ef4444' : '#334155'}" stroke-width="1.2" />`
+      : `<path d="M ${icX} ${icY + icHeight/2 - 9} A 9 9 0 0 0 ${icX} ${icY + icHeight/2 + 9} Z" fill="#090c10" stroke="#334155" stroke-width="1.2" />
+         <path d="M ${icX + 1.2} ${icY + icHeight/2 - 8} A 8 8 0 0 0 ${icX + 1.2} ${icY + icHeight/2 + 8}" fill="none" stroke="#475569" stroke-width="0.8" opacity="0.5" />`;
 
+    // Circular Pin 1 index dot: lower-left for normal, upper-right for backwards
     const dotSvg = backwards
-      ? `<circle cx="${icX + icWidth - 10}" cy="${icY + 10}" r="2.2" fill="#0a0c0e" stroke="#252930" stroke-width="0.5" />`
-      : `<circle cx="${icX + 10}" cy="${icY + icHeight - 10}" r="2.2" fill="#0a0c0e" stroke="#252930" stroke-width="0.5" />`;
+      ? `<circle cx="${icX + icWidth - 14}" cy="${icY + 10}" r="3" fill="#090b0e" stroke="#ef4444" stroke-width="0.8" />
+         <circle cx="${icX + icWidth - 14.5}" cy="${icY + 9.5}" r="1.8" fill="#040507" />`
+      : `<circle cx="${icX + 14}" cy="${icY + icHeight - 10}" r="3" fill="#090b0e" stroke="#2a303c" stroke-width="0.8" />
+         <circle cx="${icX + 13.5}" cy="${icY + icHeight - 10.5}" r="1.8" fill="#040507" />`;
 
     const textRot = backwards ? `transform="rotate(180, ${icX + icWidth / 2}, ${icY + icHeight / 2})"` : "";
-    const warningSvg = backwards
-      ? `<text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 - 9}" fill="#f87171" font-family="var(--font-mono)" font-size="7" font-weight="800" text-anchor="middle">⚠️ REVERSED</text>`
-      : "";
+    const logoX = backwards ? (icX + icWidth - 30) : (icX + 30);
+    const textCenterX = icX + icWidth / 2 + (backwards ? -6 : 6);
 
     return `
       <g class="inserted-ic-group ${backwards ? 'ic-backwards' : ''}" data-socket="${socketId}" style="cursor: pointer;">
+        <!-- Silver IC Leads -->
         ${pinsSvg}
-        <rect x="${icX}" y="${icY}" width="${icWidth}" height="${icHeight}" rx="3" fill="url(#icBody)" stroke="${backwards ? '#ef4444' : '#3f4553'}" stroke-width="${backwards ? '1.5' : '1'}" filter="url(#shadowBevel)" />
+        <!-- Molded Epoxy Body -->
+        <rect x="${icX}" y="${icY}" width="${icWidth}" height="${icHeight}" rx="4" fill="url(#icEpoxyBody)" stroke="${backwards ? '#ef4444' : '#334155'}" stroke-width="${backwards ? '1.8' : '1.2'}" filter="url(#shadowBevel)" />
+        <!-- Top Chamfer Highlight -->
+        <rect x="${icX + 3}" y="${icY + 1.5}" width="${icWidth - 6}" height="2" rx="1" fill="#475569" opacity="0.65" />
+        <!-- Bottom Chamfer Shadow -->
+        <rect x="${icX + 3}" y="${icY + icHeight - 3.5}" width="${icWidth - 6}" height="2" rx="1" fill="#000000" opacity="0.8" />
+        <!-- Center parting line -->
+        <line x1="${icX + 16}" y1="${icY + icHeight/2}" x2="${icX + icWidth - 16}" y2="${icY + icHeight/2}" stroke="#0b0d11" stroke-width="0.6" opacity="0.4" />
+        <!-- Orientation Notch -->
         ${notchSvg}
+        <!-- Pin 1 Dot -->
         ${dotSvg}
-        ${warningSvg}
-        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 3}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="11" font-weight="700" letter-spacing="1" text-anchor="middle" ${textRot}>${chipText}</text>
-        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 13}" fill="#94a3b8" font-family="var(--font-mono)" font-size="7.5" text-anchor="middle" ${textRot}>MALAYSIA 2418</text>
+        <!-- TI Logo Silkscreen -->
+        <g ${textRot}>
+          <circle cx="${logoX}" cy="${icY + icHeight / 2}" r="6.5" fill="none" stroke="#94a3b8" stroke-width="1.1" opacity="0.8" />
+          <text x="${logoX}" y="${icY + icHeight / 2 + 3}" fill="#cbd5e1" font-family="var(--font-mono)" font-size="8.5" font-weight="900" text-anchor="middle">TI</text>
+        </g>
+        <!-- Part Number Silkscreen -->
+        <text x="${textCenterX}" y="${icY + icHeight / 2 - 2}" fill="#f8fafc" font-family="var(--font-mono)" font-size="13" font-weight="800" letter-spacing="1.4" text-anchor="middle" ${textRot}>${chipText}</text>
+        <text x="${textCenterX}" y="${icY + icHeight / 2 + 10}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8.5" font-weight="600" letter-spacing="0.8" text-anchor="middle" ${textRot}>${backwards ? '⚠️ REVERSED' : 'MALAYSIA 2418B'}</text>
       </g>
     `;
   },
@@ -7300,14 +7583,14 @@ const SVG_COMPONENTS = {
     return this.drawICChip({ socketId, chipName, socketX, socketY, socketW, socketH, icPinCount, alignment, backwards });
   },
 
-  // 3D Visual IC Package Pinout Diagram (for Reference Tab)
+  // 3D Visual IC Package Pinout Diagram (for Reference Tab - matches reference image)
   drawChipPinoutDiagram(icDef) {
     if (!icDef) return "";
     const pinCount = icDef.pinCount || (icDef.pins ? icDef.pins.length : 14);
-    const half = Math.floor(pinCount / 2);
+    const half = Math.floor(pinCount / 2); // 7 for 14-pin, 8 for 16-pin
     const rowHeight = 36;
-    const bodyWidth = 190;
-    const bodyHeight = half * rowHeight + 36;
+    const bodyWidth = 170;
+    const bodyHeight = half * rowHeight + 40;
     const svgWidth = 500;
     const svgHeight = bodyHeight + 60;
     const bodyX = (svgWidth - bodyWidth) / 2;
@@ -7327,20 +7610,22 @@ const SVG_COMPONENTS = {
     // Left side pins: 1 to half (top to bottom)
     for (let i = 1; i <= half; i++) {
       const pinObj = (icDef.pins && icDef.pins.find(p => p.pin === i)) || { pin: i, name: `Pin ${i}`, type: "in" };
-      const y = bodyY + 28 + (i - 1) * rowHeight;
+      const y = bodyY + 30 + (i - 1) * rowHeight;
       const c = getColorForType(pinObj.type, pinObj.name);
 
       pinsLeftHtml += `
-        <!-- Lead Pin ${i} -->
-        <rect x="${bodyX - 22}" y="${y - 4}" width="22" height="8" rx="1.5" fill="url(#screwHead)" stroke="#475569" stroke-width="0.8" />
-        <circle cx="${bodyX - 26}" cy="${y}" r="2" fill="#38bdf8" opacity="0.6" />
+        <!-- Silver Metallic Lead Pin ${i} -->
+        <g class="ref-pin-lead">
+          <rect x="${bodyX - 26}" y="${y - 6}" width="26" height="12" rx="2" fill="url(#silverLegHoriz)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevel)" />
+          <line x1="${bodyX - 25}" y1="${y - 4}" x2="${bodyX - 2}" y2="${y - 4}" stroke="#ffffff" stroke-width="1" opacity="0.8" />
+        </g>
         <!-- Pin Number Badge -->
-        <rect x="${bodyX + 8}" y="${y - 9}" width="18" height="18" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
-        <text x="${bodyX + 17}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="10" font-weight="800" text-anchor="middle">${i}</text>
-        <!-- Pin Name & Pill -->
-        <g transform="translate(${bodyX - 32}, ${y})">
-          <rect x="-94" y="-10" width="90" height="20" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1" />
-          <text x="-49" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+        <rect x="${bodyX + 8}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
+        <text x="${bodyX + 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${i}</text>
+        <!-- Pin Name & Function Pill -->
+        <g transform="translate(${bodyX - 34}, ${y})">
+          <rect x="-96" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
+          <text x="-50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
         </g>
       `;
     }
@@ -7349,20 +7634,22 @@ const SVG_COMPONENTS = {
     for (let i = 0; i < half; i++) {
       const pinNum = pinCount - i;
       const pinObj = (icDef.pins && icDef.pins.find(p => p.pin === pinNum)) || { pin: pinNum, name: `Pin ${pinNum}`, type: "in" };
-      const y = bodyY + 28 + i * rowHeight;
+      const y = bodyY + 30 + i * rowHeight;
       const c = getColorForType(pinObj.type, pinObj.name);
 
       pinsRightHtml += `
-        <!-- Lead Pin ${pinNum} -->
-        <rect x="${bodyX + bodyWidth}" y="${y - 4}" width="22" height="8" rx="1.5" fill="url(#screwHead)" stroke="#475569" stroke-width="0.8" />
-        <circle cx="${bodyX + bodyWidth + 26}" cy="${y}" r="2" fill="#38bdf8" opacity="0.6" />
+        <!-- Silver Metallic Lead Pin ${pinNum} -->
+        <g class="ref-pin-lead">
+          <rect x="${bodyX + bodyWidth}" y="${y - 6}" width="26" height="12" rx="2" fill="url(#silverLegHoriz)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevel)" />
+          <line x1="${bodyX + bodyWidth + 2}" y1="${y - 4}" x2="${bodyX + bodyWidth + 25}" y2="${y - 4}" stroke="#ffffff" stroke-width="1" opacity="0.8" />
+        </g>
         <!-- Pin Number Badge -->
-        <rect x="${bodyX + bodyWidth - 26}" y="${y - 9}" width="18" height="18" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
-        <text x="${bodyX + bodyWidth - 17}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="10" font-weight="800" text-anchor="middle">${pinNum}</text>
-        <!-- Pin Name & Pill -->
-        <g transform="translate(${bodyX + bodyWidth + 32}, ${y})">
-          <rect x="4" y="-10" width="90" height="20" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1" />
-          <text x="49" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+        <rect x="${bodyX + bodyWidth - 28}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
+        <text x="${bodyX + bodyWidth - 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${pinNum}</text>
+        <!-- Pin Name & Function Pill -->
+        <g transform="translate(${bodyX + bodyWidth + 34}, ${y})">
+          <rect x="4" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
+          <text x="50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
         </g>
       `;
     }
@@ -7376,29 +7663,24 @@ const SVG_COMPONENTS = {
           </filter>
         </defs>
 
-        <!-- Leads Behind Body -->
+        <!-- Silver Leads on Left & Right -->
         ${pinsLeftHtml}
         ${pinsRightHtml}
 
-        <!-- 3D Epoxy Plastic Body -->
-        <rect x="${bodyX}" y="${bodyY}" width="${bodyWidth}" height="${bodyHeight}" rx="6" fill="#151921" stroke="#334155" stroke-width="1.5" filter="url(#pkgShadow)" />
-        <rect x="${bodyX + 3}" y="${bodyY + 3}" width="${bodyWidth - 6}" height="${bodyHeight - 6}" rx="4" fill="none" stroke="#262f3f" stroke-width="1" opacity="0.6" />
+        <!-- 3D Matte Dark Charcoal Epoxy Plastic Body (matching reference image) -->
+        <rect x="${bodyX}" y="${bodyY}" width="${bodyWidth}" height="${bodyHeight}" rx="6" fill="#1c1e22" stroke="#2b2f36" stroke-width="1.5" filter="url(#pkgShadow)" />
+        <rect x="${bodyX + 3.5}" y="${bodyY + 3.5}" width="${bodyWidth - 7}" height="${bodyHeight - 7}" rx="4" fill="none" stroke="#272b32" stroke-width="1.2" />
 
-        <!-- Package Notch at Top Center -->
-        <path d="M ${bodyX + bodyWidth/2 - 14} ${bodyY} A 14 14 0 0 0 ${bodyX + bodyWidth/2 + 14} ${bodyY} Z" fill="#090c10" stroke="#334155" stroke-width="1" />
+        <!-- Semicircular Orientation Notch at Top Center -->
+        <path d="M ${bodyX + bodyWidth/2 - 16} ${bodyY} A 16 16 0 0 0 ${bodyX + bodyWidth/2 + 16} ${bodyY} Z" fill="#0d0e10" stroke="#2b2f36" stroke-width="1.2" />
+        <path d="M ${bodyX + bodyWidth/2 - 15} ${bodyY + 1} A 15 15 0 0 0 ${bodyX + bodyWidth/2 + 15} ${bodyY + 1}" fill="none" stroke="#000000" stroke-width="1.8" />
 
-        <!-- Pin 1 Dot -->
-        <circle cx="${bodyX + 18}" cy="${bodyY + 18}" r="3.5" fill="#090c10" stroke="#334155" stroke-width="1" />
+        <!-- Pin 1 Index Dot -->
+        <circle cx="${bodyX + 18}" cy="${bodyY + 20}" r="3.5" fill="#0d0e10" stroke="#2c3036" stroke-width="1" />
 
-        <!-- Laser Etched Center Silkscreen -->
+        <!-- Bold Part Number Printed in Center (matching reference image) -->
         <g transform="translate(${bodyX + bodyWidth / 2}, ${bodyY + bodyHeight / 2})">
-          <circle cx="0" cy="-34" r="10" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7"/>
-          <text x="0" y="-30" fill="#94a3b8" font-family="var(--font-ui)" font-size="9" font-weight="900" text-anchor="middle">TI</text>
-
-          <text x="0" y="-12" fill="#f8fafc" font-family="var(--font-mono)" font-size="13" font-weight="800" letter-spacing="1.2" text-anchor="middle">${icDef.marking || ('SN' + icDef.name + 'N')}</text>
-          <text x="0" y="4" fill="#cbd5e1" font-family="var(--font-mono)" font-size="9.5" font-weight="700" letter-spacing="0.8" text-anchor="middle">[${icDef.name}]</text>
-          <text x="0" y="20" fill="#38bdf8" font-family="var(--font-mono)" font-size="9" font-weight="600" letter-spacing="1" text-anchor="middle">${icDef.package || ('DIP-' + pinCount)}</text>
-          <text x="0" y="34" fill="#64748b" font-family="var(--font-mono)" font-size="7.5" letter-spacing="1" text-anchor="middle">MALAYSIA 2418B</text>
+          <text x="0" y="8" fill="#ffffff" font-family="'Inter', -apple-system, var(--font-ui), sans-serif" font-size="28" font-weight="800" letter-spacing="2" text-anchor="middle" transform="rotate(-90)">${icDef.name}</text>
         </g>
       </svg>
     `;
@@ -7435,7 +7717,7 @@ const SVG_COMPONENTS = {
     `;
 
     return `
-      <g class="patch-cord-group ${isSelected ? 'selected' : ''} cord-animate-in" data-wire-id="${wire.id}">
+      <g class="patch-cord-group ${isSelected ? 'selected' : ''}" data-wire-id="${wire.id}">
         <title>Patch Cord ${wire.id}: ${wire.from} ↔ ${wire.to}</title>
         <!-- Soft Ground Shadow -->
         <path d="${shadowPath}" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" pointer-events="none" />
@@ -7491,6 +7773,57 @@ const SVG_COMPONENTS = {
         <circle cx="${p1.x}" cy="${p1.y}" r="6.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
         <circle cx="${p2.x}" cy="${p2.y}" r="6.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
       </g>
+    `;
+  },
+
+  // 12. drawDIPThumbnail: photorealistic vertical DIP chip graphic for IC Drawer catalog
+  drawDIPThumbnail(opts) {
+    const ic = (typeof opts === "string") ? (typeof IC_LIBRARY !== "undefined" ? IC_LIBRARY[opts] : { name: opts }) : (opts || {});
+    const chipName = ic.name || "7400";
+    const pinCount = ic.pinCount || (ic.pins ? ic.pins.length : 14);
+    const half = Math.min(20, Math.floor(pinCount / 2));
+
+    const pitch = 14;
+    const bodyW = 38;
+    const bodyH = (half - 1) * pitch + 32;
+    const legW = 10;
+    const legH = 7;
+    const totalW = bodyW + legW * 2 + 4;
+    const totalH = bodyH + 12;
+    const bodyX = legW + 2;
+    const bodyY = 6;
+
+    let legsLeft = "";
+    let legsRight = "";
+    for (let i = 0; i < half; i++) {
+      const py = bodyY + 16 + i * pitch;
+      legsLeft += `
+        <g transform="translate(${bodyX - legW}, ${py - legH/2})">
+          <rect x="0" y="0" width="${legW}" height="${legH}" rx="1.5" fill="url(#silverLegHoriz)" stroke="#334155" stroke-width="0.6" filter="url(#shadowBevel)" />
+          <line x1="2" y1="1.5" x2="${legW - 1}" y2="1.5" stroke="#ffffff" stroke-width="0.8" opacity="0.8" />
+        </g>
+      `;
+      legsRight += `
+        <g transform="translate(${bodyX + bodyW}, ${py - legH/2})">
+          <rect x="0" y="0" width="${legW}" height="${legH}" rx="1.5" fill="url(#silverLegHoriz)" stroke="#334155" stroke-width="0.6" filter="url(#shadowBevel)" />
+          <line x1="1" y1="1.5" x2="${legW - 2}" y2="1.5" stroke="#ffffff" stroke-width="0.8" opacity="0.8" />
+        </g>
+      `;
+    }
+
+    const fontSize = (chipName.length > 5) ? 12 : 14;
+
+    return `
+      <svg class="dip-chip-thumb-svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));">
+        <g class="chip-legs">${legsLeft}${legsRight}</g>
+        <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="3.5" fill="url(#icEpoxyBody)" stroke="#090a0d" stroke-width="1.2" />
+        <rect x="${bodyX + 1.2}" y="${bodyY + 1.2}" width="${bodyW - 2.4}" height="${bodyH - 2.4}" rx="2.5" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="0.8" />
+        <path d="M ${bodyX + bodyW/2 - 7} ${bodyY} A 7 7 0 0 0 ${bodyX + bodyW/2 + 7} ${bodyY}" fill="#0d0f12" stroke="#090a0d" stroke-width="1" />
+        <circle cx="${bodyX + 7}" cy="${bodyY + 13}" r="2.5" fill="#0d0f12" stroke="#252a33" stroke-width="0.8" />
+        <text x="${bodyX + bodyW/2}" y="${bodyY + bodyH/2}" fill="#f1f5f9" font-family="'JetBrains Mono', Inter, monospace" font-size="${fontSize}" font-weight="900" text-anchor="middle" transform="rotate(90, ${bodyX + bodyW/2}, ${bodyY + bodyH/2})" letter-spacing="1.5">
+          ${chipName}
+        </text>
+      </svg>
     `;
   }
 };
@@ -7558,6 +7891,49 @@ class BoardRenderer {
       outputs: { x: 1020, y: 20, w: 560, h: 330 },
       u5: { x: 20, y: 20, w: 380, h: 1080 }
     };
+  }
+
+  getJackFromEvent(e) {
+    if (!e) return null;
+
+    // 1. Precise proximity check against this.jackCoords:
+    // Enables multi-wire connections and piggybacking onto the same port
+    // without interference from overlapping banana plugs or wire hitboxes!
+    if (this.jackCoords) {
+      const svgPt = this.getSVGCoords(e);
+      if (svgPt && !isNaN(svgPt.x) && !isNaN(svgPt.y)) {
+        let closestJack = null;
+        let minDistSq = 22 * 22; // 22px radius tolerance
+        for (const [jId, pt] of Object.entries(this.jackCoords)) {
+          const dx = svgPt.x - pt.x;
+          const dy = svgPt.y - pt.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < minDistSq) {
+            minDistSq = distSq;
+            closestJack = jId;
+          }
+        }
+        if (closestJack) return closestJack;
+      }
+    }
+
+    // 2. Direct DOM target check
+    let group = (e.target && typeof e.target.closest === "function") ? e.target.closest(".jack-group") : null;
+    if (group && group.dataset.jack) return group.dataset.jack;
+
+    // 3. elementsFromPoint DOM penetration check
+    if (typeof document !== "undefined" && typeof document.elementsFromPoint === "function") {
+      const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : null));
+      const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : null));
+      if (clientX !== null && clientY !== null) {
+        const elems = document.elementsFromPoint(clientX, clientY);
+        for (const el of elems) {
+          const jg = (el && typeof el.closest === "function") ? el.closest(".jack-group") : null;
+          if (jg && jg.dataset.jack) return jg.dataset.jack;
+        }
+      }
+    }
+    return null;
   }
 
   setView(viewName) {
@@ -7705,10 +8081,9 @@ class BoardRenderer {
       if (this.isPanning || this.isDraggingKnob) return;
       if (e.button !== 0) return; // Left click only for dragging
 
-      // Jack mousedown -> start drag-to-connect
-      const jackGroup = e.target.closest(".jack-group");
-      if (jackGroup) {
-        const jackId = jackGroup.dataset.jack;
+      // Jack mousedown -> start drag-to-connect (supports multiple wires from same hole/port!)
+      const jackId = this.getJackFromEvent(e);
+      if (jackId) {
         this.dragStartJack = jackId;
         this.dragStartPos = this.getSVGCoords(e);
         this.tempMousePos = this.dragStartPos;
@@ -7729,6 +8104,12 @@ class BoardRenderer {
 
     // Click interactions (switches, levers, clock controls, cord selection/deletion)
     this.svg.addEventListener("click", (e) => {
+      // 0. Jack click -> if clicking directly on a jack, do NOT delete or select cords behind it!
+      const jackId = this.getJackFromEvent(e);
+      if (jackId) {
+        return;
+      }
+
       // 1. Midpoint ✕ delete handle on cord
       const deleteHandle = e.target.closest(".cord-delete-handle");
       if (deleteHandle) {
@@ -7764,12 +8145,16 @@ class BoardRenderer {
         return;
       }
 
-      // 4. ZIF Socket Lever Toggle
-      const zifLever = e.target.closest(".zif-lever");
+      // 4. ZIF Socket Lever Toggle (from lever handle OR lever symbol/badge on the board)
+      const zifLever = (e.target && typeof e.target.closest === "function")
+        ? (e.target.closest(".zif-lever") || e.target.closest(".zif-lever-badge"))
+        : null;
       if (zifLever) {
         const sId = zifLever.dataset.socket;
         const curLocked = this.engine.sockets[sId].leverLocked;
         this.engine.setSocketLever(sId, !curLocked);
+        if (window.consolePanel) window.consolePanel.render();
+        this.render();
         return;
       }
 
@@ -7839,15 +8224,13 @@ class BoardRenderer {
       if (this.engine.board.pulsers[1].pressed) this.engine.setPulser(1, false);
       if (this.engine.board.pulsers[2].pressed) this.engine.setPulser(2, false);
 
-      // Handle cord dragging completion
+      // Handle cord dragging completion (supports multiple wires into same jack!)
       if (this.isDraggingCord && this.dragStartJack) {
         const curPos = this.getSVGCoords(e);
-        const movedDist = Math.hypot(curPos.x - this.dragStartPos.x, curPos.y - this.dragStartPos.y);
+        const movedDist = this.dragStartPos ? Math.hypot(curPos.x - this.dragStartPos.x, curPos.y - this.dragStartPos.y) : 0;
 
-        // Find drop target jack under pointer
-        const elem = document.elementFromPoint(e.clientX, e.clientY);
-        const targetGroup = elem ? elem.closest(".jack-group") : null;
-        const targetJack = targetGroup ? targetGroup.dataset.jack : null;
+        // Find drop target jack under pointer (uses elementsFromPoint so stacked jacks connect!)
+        const targetJack = this.getJackFromEvent(e);
 
         if (targetJack && targetJack !== this.dragStartJack) {
           // Dragged and dropped onto a different jack!
@@ -7898,9 +8281,8 @@ class BoardRenderer {
         this.renderCordsOnly();
         return;
       }
-      const jackGroup = e.target.closest(".jack-group");
-      if (jackGroup) {
-        const jackId = jackGroup.dataset.jack;
+      const jackId = this.getJackFromEvent(e);
+      if (jackId) {
         const attached = this.engine.wires.filter(w => w.from === jackId || w.to === jackId);
         if (attached.length > 0) {
           this.engine.removeWire(attached[attached.length - 1].id);
@@ -7919,10 +8301,10 @@ class BoardRenderer {
         this.tempMousePos = coords;
 
         // Check if mouse is hovering over candidate target jack
-        const jackGroup = e.target.closest(".jack-group");
+        const hoverJack = this.getJackFromEvent(e);
         const activeJack = this.dragStartJack || this.selectedJack;
-        if (jackGroup && jackGroup.dataset.jack !== activeJack) {
-          this.hoverTargetJack = jackGroup.dataset.jack;
+        if (hoverJack && hoverJack !== activeJack) {
+          this.hoverTargetJack = hoverJack;
         } else {
           this.hoverTargetJack = null;
         }
@@ -7930,10 +8312,9 @@ class BoardRenderer {
         return; // Suppress probe HUD while wiring
       }
 
-      const jackGroup = e.target.closest(".jack-group");
-      if (jackGroup) {
-        const jackId = jackGroup.dataset.jack;
-        if (this.onJackHover) this.onJackHover(jackId, e);
+      const hoverJack = this.getJackFromEvent(e);
+      if (hoverJack) {
+        if (this.onJackHover) this.onJackHover(hoverJack, e);
       } else {
         if (this.onJackHover) this.onJackHover(null, e);
       }
@@ -8173,7 +8554,13 @@ class BoardRenderer {
       <g id="zone-left-strip">
         <rect x="42" y="42" width="316" height="1030" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
         <text x="200" y="70" class="silkscreen-title" text-anchor="middle">40 PIN ZIF EXPANSION</text>
-        <text x="200" y="90" class="silkscreen-text mini" text-anchor="middle">UNIVERSAL MICROCONTROLLER / LSI INTERFACE (U5)</text>
+        <text x="200" y="88" class="silkscreen-text mini" text-anchor="middle">UNIVERSAL MICROCONTROLLER / LSI INTERFACE (U5)</text>
+        <!-- Clickable Lever Symbol / Badge on board for U5 -->
+        <g class="zif-lever-badge" data-socket="U5" style="cursor: pointer;" tabindex="0" role="button" aria-label="Toggle U5 lever (${this.engine.sockets.U5.leverLocked ? 'Locked' : 'Open'})">
+          <title>Click to toggle lever (${this.engine.sockets.U5.leverLocked ? 'Locked' : 'Open'})</title>
+          <rect x="110" y="96" width="180" height="20" rx="4" fill="${this.engine.sockets.U5.leverLocked ? 'rgba(16,185,129,0.22)' : 'rgba(245,158,11,0.25)'}" stroke="${this.engine.sockets.U5.leverLocked ? '#10b981' : '#f59e0b'}" stroke-width="1.2" />
+          <text x="200" y="110" fill="${this.engine.sockets.U5.leverLocked ? '#86efac' : '#fde047'}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${this.engine.sockets.U5.leverLocked ? '🔒 LEVER: LOCKED' : '🔓 LEVER: OPEN'}</text>
+        </g>
 
         ${SVG_COMPONENTS.drawZIFSocket({
           socketId: "U5",
@@ -8186,7 +8573,8 @@ class BoardRenderer {
           chipName: this.engine.sockets.U5.chip,
           marking: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.marking || ("SN" + this.engine.sockets.U5.chip + "N")) : "",
           socketX: 130, socketY: 120, socketW: 140, socketH: 840,
-          icPinCount: 40, alignment: "left",
+          icPinCount: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.pinCount || 40) : 40,
+          alignment: "left",
           backwards: !!this.engine.sockets.U5.backwards
         })}
       </g>
@@ -8283,7 +8671,7 @@ class BoardRenderer {
         ${SVG_COMPONENTS.drawSevenSeg({
           id: "output-7seg",
           x: 1249, y: 78,
-          digits: this.engine.segDigits
+          digits: this.engine.masterPower ? this.engine.segDigits : [-1, -1]
         })}
       </g>
     `;
@@ -8381,8 +8769,8 @@ class BoardRenderer {
     const p1NegVal = this.engine.board.pulsers[1].neg;
     const p1PosB = this.engine.board.leds["LED_PULSER_1_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_1_POS"] : (p1PosVal ? 1.0 : 0.0);
 
-    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_POS", cx: 846, cy: 468, brightness: p1PosB, color: "red" });
-    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_NEG", cx: 888, cy: 468, brightness: p1NegVal ? 1.0 : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_POS", cx: 846, cy: 468, brightness: this.engine.masterPower ? p1PosB : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_NEG", cx: 888, cy: 468, brightness: this.engine.masterPower ? (p1NegVal ? 1.0 : 0.0) : 0.0, color: "red" });
     svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.1.POS", label: "POS ⎍", cx: 846, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.1.POS" });
     svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.1.NEG", label: "NEG ⎎", cx: 888, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.1.NEG" });
 
@@ -8396,8 +8784,8 @@ class BoardRenderer {
     const p2NegVal = this.engine.board.pulsers[2].neg;
     const p2PosB = this.engine.board.leds["LED_PULSER_2_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_2_POS"] : (p2PosVal ? 1.0 : 0.0);
 
-    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_POS", cx: 960, cy: 468, brightness: p2PosB, color: "red" });
-    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_NEG", cx: 1002, cy: 468, brightness: p2NegVal ? 1.0 : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_POS", cx: 960, cy: 468, brightness: this.engine.masterPower ? p2PosB : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_NEG", cx: 1002, cy: 468, brightness: this.engine.masterPower ? (p2NegVal ? 1.0 : 0.0) : 0.0, color: "red" });
     svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.2.POS", label: "POS ⎍", cx: 960, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.2.POS" });
     svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.2.NEG", label: "NEG ⎎", cx: 1002, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.2.NEG" });
 
@@ -8465,11 +8853,20 @@ class BoardRenderer {
     for (const cell of socketCells) {
       const sData = this.engine.sockets[cell.id];
       const icDef = sData.chip ? IC_LIBRARY[sData.chip] : null;
-      const leverText = sData.leverLocked ? "🔒 LOCKED" : "🔓 OPEN (UNLOCKED)";
+      const leverLocked = !!sData.leverLocked;
+      const leverBadgeBg = leverLocked ? "rgba(16, 185, 129, 0.22)" : "rgba(245, 158, 11, 0.25)";
+      const leverBadgeBorder = leverLocked ? "#10b981" : "#f59e0b";
+      const leverBadgeColor = leverLocked ? "#86efac" : "#fde047";
+      const leverLabel = leverLocked ? "🔒 LEVER: LOCKED" : "🔓 LEVER: OPEN";
 
       svgContent += `
         <text x="${cell.x + 10}" y="${cell.y - 48}" class="silkscreen-title bold">${cell.label}</text>
-        <text x="${cell.x + 60}" y="${cell.y - 48}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''}) - ${leverText}` : `[EMPTY 20-PIN ZIF] - ${leverText}`}</text>
+        <text x="${cell.x + 50}" y="${cell.y - 48}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''})` : `[EMPTY 20-PIN ZIF]`}</text>
+        <g class="zif-lever-badge" data-socket="${cell.id}" style="cursor: pointer;" tabindex="0" role="button" aria-label="Toggle ${cell.id} lever (${leverLocked ? 'Locked' : 'Open'})">
+          <title>Click to toggle lever (${leverLocked ? 'Locked' : 'Open'})</title>
+          <rect x="${cell.x + zifW - 145}" y="${cell.y - 62}" width="145" height="20" rx="4" fill="${leverBadgeBg}" stroke="${leverBadgeBorder}" stroke-width="1.2" />
+          <text x="${cell.x + zifW - 72}" y="${cell.y - 48}" fill="${leverBadgeColor}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${leverLabel}</text>
+        </g>
       `;
 
       svgContent += SVG_COMPONENTS.drawZIFSocket({
@@ -8702,9 +9099,8 @@ class BoardRenderer {
         if (this.isDraggingCord) {
           e.preventDefault();
           this.tempMousePos = this.getSVGCoords(touch);
-          const elem = document.elementFromPoint(touch.clientX, touch.clientY);
-          const targetGroup = elem ? elem.closest(".jack-group") : null;
-          this.hoverTargetJack = targetGroup ? targetGroup.dataset.jack : null;
+          const targetJack = this.getJackFromEvent(touch);
+          this.hoverTargetJack = (targetJack && targetJack !== (this.dragStartJack || this.selectedJack)) ? targetJack : null;
           this.updateRubberBand();
         } else if (this.isPanning) {
           e.preventDefault();
@@ -8731,9 +9127,7 @@ class BoardRenderer {
 
       if (this.isDraggingCord && this.dragStartJack) {
         const lastTouch = e.changedTouches[0];
-        const elem = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
-        const targetGroup = elem ? elem.closest(".jack-group") : null;
-        const targetJack = targetGroup ? targetGroup.dataset.jack : null;
+        const targetJack = this.getJackFromEvent(lastTouch);
         const movedDist = touchStartPos ? Math.hypot(lastTouch.clientX - touchStartPos.x, lastTouch.clientY - touchStartPos.y) : 0;
 
         if (targetJack && targetJack !== this.dragStartJack) {
@@ -8796,11 +9190,12 @@ class BoardRenderer {
           return;
         }
 
-        const zifLever = active.closest(".zif-lever");
+        const zifLever = active.closest(".zif-lever") || active.closest(".zif-lever-badge");
         if (zifLever) {
           e.preventDefault();
           const sId = zifLever.dataset.socket;
           this.engine.setSocketLever(sId, !this.engine.sockets[sId].leverLocked);
+          if (window.consolePanel) window.consolePanel.render();
           this.render();
           return;
         }
@@ -9323,11 +9718,11 @@ class LabConsole {
     });
 
     return `
-      <!-- 1. IC INVENTORY (Small cards for U1..U5) -->
+      <!-- 1. TRAINER ZIF SOCKETS (Small cards for U1..U5) -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title">IC INVENTORY</span>
-          <span style="font-size: 10px; color: #94a3b8; font-family: var(--font-mono);">Sockets U1–U5</span>
+          <span class="card-title">TRAINER ZIF SOCKETS (U1–U5)</span>
+          <span style="font-size: 10px; color: #94a3b8; font-family: var(--font-mono);">Active Workbench</span>
         </div>
         <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
           Click socket card to select. Drag chips from below directly onto socket cards or board.
@@ -9367,6 +9762,9 @@ class LabConsole {
                 <div style="font-size: 8.5px; color: ${statusColor}; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   ● ${statusText}
                 </div>
+                <button class="btn btn-socket-quick-lever ${s.leverLocked ? '' : 'btn-teal'}" data-socket="${sId}" style="font-size: 8.5px; padding: 2px 4px; width: 100%; margin-top: 4px; line-height: 1.2;" title="Click to toggle lever for ${sId}">
+                  ${s.leverLocked ? '🔒 Locked' : '🔓 Open'}
+                </button>
               </div>
             `;
           }).join("")}
@@ -9417,15 +9815,15 @@ class LabConsole {
         </div>
       </div>
 
-      <!-- 3. CHOOSE A CHIP (Search + Scrollable List) -->
+      <!-- 3. IC DRAWER & COMPONENT CATALOG (Search + Visual DIP Chips) -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title">CHOOSE A CHIP</span>
-          <span style="font-size: 10px; color: var(--accent-teal); font-family: var(--font-mono); font-weight: 700;">${allChips.length} Available</span>
+          <span class="card-title">IC DRAWER & COMPONENT CATALOG</span>
+          <span style="font-size: 10px; color: var(--accent-teal); font-family: var(--font-mono); font-weight: 700;">${allChips.length} Models Ready</span>
         </div>
 
         <div class="chip-search-wrapper">
-          <input type="text" class="chip-search-input" id="chip-search-input" value="${this.chipSearchQuery || ''}" placeholder="🔍 Search by number, name, function (e.g. 7408, AND, MUX)...">
+          <input type="text" class="chip-search-input" id="chip-search-input" value="${this.chipSearchQuery || ''}" placeholder="🔍 Search drawer by number, name, function (e.g. 7408, AND, MUX)...">
         </div>
 
         <div class="chip-list-scroll">
@@ -9434,28 +9832,45 @@ class LabConsole {
             const isBasic = basicGateICs.includes(c);
             const isExpReq = expRequiredICs.includes(c);
             const gateCount = (ic.pins && ic.pins.filter(p => p.type === 'out').length) || 4;
+            const chipThumbSvg = (SVG_COMPONENTS && typeof SVG_COMPONENTS.drawDIPThumbnail === "function")
+              ? SVG_COMPONENTS.drawDIPThumbnail(ic)
+              : '';
 
             return `
               <div class="chip-card" draggable="true" data-chip="${c}">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-size: 13px; font-weight: 800; font-family: var(--font-mono); color: #fff;">${c}</span>
-                    <span style="font-size: 9.5px; color: #94a3b8; font-family: var(--font-mono);">${ic.marking || ('SN' + c + 'N')}</span>
-                    ${isExpReq ? '<span class="chip-tag-exp">★ IN THIS EXPERIMENT</span>' : ''}
-                    ${isBasic && !isExpReq ? '<span class="chip-tag-basic">BASIC GATE</span>' : ''}
+                <div class="chip-card-visual" title="Drag ${c} to any PCB socket">
+                  ${chipThumbSvg}
+                </div>
+                <div class="chip-card-info">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                      <span class="chip-title-bold">${c}</span>
+                      <span class="chip-marking-pill">${ic.marking || ('SN' + c + 'N')}</span>
+                      ${isExpReq ? '<span class="chip-tag-exp">★ REQUIRED IN LAB</span>' : ''}
+                      ${isBasic && !isExpReq ? '<span class="chip-tag-basic">BASIC GATE</span>' : ''}
+                    </div>
+                    <span class="chip-pkg-badge">${ic.package || ((ic.pinCount || 14) + '-PIN DIP')}</span>
                   </div>
-                  <span style="font-size: 9px; font-family: var(--font-mono); color: #64748b;">${ic.package || 'DIP-14'}</span>
-                </div>
 
-                <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 6px; line-height: 1.35;">
-                  ${ic.title || ic.description || ''}
-                </div>
+                  <div class="chip-desc-text">
+                    ${ic.title || ic.description || ''}
+                  </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; font-family: var(--font-mono);">
-                  <div>VCC: Pin ${ic.vccPin} &middot; GND: Pin ${ic.gndPin} &middot; ${gateCount} Outputs</div>
-                  <button class="btn btn-teal insert-chip-btn" data-chip="${c}" style="font-size: 10px; padding: 3px 8px;">
-                    ${selectedSock.chip ? 'Replace in ' + this.selectedSocket : 'Seat in ' + this.selectedSocket}
-                  </button>
+                  <div class="chip-specs-row">
+                    <span><b>VCC:</b> Pin ${ic.vccPin}</span>
+                    <span><b>GND:</b> Pin ${ic.gndPin}</span>
+                    <span><b>Pins:</b> ${ic.pinCount || 14}</span>
+                    <span><b>Outputs:</b> ${gateCount}</span>
+                  </div>
+
+                  <div class="chip-action-row">
+                    <button class="btn btn-teal insert-chip-btn" data-chip="${c}">
+                      ${selectedSock.chip ? 'Replace in ' + this.selectedSocket : 'Seat in ' + this.selectedSocket}
+                    </button>
+                    <button class="btn btn-subtle inspect-chip-btn" data-chip="${c}" title="View datasheet pinout diagram">
+                      Datasheet ↗
+                    </button>
+                  </div>
                 </div>
               </div>
             `;
@@ -10117,6 +10532,20 @@ class LabConsole {
       });
     });
 
+    // Quick lever toggle from socket cards in inventory
+    this.container.querySelectorAll(".btn-socket-quick-lever").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const sId = btn.dataset.socket;
+        const s = this.engine.sockets[sId];
+        if (s) {
+          this.engine.setSocketLever(sId, !s.leverLocked);
+          this.board.render();
+          this.render();
+        }
+      });
+    });
+
     // Selected socket lever toggle
     const btnSocketLever = this.container.querySelector("#btn-toggle-socket-lever");
     if (btnSocketLever) {
@@ -10186,6 +10615,16 @@ class LabConsole {
     this.container.querySelectorAll(".insert-chip-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         this.insertChipToSocket(this.selectedSocket, btn.dataset.chip);
+      });
+    });
+
+    // Inspect datasheet button on chip cards
+    this.container.querySelectorAll(".inspect-chip-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.currentRefChip = btn.dataset.chip;
+        this.currentTab = "reference";
+        this.render();
       });
     });
 

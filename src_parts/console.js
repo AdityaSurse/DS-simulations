@@ -473,11 +473,11 @@ class LabConsole {
     });
 
     return `
-      <!-- 1. IC INVENTORY (Small cards for U1..U5) -->
+      <!-- 1. TRAINER ZIF SOCKETS (Small cards for U1..U5) -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title">IC INVENTORY</span>
-          <span style="font-size: 10px; color: #94a3b8; font-family: var(--font-mono);">Sockets U1–U5</span>
+          <span class="card-title">TRAINER ZIF SOCKETS (U1–U5)</span>
+          <span style="font-size: 10px; color: #94a3b8; font-family: var(--font-mono);">Active Workbench</span>
         </div>
         <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
           Click socket card to select. Drag chips from below directly onto socket cards or board.
@@ -517,6 +517,9 @@ class LabConsole {
                 <div style="font-size: 8.5px; color: ${statusColor}; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   ● ${statusText}
                 </div>
+                <button class="btn btn-socket-quick-lever ${s.leverLocked ? '' : 'btn-teal'}" data-socket="${sId}" style="font-size: 8.5px; padding: 2px 4px; width: 100%; margin-top: 4px; line-height: 1.2;" title="Click to toggle lever for ${sId}">
+                  ${s.leverLocked ? '🔒 Locked' : '🔓 Open'}
+                </button>
               </div>
             `;
           }).join("")}
@@ -567,15 +570,15 @@ class LabConsole {
         </div>
       </div>
 
-      <!-- 3. CHOOSE A CHIP (Search + Scrollable List) -->
+      <!-- 3. IC DRAWER & COMPONENT CATALOG (Search + Visual DIP Chips) -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title">CHOOSE A CHIP</span>
-          <span style="font-size: 10px; color: var(--accent-teal); font-family: var(--font-mono); font-weight: 700;">${allChips.length} Available</span>
+          <span class="card-title">IC DRAWER & COMPONENT CATALOG</span>
+          <span style="font-size: 10px; color: var(--accent-teal); font-family: var(--font-mono); font-weight: 700;">${allChips.length} Models Ready</span>
         </div>
 
         <div class="chip-search-wrapper">
-          <input type="text" class="chip-search-input" id="chip-search-input" value="${this.chipSearchQuery || ''}" placeholder="🔍 Search by number, name, function (e.g. 7408, AND, MUX)...">
+          <input type="text" class="chip-search-input" id="chip-search-input" value="${this.chipSearchQuery || ''}" placeholder="🔍 Search drawer by number, name, function (e.g. 7408, AND, MUX)...">
         </div>
 
         <div class="chip-list-scroll">
@@ -584,28 +587,45 @@ class LabConsole {
             const isBasic = basicGateICs.includes(c);
             const isExpReq = expRequiredICs.includes(c);
             const gateCount = (ic.pins && ic.pins.filter(p => p.type === 'out').length) || 4;
+            const chipThumbSvg = (SVG_COMPONENTS && typeof SVG_COMPONENTS.drawDIPThumbnail === "function")
+              ? SVG_COMPONENTS.drawDIPThumbnail(ic)
+              : '';
 
             return `
               <div class="chip-card" draggable="true" data-chip="${c}">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-size: 13px; font-weight: 800; font-family: var(--font-mono); color: #fff;">${c}</span>
-                    <span style="font-size: 9.5px; color: #94a3b8; font-family: var(--font-mono);">${ic.marking || ('SN' + c + 'N')}</span>
-                    ${isExpReq ? '<span class="chip-tag-exp">★ IN THIS EXPERIMENT</span>' : ''}
-                    ${isBasic && !isExpReq ? '<span class="chip-tag-basic">BASIC GATE</span>' : ''}
+                <div class="chip-card-visual" title="Drag ${c} to any PCB socket">
+                  ${chipThumbSvg}
+                </div>
+                <div class="chip-card-info">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                      <span class="chip-title-bold">${c}</span>
+                      <span class="chip-marking-pill">${ic.marking || ('SN' + c + 'N')}</span>
+                      ${isExpReq ? '<span class="chip-tag-exp">★ REQUIRED IN LAB</span>' : ''}
+                      ${isBasic && !isExpReq ? '<span class="chip-tag-basic">BASIC GATE</span>' : ''}
+                    </div>
+                    <span class="chip-pkg-badge">${ic.package || ((ic.pinCount || 14) + '-PIN DIP')}</span>
                   </div>
-                  <span style="font-size: 9px; font-family: var(--font-mono); color: #64748b;">${ic.package || 'DIP-14'}</span>
-                </div>
 
-                <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 6px; line-height: 1.35;">
-                  ${ic.title || ic.description || ''}
-                </div>
+                  <div class="chip-desc-text">
+                    ${ic.title || ic.description || ''}
+                  </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; font-family: var(--font-mono);">
-                  <div>VCC: Pin ${ic.vccPin} &middot; GND: Pin ${ic.gndPin} &middot; ${gateCount} Outputs</div>
-                  <button class="btn btn-teal insert-chip-btn" data-chip="${c}" style="font-size: 10px; padding: 3px 8px;">
-                    ${selectedSock.chip ? 'Replace in ' + this.selectedSocket : 'Seat in ' + this.selectedSocket}
-                  </button>
+                  <div class="chip-specs-row">
+                    <span><b>VCC:</b> Pin ${ic.vccPin}</span>
+                    <span><b>GND:</b> Pin ${ic.gndPin}</span>
+                    <span><b>Pins:</b> ${ic.pinCount || 14}</span>
+                    <span><b>Outputs:</b> ${gateCount}</span>
+                  </div>
+
+                  <div class="chip-action-row">
+                    <button class="btn btn-teal insert-chip-btn" data-chip="${c}">
+                      ${selectedSock.chip ? 'Replace in ' + this.selectedSocket : 'Seat in ' + this.selectedSocket}
+                    </button>
+                    <button class="btn btn-subtle inspect-chip-btn" data-chip="${c}" title="View datasheet pinout diagram">
+                      Datasheet ↗
+                    </button>
+                  </div>
                 </div>
               </div>
             `;
@@ -1267,6 +1287,20 @@ class LabConsole {
       });
     });
 
+    // Quick lever toggle from socket cards in inventory
+    this.container.querySelectorAll(".btn-socket-quick-lever").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const sId = btn.dataset.socket;
+        const s = this.engine.sockets[sId];
+        if (s) {
+          this.engine.setSocketLever(sId, !s.leverLocked);
+          this.board.render();
+          this.render();
+        }
+      });
+    });
+
     // Selected socket lever toggle
     const btnSocketLever = this.container.querySelector("#btn-toggle-socket-lever");
     if (btnSocketLever) {
@@ -1336,6 +1370,16 @@ class LabConsole {
     this.container.querySelectorAll(".insert-chip-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         this.insertChipToSocket(this.selectedSocket, btn.dataset.chip);
+      });
+    });
+
+    // Inspect datasheet button on chip cards
+    this.container.querySelectorAll(".inspect-chip-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.currentRefChip = btn.dataset.chip;
+        this.currentTab = "reference";
+        this.render();
       });
     });
 

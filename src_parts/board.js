@@ -63,6 +63,49 @@ class BoardRenderer {
     };
   }
 
+  getJackFromEvent(e) {
+    if (!e) return null;
+
+    // 1. Precise proximity check against this.jackCoords:
+    // Enables multi-wire connections and piggybacking onto the same port
+    // without interference from overlapping banana plugs or wire hitboxes!
+    if (this.jackCoords) {
+      const svgPt = this.getSVGCoords(e);
+      if (svgPt && !isNaN(svgPt.x) && !isNaN(svgPt.y)) {
+        let closestJack = null;
+        let minDistSq = 22 * 22; // 22px radius tolerance
+        for (const [jId, pt] of Object.entries(this.jackCoords)) {
+          const dx = svgPt.x - pt.x;
+          const dy = svgPt.y - pt.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < minDistSq) {
+            minDistSq = distSq;
+            closestJack = jId;
+          }
+        }
+        if (closestJack) return closestJack;
+      }
+    }
+
+    // 2. Direct DOM target check
+    let group = (e.target && typeof e.target.closest === "function") ? e.target.closest(".jack-group") : null;
+    if (group && group.dataset.jack) return group.dataset.jack;
+
+    // 3. elementsFromPoint DOM penetration check
+    if (typeof document !== "undefined" && typeof document.elementsFromPoint === "function") {
+      const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : null));
+      const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : null));
+      if (clientX !== null && clientY !== null) {
+        const elems = document.elementsFromPoint(clientX, clientY);
+        for (const el of elems) {
+          const jg = (el && typeof el.closest === "function") ? el.closest(".jack-group") : null;
+          if (jg && jg.dataset.jack) return jg.dataset.jack;
+        }
+      }
+    }
+    return null;
+  }
+
   setView(viewName) {
     const preset = this.viewPresets[viewName] || this.viewPresets.full;
     this.activeView = viewName;
@@ -208,10 +251,9 @@ class BoardRenderer {
       if (this.isPanning || this.isDraggingKnob) return;
       if (e.button !== 0) return; // Left click only for dragging
 
-      // Jack mousedown -> start drag-to-connect
-      const jackGroup = e.target.closest(".jack-group");
-      if (jackGroup) {
-        const jackId = jackGroup.dataset.jack;
+      // Jack mousedown -> start drag-to-connect (supports multiple wires from same hole/port!)
+      const jackId = this.getJackFromEvent(e);
+      if (jackId) {
         this.dragStartJack = jackId;
         this.dragStartPos = this.getSVGCoords(e);
         this.tempMousePos = this.dragStartPos;
@@ -232,6 +274,12 @@ class BoardRenderer {
 
     // Click interactions (switches, levers, clock controls, cord selection/deletion)
     this.svg.addEventListener("click", (e) => {
+      // 0. Jack click -> if clicking directly on a jack, do NOT delete or select cords behind it!
+      const jackId = this.getJackFromEvent(e);
+      if (jackId) {
+        return;
+      }
+
       // 1. Midpoint ✕ delete handle on cord
       const deleteHandle = e.target.closest(".cord-delete-handle");
       if (deleteHandle) {
@@ -267,12 +315,16 @@ class BoardRenderer {
         return;
       }
 
-      // 4. ZIF Socket Lever Toggle
-      const zifLever = e.target.closest(".zif-lever");
+      // 4. ZIF Socket Lever Toggle (from lever handle OR lever symbol/badge on the board)
+      const zifLever = (e.target && typeof e.target.closest === "function")
+        ? (e.target.closest(".zif-lever") || e.target.closest(".zif-lever-badge"))
+        : null;
       if (zifLever) {
         const sId = zifLever.dataset.socket;
         const curLocked = this.engine.sockets[sId].leverLocked;
         this.engine.setSocketLever(sId, !curLocked);
+        if (window.consolePanel) window.consolePanel.render();
+        this.render();
         return;
       }
 
@@ -342,15 +394,13 @@ class BoardRenderer {
       if (this.engine.board.pulsers[1].pressed) this.engine.setPulser(1, false);
       if (this.engine.board.pulsers[2].pressed) this.engine.setPulser(2, false);
 
-      // Handle cord dragging completion
+      // Handle cord dragging completion (supports multiple wires into same jack!)
       if (this.isDraggingCord && this.dragStartJack) {
         const curPos = this.getSVGCoords(e);
-        const movedDist = Math.hypot(curPos.x - this.dragStartPos.x, curPos.y - this.dragStartPos.y);
+        const movedDist = this.dragStartPos ? Math.hypot(curPos.x - this.dragStartPos.x, curPos.y - this.dragStartPos.y) : 0;
 
-        // Find drop target jack under pointer
-        const elem = document.elementFromPoint(e.clientX, e.clientY);
-        const targetGroup = elem ? elem.closest(".jack-group") : null;
-        const targetJack = targetGroup ? targetGroup.dataset.jack : null;
+        // Find drop target jack under pointer (uses elementsFromPoint so stacked jacks connect!)
+        const targetJack = this.getJackFromEvent(e);
 
         if (targetJack && targetJack !== this.dragStartJack) {
           // Dragged and dropped onto a different jack!
@@ -401,9 +451,8 @@ class BoardRenderer {
         this.renderCordsOnly();
         return;
       }
-      const jackGroup = e.target.closest(".jack-group");
-      if (jackGroup) {
-        const jackId = jackGroup.dataset.jack;
+      const jackId = this.getJackFromEvent(e);
+      if (jackId) {
         const attached = this.engine.wires.filter(w => w.from === jackId || w.to === jackId);
         if (attached.length > 0) {
           this.engine.removeWire(attached[attached.length - 1].id);
@@ -422,10 +471,10 @@ class BoardRenderer {
         this.tempMousePos = coords;
 
         // Check if mouse is hovering over candidate target jack
-        const jackGroup = e.target.closest(".jack-group");
+        const hoverJack = this.getJackFromEvent(e);
         const activeJack = this.dragStartJack || this.selectedJack;
-        if (jackGroup && jackGroup.dataset.jack !== activeJack) {
-          this.hoverTargetJack = jackGroup.dataset.jack;
+        if (hoverJack && hoverJack !== activeJack) {
+          this.hoverTargetJack = hoverJack;
         } else {
           this.hoverTargetJack = null;
         }
@@ -433,10 +482,9 @@ class BoardRenderer {
         return; // Suppress probe HUD while wiring
       }
 
-      const jackGroup = e.target.closest(".jack-group");
-      if (jackGroup) {
-        const jackId = jackGroup.dataset.jack;
-        if (this.onJackHover) this.onJackHover(jackId, e);
+      const hoverJack = this.getJackFromEvent(e);
+      if (hoverJack) {
+        if (this.onJackHover) this.onJackHover(hoverJack, e);
       } else {
         if (this.onJackHover) this.onJackHover(null, e);
       }
@@ -676,7 +724,13 @@ class BoardRenderer {
       <g id="zone-left-strip">
         <rect x="42" y="42" width="316" height="1030" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
         <text x="200" y="70" class="silkscreen-title" text-anchor="middle">40 PIN ZIF EXPANSION</text>
-        <text x="200" y="90" class="silkscreen-text mini" text-anchor="middle">UNIVERSAL MICROCONTROLLER / LSI INTERFACE (U5)</text>
+        <text x="200" y="88" class="silkscreen-text mini" text-anchor="middle">UNIVERSAL MICROCONTROLLER / LSI INTERFACE (U5)</text>
+        <!-- Clickable Lever Symbol / Badge on board for U5 -->
+        <g class="zif-lever-badge" data-socket="U5" style="cursor: pointer;" tabindex="0" role="button" aria-label="Toggle U5 lever (${this.engine.sockets.U5.leverLocked ? 'Locked' : 'Open'})">
+          <title>Click to toggle lever (${this.engine.sockets.U5.leverLocked ? 'Locked' : 'Open'})</title>
+          <rect x="110" y="96" width="180" height="20" rx="4" fill="${this.engine.sockets.U5.leverLocked ? 'rgba(16,185,129,0.22)' : 'rgba(245,158,11,0.25)'}" stroke="${this.engine.sockets.U5.leverLocked ? '#10b981' : '#f59e0b'}" stroke-width="1.2" />
+          <text x="200" y="110" fill="${this.engine.sockets.U5.leverLocked ? '#86efac' : '#fde047'}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${this.engine.sockets.U5.leverLocked ? '🔒 LEVER: LOCKED' : '🔓 LEVER: OPEN'}</text>
+        </g>
 
         ${SVG_COMPONENTS.drawZIFSocket({
           socketId: "U5",
@@ -689,7 +743,8 @@ class BoardRenderer {
           chipName: this.engine.sockets.U5.chip,
           marking: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.marking || ("SN" + this.engine.sockets.U5.chip + "N")) : "",
           socketX: 130, socketY: 120, socketW: 140, socketH: 840,
-          icPinCount: 40, alignment: "left",
+          icPinCount: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.pinCount || 40) : 40,
+          alignment: "left",
           backwards: !!this.engine.sockets.U5.backwards
         })}
       </g>
@@ -786,7 +841,7 @@ class BoardRenderer {
         ${SVG_COMPONENTS.drawSevenSeg({
           id: "output-7seg",
           x: 1249, y: 78,
-          digits: this.engine.segDigits
+          digits: this.engine.masterPower ? this.engine.segDigits : [-1, -1]
         })}
       </g>
     `;
@@ -884,8 +939,8 @@ class BoardRenderer {
     const p1NegVal = this.engine.board.pulsers[1].neg;
     const p1PosB = this.engine.board.leds["LED_PULSER_1_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_1_POS"] : (p1PosVal ? 1.0 : 0.0);
 
-    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_POS", cx: 846, cy: 468, brightness: p1PosB, color: "red" });
-    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_NEG", cx: 888, cy: 468, brightness: p1NegVal ? 1.0 : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_POS", cx: 846, cy: 468, brightness: this.engine.masterPower ? p1PosB : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P1_NEG", cx: 888, cy: 468, brightness: this.engine.masterPower ? (p1NegVal ? 1.0 : 0.0) : 0.0, color: "red" });
     svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.1.POS", label: "POS ⎍", cx: 846, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.1.POS" });
     svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.1.NEG", label: "NEG ⎎", cx: 888, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.1.NEG" });
 
@@ -899,8 +954,8 @@ class BoardRenderer {
     const p2NegVal = this.engine.board.pulsers[2].neg;
     const p2PosB = this.engine.board.leds["LED_PULSER_2_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_2_POS"] : (p2PosVal ? 1.0 : 0.0);
 
-    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_POS", cx: 960, cy: 468, brightness: p2PosB, color: "red" });
-    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_NEG", cx: 1002, cy: 468, brightness: p2NegVal ? 1.0 : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_POS", cx: 960, cy: 468, brightness: this.engine.masterPower ? p2PosB : 0.0, color: "red" });
+    svgContent += SVG_COMPONENTS.drawLED({ id: "LED_P2_NEG", cx: 1002, cy: 468, brightness: this.engine.masterPower ? (p2NegVal ? 1.0 : 0.0) : 0.0, color: "red" });
     svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.2.POS", label: "POS ⎍", cx: 960, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.2.POS" });
     svgContent += SVG_COMPONENTS.drawJack({ id: "PULSER.2.NEG", label: "NEG ⎎", cx: 1002, cy: 494, labelSide: "bottom", isSelected: this.selectedJack === "PULSER.2.NEG" });
 
@@ -968,11 +1023,20 @@ class BoardRenderer {
     for (const cell of socketCells) {
       const sData = this.engine.sockets[cell.id];
       const icDef = sData.chip ? IC_LIBRARY[sData.chip] : null;
-      const leverText = sData.leverLocked ? "🔒 LOCKED" : "🔓 OPEN (UNLOCKED)";
+      const leverLocked = !!sData.leverLocked;
+      const leverBadgeBg = leverLocked ? "rgba(16, 185, 129, 0.22)" : "rgba(245, 158, 11, 0.25)";
+      const leverBadgeBorder = leverLocked ? "#10b981" : "#f59e0b";
+      const leverBadgeColor = leverLocked ? "#86efac" : "#fde047";
+      const leverLabel = leverLocked ? "🔒 LEVER: LOCKED" : "🔓 LEVER: OPEN";
 
       svgContent += `
         <text x="${cell.x + 10}" y="${cell.y - 48}" class="silkscreen-title bold">${cell.label}</text>
-        <text x="${cell.x + 60}" y="${cell.y - 48}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''}) - ${leverText}` : `[EMPTY 20-PIN ZIF] - ${leverText}`}</text>
+        <text x="${cell.x + 50}" y="${cell.y - 48}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''})` : `[EMPTY 20-PIN ZIF]`}</text>
+        <g class="zif-lever-badge" data-socket="${cell.id}" style="cursor: pointer;" tabindex="0" role="button" aria-label="Toggle ${cell.id} lever (${leverLocked ? 'Locked' : 'Open'})">
+          <title>Click to toggle lever (${leverLocked ? 'Locked' : 'Open'})</title>
+          <rect x="${cell.x + zifW - 145}" y="${cell.y - 62}" width="145" height="20" rx="4" fill="${leverBadgeBg}" stroke="${leverBadgeBorder}" stroke-width="1.2" />
+          <text x="${cell.x + zifW - 72}" y="${cell.y - 48}" fill="${leverBadgeColor}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${leverLabel}</text>
+        </g>
       `;
 
       svgContent += SVG_COMPONENTS.drawZIFSocket({
@@ -1205,9 +1269,8 @@ class BoardRenderer {
         if (this.isDraggingCord) {
           e.preventDefault();
           this.tempMousePos = this.getSVGCoords(touch);
-          const elem = document.elementFromPoint(touch.clientX, touch.clientY);
-          const targetGroup = elem ? elem.closest(".jack-group") : null;
-          this.hoverTargetJack = targetGroup ? targetGroup.dataset.jack : null;
+          const targetJack = this.getJackFromEvent(touch);
+          this.hoverTargetJack = (targetJack && targetJack !== (this.dragStartJack || this.selectedJack)) ? targetJack : null;
           this.updateRubberBand();
         } else if (this.isPanning) {
           e.preventDefault();
@@ -1234,9 +1297,7 @@ class BoardRenderer {
 
       if (this.isDraggingCord && this.dragStartJack) {
         const lastTouch = e.changedTouches[0];
-        const elem = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
-        const targetGroup = elem ? elem.closest(".jack-group") : null;
-        const targetJack = targetGroup ? targetGroup.dataset.jack : null;
+        const targetJack = this.getJackFromEvent(lastTouch);
         const movedDist = touchStartPos ? Math.hypot(lastTouch.clientX - touchStartPos.x, lastTouch.clientY - touchStartPos.y) : 0;
 
         if (targetJack && targetJack !== this.dragStartJack) {
@@ -1299,11 +1360,12 @@ class BoardRenderer {
           return;
         }
 
-        const zifLever = active.closest(".zif-lever");
+        const zifLever = active.closest(".zif-lever") || active.closest(".zif-lever-badge");
         if (zifLever) {
           e.preventDefault();
           const sId = zifLever.dataset.socket;
           this.engine.setSocketLever(sId, !this.engine.sockets[sId].leverLocked);
+          if (window.consolePanel) window.consolePanel.render();
           this.render();
           return;
         }

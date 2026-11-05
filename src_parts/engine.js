@@ -471,7 +471,12 @@ class TTLEngine {
   // Socket Jack <-> IC Pin Mapping
   getJackForICPin(socketId, icPin, pinCount, alignment = "left") {
     if (socketId === "U5") {
-      return `U5.J${icPin}`;
+      const half = Math.floor(pinCount / 2);
+      if (icPin <= half) {
+        return `U5.J${icPin}`;
+      } else {
+        return `U5.J${40 - (pinCount - icPin)}`;
+      }
     }
     const half = pinCount / 2;
     const diff = 20 - pinCount;

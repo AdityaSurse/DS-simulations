@@ -125,7 +125,8 @@ def build():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DIT 9005 Digital IC Trainer Simulator</title>
+  <title>DS Simulation — IC Trainer Kit Simulation</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f172a'/%3E%3Crect x='6' y='9' width='20' height='14' rx='2.5' fill='%231e293b' stroke='%2338bdf8' stroke-width='1.5'/%3E%3Cline x1='10' y1='4' x2='10' y2='9' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='16' y1='4' x2='16' y2='9' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='22' y1='4' x2='22' y2='9' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='10' y1='23' x2='10' y2='28' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='16' y1='23' x2='16' y2='28' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='22' y1='23' x2='22' y2='28' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%2322c55e'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -139,12 +140,12 @@ def build():
   <div id="boot-splash">
     <div class="splash-terminal">
       <div style="font-size: 15px; font-weight: 800; color: #ffffff; margin-bottom: 8px; letter-spacing: 1px;">
-        HI-TECH DIT 9005 DIGITAL IC TRAINER SIMULATOR
+        DS SIMULATION — IC TRAINER KIT SIMULATOR
       </div>
       <div style="font-size: 11px; color: #86efac; line-height: 1.6;">
-        ROM BIOS v2.4 (c) 1988-2026 HI-TECH SYSTEMS PUNE-30<br>
+        ROM BIOS v2.4 (c) 1988-2026 DIGITAL SYSTEMS LAB<br>
         INITIALIZING TTL LOGIC CORES & UNION-FIND MATRIX...<br>
-        TESTING 74-SERIES IC LIBRARY (15 MODELS)... OK<br>
+        TESTING 74-SERIES IC LIBRARY (16 MODELS)... OK<br>
         VERIFYING VOLTAGE REGULATORS (+5V, +12V, GND)... NORMAL<br>
         CALIBRATING TIMEBASE GENERATOR (0.5Hz – 10kHz)... STABLE<br>
         SYSTEM READY.
@@ -158,14 +159,26 @@ def build():
   <!-- Header Bar -->
   <header class="app-header">
     <div class="brand-section">
-      <div class="logo-badge">DS</div>
+      <div class="logo-badge" title="DS Simulation — IC Trainer Kit Simulation">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="5" width="20" height="14" rx="2.5" fill="#1e293b" stroke="#38bdf8" stroke-width="1.3" />
+          <path d="M 2 9 A 2 2 0 0 1 2 15" stroke="#38bdf8" stroke-width="1.2" fill="#0f172a" />
+          <line x1="6" y1="2" x2="6" y2="5" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="12" y1="2" x2="12" y2="5" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="18" y1="2" x2="18" y2="5" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="6" y1="19" x2="6" y2="22" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="12" y1="19" x2="12" y2="22" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <line x1="18" y1="19" x2="18" y2="22" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" />
+          <circle cx="12" cy="12" r="2.2" fill="#22c55e" />
+        </svg>
+      </div>
       <div class="brand-titles">
         <h1 class="brand-title">
-          HI-TECH DIT 9005
-          <span class="pill-badge">TTL 74-SERIES</span>
-          <span class="pill-badge" style="color: var(--accent-amber); border-color: rgba(245, 158, 11, 0.3);">PUNE-30</span>
+          DS SIMULATION
+          <span class="pill-badge">FREE LAB EDITION</span>
+          <span class="pill-badge" style="color: var(--accent-teal); border-color: rgba(20, 184, 166, 0.3);">DIGITAL SYSTEMS</span>
         </h1>
-        <span class="brand-subtitle">DIGITAL SYSTEMS SIMULATION SUITE</span>
+        <span class="brand-subtitle">IC Trainer Kit Simulation</span>
       </div>
     </div>
 

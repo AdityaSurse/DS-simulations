@@ -141,6 +141,31 @@ const SVG_COMPONENTS = {
           <stop offset="100%" stop-color="#101216" />
         </linearGradient>
 
+        <!-- Metallic silver IC lead pin gradients -->
+        <linearGradient id="silverLeg" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#94a3b8" />
+          <stop offset="25%" stop-color="#f8fafc" />
+          <stop offset="55%" stop-color="#e2e8f0" />
+          <stop offset="80%" stop-color="#cbd5e1" />
+          <stop offset="100%" stop-color="#64748b" />
+        </linearGradient>
+        <linearGradient id="silverLegHoriz" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#94a3b8" />
+          <stop offset="25%" stop-color="#f8fafc" />
+          <stop offset="55%" stop-color="#e2e8f0" />
+          <stop offset="80%" stop-color="#cbd5e1" />
+          <stop offset="100%" stop-color="#64748b" />
+        </linearGradient>
+
+        <!-- Molded epoxy IC body gradient -->
+        <linearGradient id="icEpoxyBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2a2e37" />
+          <stop offset="6%" stop-color="#1e2229" />
+          <stop offset="50%" stop-color="#14171d" />
+          <stop offset="94%" stop-color="#111317" />
+          <stop offset="100%" stop-color="#0a0c0f" />
+        </linearGradient>
+
         <!-- Drop shadow filters -->
         <filter id="shadowBevel" x="-10%" y="-10%" width="120%" height="120%">
           <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
@@ -294,13 +319,14 @@ const SVG_COMPONENTS = {
     };
 
     const renderDigit = (dx, dy, val) => {
-      const segs = SEG_MAP[val] || SEG_MAP[0];
-      const sColor = (idx) => segs[idx] ? "#ff2a2a" : "#220404";
+      const isOff = (val === null || val === undefined || val < 0 || val > 15);
+      const segs = isOff ? [0,0,0,0,0,0,0] : (SEG_MAP[val] || [0,0,0,0,0,0,0]);
+      const sColor = (idx) => segs[idx] ? "#ff2a2a" : "#1a0404";
       const sGlow = (idx) => segs[idx] ? "filter='url(#ledGlowFilter)'" : "";
 
       return `
         <g transform="translate(${dx}, ${dy})">
-          <rect x="-1" y="-1" width="38" height="58" rx="3" fill="#100202" stroke="#220404" stroke-width="1" />
+          <rect x="-1" y="-1" width="38" height="58" rx="3" fill="#0d0202" stroke="#1f0404" stroke-width="1" />
           <polygon points="6,4 30,4 27,8 9,8" fill="${sColor(0)}" ${sGlow(0)} />
           <polygon points="31,5 35,9 33,26 29,24" fill="${sColor(1)}" ${sGlow(1)} />
           <polygon points="33,30 35,47 31,51 29,32" fill="${sColor(2)}" ${sGlow(2)} />
@@ -308,7 +334,7 @@ const SVG_COMPONENTS = {
           <polygon points="7,32 5,51 1,47 3,30" fill="${sColor(4)}" ${sGlow(4)} />
           <polygon points="7,24 3,26 1,9 5,5" fill="${sColor(5)}" ${sGlow(5)} />
           <polygon points="9,26 27,26 29,28 27,30 9,30 7,28" fill="${sColor(6)}" ${sGlow(6)} />
-          <circle cx="34" cy="52" r="1.5" fill="#220404" />
+          <circle cx="34" cy="52" r="1.5" fill="#1a0404" />
         </g>
       `;
     };
@@ -426,8 +452,8 @@ const SVG_COMPONENTS = {
     const leverX = is40 ? x + width / 2 : x - 12;
     const leverY = is40 ? y + height + 6 : y + height / 2;
     const leverTransform = is40
-      ? (leverLocked ? "rotate(0)" : "rotate(-35)")
-      : (leverLocked ? "rotate(0)" : "rotate(-45)");
+      ? (leverLocked ? "rotate(0)" : "rotate(-65)")
+      : (leverLocked ? "rotate(0)" : "rotate(-65)");
 
     let pinHoles = "";
     if (!is40) {
@@ -463,9 +489,12 @@ const SVG_COMPONENTS = {
         <rect x="${x + 8}" y="${y + 8}" width="${width - 16}" height="${height - 16}" rx="3" fill="#10345c" stroke="#0b2440" stroke-width="1" />
         ${pinHoles}
         <polygon points="${x + 14},${is40 ? y + 16 : y + height - 12} ${x + 20},${is40 ? y + 22 : y + height - 6} ${x + 8},${is40 ? y + 22 : y + height - 6}" fill="#93c5fd" opacity="0.6" />
-        <g class="zif-lever" data-socket="${socketId}" transform="translate(${leverX}, ${leverY}) ${leverTransform}" style="cursor: pointer;" tabindex="0" role="button" aria-label="ZIF Socket ${socketId} Lever (${leverLocked ? 'Locked' : 'Open'})">
+        <g class="zif-lever" data-socket="${socketId}" transform="translate(${leverX}, ${leverY}) ${leverTransform}" style="cursor: pointer; transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); transform-box: fill-box;" tabindex="0" role="button" aria-label="ZIF Socket ${socketId} Lever (${leverLocked ? 'Locked' : 'Open'})">
+          <title>Click to toggle lever (${leverLocked ? 'Locked' : 'Open'})</title>
+          <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="26" fill="rgba(0,0,0,0.001)" pointer-events="all" />
           <rect x="${is40 ? -3 : -24}" y="${is40 ? 0 : -3}" width="${is40 ? 6 : 28}" height="${is40 ? 28 : 6}" rx="2" fill="url(#screwHead)" stroke="#333" stroke-width="0.5" />
-          <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="7" fill="#1d4ed8" stroke="#93c5fd" stroke-width="1" />
+          <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="8" fill="${leverLocked ? '#1d4ed8' : '#ef4444'}" stroke="#93c5fd" stroke-width="1.2" />
+          <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="3" fill="#ffffff" opacity="0.8" />
         </g>
       </g>
     `;
@@ -474,7 +503,7 @@ const SVG_COMPONENTS = {
     return this.drawZIFSocket({ socketId, x, y, width, height, pinCount, leverLocked });
   },
 
-  // 9. drawICChip: black epoxy body with highlights, silver gold-ish pins, notch + pin-1 dot, printed part # & date code
+  // 9. drawICChip: photorealistic black molded epoxy DIP body, silver metallic legs, notch, pin-1 dimple, bold silkscreen
   drawICChip(opts) {
     const { socketId, chipName, marking, socketX, socketY, socketW, socketH, icPinCount = 14, alignment = "left", backwards = false } = opts;
     if (!chipName) return "";
@@ -482,62 +511,134 @@ const SVG_COMPONENTS = {
     const is40 = (socketId === "U5");
 
     if (is40) {
-      const notchY = backwards ? (socketY + socketH - 12) : (socketY + 12);
-      const dotY = backwards ? (socketY + socketH - 26) : (socketY + 26);
+      const half = Math.min(20, Math.floor(icPinCount / 2));
+      const vertPitch = (socketH - 50) / 19;
+      const chipHeight = (half - 1) * vertPitch + 34;
+      const chipWidth = socketW - 32;
+      const icX = socketX + 16;
+      const icY = socketY + 12;
+
+      let silverLegs = "";
+      for (let i = 0; i < half; i++) {
+        const py = socketY + 25 + i * vertPitch;
+        // Left leg
+        silverLegs += `
+          <rect x="${socketX + 10}" y="${py - 4}" width="12" height="8" rx="1.5" fill="url(#silverLegHoriz)" stroke="#475569" stroke-width="0.6" filter="url(#shadowBevel)" />
+          <rect x="${socketX + 16}" y="${py - 5}" width="4" height="10" rx="1" fill="url(#silverLegHoriz)" />
+        `;
+        // Right leg
+        silverLegs += `
+          <rect x="${socketX + socketW - 22}" y="${py - 4}" width="12" height="8" rx="1.5" fill="url(#silverLegHoriz)" stroke="#475569" stroke-width="0.6" filter="url(#shadowBevel)" />
+          <rect x="${socketX + socketW - 20}" y="${py - 5}" width="4" height="10" rx="1" fill="url(#silverLegHoriz)" />
+        `;
+      }
+
+      const notchY = backwards ? (icY + chipHeight) : icY;
+      const dotY = backwards ? (icY + chipHeight - 16) : (icY + 16);
       const rot = backwards ? 90 : -90;
+
       return `
-        <g class="inserted-ic-group" data-socket="${socketId}" style="cursor: pointer;">
-          <rect x="${socketX + 16}" y="${socketY + 12}" width="${socketW - 32}" height="${socketH - 24}" rx="3" fill="url(#icBody)" stroke="#333" stroke-width="1" filter="url(#shadowBevel)" />
-          <path d="M ${socketX + 16 + (socketW - 32)/2 - 8} ${notchY} A 8 8 0 0 ${backwards ? 1 : 0} ${socketX + 16 + (socketW - 32)/2 + 8} ${notchY} Z" fill="#111" />
-          <circle cx="${socketX + 26}" cy="${dotY}" r="2.5" fill="#000" />
-          <text x="${socketX + 16 + (socketW - 32)/2}" y="${socketY + 12 + (socketH - 24)/2}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="12" font-weight="700" letter-spacing="1" text-anchor="middle" transform="rotate(${rot}, ${socketX + 16 + (socketW - 32)/2}, ${socketY + 12 + (socketH - 24)/2})">${chipText}</text>
-          <text x="${socketX + 16 + (socketW - 32)/2 + 12}" y="${socketY + 12 + (socketH - 24)/2}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle" transform="rotate(${rot}, ${socketX + 16 + (socketW - 32)/2 + 12}, ${socketY + 12 + (socketH - 24)/2})">${backwards ? 'REVERSED' : '2418'}</text>
+        <g class="inserted-ic-group ${backwards ? 'ic-backwards' : ''}" data-socket="${socketId}" style="cursor: pointer;">
+          ${silverLegs}
+          <rect x="${icX}" y="${icY}" width="${chipWidth}" height="${chipHeight}" rx="4" fill="url(#icEpoxyBody)" stroke="${backwards ? '#ef4444' : '#334155'}" stroke-width="${backwards ? '2' : '1.2'}" filter="url(#shadowBevel)" />
+          <line x1="${icX + 3}" y1="${icY + 2}" x2="${icX + 3}" y2="${icY + chipHeight - 2}" stroke="#475569" stroke-width="1.2" opacity="0.6" />
+          <line x1="${icX + chipWidth - 3}" y1="${icY + 2}" x2="${icX + chipWidth - 3}" y2="${icY + chipHeight - 2}" stroke="#000000" stroke-width="1.5" opacity="0.7" />
+          <!-- Semicircular Notch -->
+          <path d="M ${icX + chipWidth/2 - 9} ${notchY} A 9 9 0 0 ${backwards ? 1 : 0} ${icX + chipWidth/2 + 9} ${notchY} Z" fill="#090c10" stroke="#334155" stroke-width="1" />
+          <!-- Pin 1 Dot -->
+          <circle cx="${icX + 16}" cy="${dotY}" r="3" fill="#090b0e" stroke="#2a303c" stroke-width="0.8" />
+          <!-- Silkscreen Markings -->
+          <text x="${icX + chipWidth/2}" y="${icY + chipHeight/2}" fill="#f8fafc" font-family="var(--font-mono)" font-size="13" font-weight="800" letter-spacing="1.5" text-anchor="middle" transform="rotate(${rot}, ${icX + chipWidth/2}, ${icY + chipHeight/2})">${chipText}</text>
+          <text x="${icX + chipWidth/2 + 14}" y="${icY + chipHeight/2}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8.5" font-weight="600" text-anchor="middle" transform="rotate(${rot}, ${icX + chipWidth/2 + 14}, ${icY + chipHeight/2})">${backwards ? '⚠️ REVERSED' : 'MALAYSIA 2418B'}</text>
         </g>
       `;
     }
 
+    // Horizontal 20-pin ZIF sockets (U1–U4)
     const totalSlots = 10;
     const slotPitch = (socketW - 40) / (totalSlots - 1);
-    const chipSlots = icPinCount / 2;
+    const chipSlots = Math.floor(icPinCount / 2); // 7 for 14-pin, 8 for 16-pin
 
     let startSlot = 0;
     if (alignment === "right") startSlot = totalSlots - chipSlots;
     else if (alignment === "center") startSlot = Math.floor((totalSlots - chipSlots) / 2);
 
-    const icWidth = (chipSlots - 1) * slotPitch + 28;
-    const icX = socketX + 20 + startSlot * slotPitch - 14;
-    const icY = socketY + 18;
-    const icHeight = socketH - 36;
+    const icWidth = (chipSlots - 1) * slotPitch + 30;
+    const icX = socketX + 20 + startSlot * slotPitch - 15;
+    const icY = socketY + 16;
+    const icHeight = 44;
 
+    // Realistic silver metallic legs matching chip's real pin count
     let pinsSvg = "";
     for (let i = 0; i < chipSlots; i++) {
-      const px = icX + 14 + i * slotPitch;
-      pinsSvg += `<rect x="${px - 2}" y="${icY - 6}" width="4" height="6" fill="url(#screwHead)" stroke="#222" stroke-width="0.3" />`;
-      pinsSvg += `<rect x="${px - 2}" y="${icY + icHeight}" width="4" height="6" fill="url(#screwHead)" stroke="#222" stroke-width="0.3" />`;
+      const px = socketX + 20 + (startSlot + i) * slotPitch;
+      // Top Leg: shoulder at IC body, narrow pin entering socket hole
+      pinsSvg += `
+        <g class="ic-leg-top">
+          <!-- Metallic lead drop shadow -->
+          <rect x="${px - 3.5}" y="${icY - 7}" width="7" height="9" fill="rgba(0,0,0,0.3)" />
+          <!-- Pin entering socket contact -->
+          <rect x="${px - 2.5}" y="${icY - 7}" width="5" height="6" rx="0.8" fill="url(#silverLeg)" stroke="#475569" stroke-width="0.5" />
+          <!-- Wider lead shoulder emerging from epoxy body -->
+          <rect x="${px - 3.5}" y="${icY - 2}" width="7" height="4" rx="0.6" fill="url(#silverLeg)" stroke="#334155" stroke-width="0.5" />
+          <line x1="${px}" y1="${icY - 6}" x2="${px}" y2="${icY + 1}" stroke="#ffffff" stroke-width="0.8" opacity="0.6" />
+        </g>
+      `;
+      // Bottom Leg: shoulder at IC body, narrow pin entering bottom socket hole
+      pinsSvg += `
+        <g class="ic-leg-bottom">
+          <!-- Metallic lead drop shadow -->
+          <rect x="${px - 3.5}" y="${icY + icHeight - 2}" width="7" height="9" fill="rgba(0,0,0,0.3)" />
+          <!-- Wider lead shoulder emerging from epoxy body -->
+          <rect x="${px - 3.5}" y="${icY + icHeight - 2}" width="7" height="4" rx="0.6" fill="url(#silverLeg)" stroke="#334155" stroke-width="0.5" />
+          <!-- Pin entering socket contact -->
+          <rect x="${px - 2.5}" y="${icY + icHeight + 1}" width="5" height="6" rx="0.8" fill="url(#silverLeg)" stroke="#475569" stroke-width="0.5" />
+          <line x1="${px}" y1="${icY + icHeight - 1}" x2="${px}" y2="${icY + icHeight + 6}" stroke="#ffffff" stroke-width="0.8" opacity="0.6" />
+        </g>
+      `;
     }
 
+    // Notch on the pin-1 end (left side for normal, right side for backwards)
     const notchSvg = backwards
-      ? `<path d="M ${icX + icWidth} ${icY + icHeight/2 - 7} A 7 7 0 0 1 ${icX + icWidth} ${icY + icHeight/2 + 7} Z" fill="#111317" />`
-      : `<path d="M ${icX} ${icY + icHeight/2 - 7} A 7 7 0 0 0 ${icX} ${icY + icHeight/2 + 7} Z" fill="#111317" />`;
+      ? `<path d="M ${icX + icWidth} ${icY + icHeight/2 - 9} A 9 9 0 0 1 ${icX + icWidth} ${icY + icHeight/2 + 9} Z" fill="#090c10" stroke="${backwards ? '#ef4444' : '#334155'}" stroke-width="1.2" />`
+      : `<path d="M ${icX} ${icY + icHeight/2 - 9} A 9 9 0 0 0 ${icX} ${icY + icHeight/2 + 9} Z" fill="#090c10" stroke="#334155" stroke-width="1.2" />
+         <path d="M ${icX + 1.2} ${icY + icHeight/2 - 8} A 8 8 0 0 0 ${icX + 1.2} ${icY + icHeight/2 + 8}" fill="none" stroke="#475569" stroke-width="0.8" opacity="0.5" />`;
 
+    // Circular Pin 1 index dot: lower-left for normal, upper-right for backwards
     const dotSvg = backwards
-      ? `<circle cx="${icX + icWidth - 10}" cy="${icY + 10}" r="2.2" fill="#0a0c0e" stroke="#252930" stroke-width="0.5" />`
-      : `<circle cx="${icX + 10}" cy="${icY + icHeight - 10}" r="2.2" fill="#0a0c0e" stroke="#252930" stroke-width="0.5" />`;
+      ? `<circle cx="${icX + icWidth - 14}" cy="${icY + 10}" r="3" fill="#090b0e" stroke="#ef4444" stroke-width="0.8" />
+         <circle cx="${icX + icWidth - 14.5}" cy="${icY + 9.5}" r="1.8" fill="#040507" />`
+      : `<circle cx="${icX + 14}" cy="${icY + icHeight - 10}" r="3" fill="#090b0e" stroke="#2a303c" stroke-width="0.8" />
+         <circle cx="${icX + 13.5}" cy="${icY + icHeight - 10.5}" r="1.8" fill="#040507" />`;
 
     const textRot = backwards ? `transform="rotate(180, ${icX + icWidth / 2}, ${icY + icHeight / 2})"` : "";
-    const warningSvg = backwards
-      ? `<text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 - 9}" fill="#f87171" font-family="var(--font-mono)" font-size="7" font-weight="800" text-anchor="middle">⚠️ REVERSED</text>`
-      : "";
+    const logoX = backwards ? (icX + icWidth - 30) : (icX + 30);
+    const textCenterX = icX + icWidth / 2 + (backwards ? -6 : 6);
 
     return `
       <g class="inserted-ic-group ${backwards ? 'ic-backwards' : ''}" data-socket="${socketId}" style="cursor: pointer;">
+        <!-- Silver IC Leads -->
         ${pinsSvg}
-        <rect x="${icX}" y="${icY}" width="${icWidth}" height="${icHeight}" rx="3" fill="url(#icBody)" stroke="${backwards ? '#ef4444' : '#3f4553'}" stroke-width="${backwards ? '1.5' : '1'}" filter="url(#shadowBevel)" />
+        <!-- Molded Epoxy Body -->
+        <rect x="${icX}" y="${icY}" width="${icWidth}" height="${icHeight}" rx="4" fill="url(#icEpoxyBody)" stroke="${backwards ? '#ef4444' : '#334155'}" stroke-width="${backwards ? '1.8' : '1.2'}" filter="url(#shadowBevel)" />
+        <!-- Top Chamfer Highlight -->
+        <rect x="${icX + 3}" y="${icY + 1.5}" width="${icWidth - 6}" height="2" rx="1" fill="#475569" opacity="0.65" />
+        <!-- Bottom Chamfer Shadow -->
+        <rect x="${icX + 3}" y="${icY + icHeight - 3.5}" width="${icWidth - 6}" height="2" rx="1" fill="#000000" opacity="0.8" />
+        <!-- Center parting line -->
+        <line x1="${icX + 16}" y1="${icY + icHeight/2}" x2="${icX + icWidth - 16}" y2="${icY + icHeight/2}" stroke="#0b0d11" stroke-width="0.6" opacity="0.4" />
+        <!-- Orientation Notch -->
         ${notchSvg}
+        <!-- Pin 1 Dot -->
         ${dotSvg}
-        ${warningSvg}
-        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 3}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="11" font-weight="700" letter-spacing="1" text-anchor="middle" ${textRot}>${chipText}</text>
-        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 13}" fill="#94a3b8" font-family="var(--font-mono)" font-size="7.5" text-anchor="middle" ${textRot}>MALAYSIA 2418</text>
+        <!-- TI Logo Silkscreen -->
+        <g ${textRot}>
+          <circle cx="${logoX}" cy="${icY + icHeight / 2}" r="6.5" fill="none" stroke="#94a3b8" stroke-width="1.1" opacity="0.8" />
+          <text x="${logoX}" y="${icY + icHeight / 2 + 3}" fill="#cbd5e1" font-family="var(--font-mono)" font-size="8.5" font-weight="900" text-anchor="middle">TI</text>
+        </g>
+        <!-- Part Number Silkscreen -->
+        <text x="${textCenterX}" y="${icY + icHeight / 2 - 2}" fill="#f8fafc" font-family="var(--font-mono)" font-size="13" font-weight="800" letter-spacing="1.4" text-anchor="middle" ${textRot}>${chipText}</text>
+        <text x="${textCenterX}" y="${icY + icHeight / 2 + 10}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8.5" font-weight="600" letter-spacing="0.8" text-anchor="middle" ${textRot}>${backwards ? '⚠️ REVERSED' : 'MALAYSIA 2418B'}</text>
       </g>
     `;
   },
@@ -545,14 +646,14 @@ const SVG_COMPONENTS = {
     return this.drawICChip({ socketId, chipName, socketX, socketY, socketW, socketH, icPinCount, alignment, backwards });
   },
 
-  // 3D Visual IC Package Pinout Diagram (for Reference Tab)
+  // 3D Visual IC Package Pinout Diagram (for Reference Tab - matches reference image)
   drawChipPinoutDiagram(icDef) {
     if (!icDef) return "";
     const pinCount = icDef.pinCount || (icDef.pins ? icDef.pins.length : 14);
-    const half = Math.floor(pinCount / 2);
+    const half = Math.floor(pinCount / 2); // 7 for 14-pin, 8 for 16-pin
     const rowHeight = 36;
-    const bodyWidth = 190;
-    const bodyHeight = half * rowHeight + 36;
+    const bodyWidth = 170;
+    const bodyHeight = half * rowHeight + 40;
     const svgWidth = 500;
     const svgHeight = bodyHeight + 60;
     const bodyX = (svgWidth - bodyWidth) / 2;
@@ -572,20 +673,22 @@ const SVG_COMPONENTS = {
     // Left side pins: 1 to half (top to bottom)
     for (let i = 1; i <= half; i++) {
       const pinObj = (icDef.pins && icDef.pins.find(p => p.pin === i)) || { pin: i, name: `Pin ${i}`, type: "in" };
-      const y = bodyY + 28 + (i - 1) * rowHeight;
+      const y = bodyY + 30 + (i - 1) * rowHeight;
       const c = getColorForType(pinObj.type, pinObj.name);
 
       pinsLeftHtml += `
-        <!-- Lead Pin ${i} -->
-        <rect x="${bodyX - 22}" y="${y - 4}" width="22" height="8" rx="1.5" fill="url(#screwHead)" stroke="#475569" stroke-width="0.8" />
-        <circle cx="${bodyX - 26}" cy="${y}" r="2" fill="#38bdf8" opacity="0.6" />
+        <!-- Silver Metallic Lead Pin ${i} -->
+        <g class="ref-pin-lead">
+          <rect x="${bodyX - 26}" y="${y - 6}" width="26" height="12" rx="2" fill="url(#silverLegHoriz)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevel)" />
+          <line x1="${bodyX - 25}" y1="${y - 4}" x2="${bodyX - 2}" y2="${y - 4}" stroke="#ffffff" stroke-width="1" opacity="0.8" />
+        </g>
         <!-- Pin Number Badge -->
-        <rect x="${bodyX + 8}" y="${y - 9}" width="18" height="18" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
-        <text x="${bodyX + 17}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="10" font-weight="800" text-anchor="middle">${i}</text>
-        <!-- Pin Name & Pill -->
-        <g transform="translate(${bodyX - 32}, ${y})">
-          <rect x="-94" y="-10" width="90" height="20" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1" />
-          <text x="-49" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+        <rect x="${bodyX + 8}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
+        <text x="${bodyX + 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${i}</text>
+        <!-- Pin Name & Function Pill -->
+        <g transform="translate(${bodyX - 34}, ${y})">
+          <rect x="-96" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
+          <text x="-50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
         </g>
       `;
     }
@@ -594,20 +697,22 @@ const SVG_COMPONENTS = {
     for (let i = 0; i < half; i++) {
       const pinNum = pinCount - i;
       const pinObj = (icDef.pins && icDef.pins.find(p => p.pin === pinNum)) || { pin: pinNum, name: `Pin ${pinNum}`, type: "in" };
-      const y = bodyY + 28 + i * rowHeight;
+      const y = bodyY + 30 + i * rowHeight;
       const c = getColorForType(pinObj.type, pinObj.name);
 
       pinsRightHtml += `
-        <!-- Lead Pin ${pinNum} -->
-        <rect x="${bodyX + bodyWidth}" y="${y - 4}" width="22" height="8" rx="1.5" fill="url(#screwHead)" stroke="#475569" stroke-width="0.8" />
-        <circle cx="${bodyX + bodyWidth + 26}" cy="${y}" r="2" fill="#38bdf8" opacity="0.6" />
+        <!-- Silver Metallic Lead Pin ${pinNum} -->
+        <g class="ref-pin-lead">
+          <rect x="${bodyX + bodyWidth}" y="${y - 6}" width="26" height="12" rx="2" fill="url(#silverLegHoriz)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevel)" />
+          <line x1="${bodyX + bodyWidth + 2}" y1="${y - 4}" x2="${bodyX + bodyWidth + 25}" y2="${y - 4}" stroke="#ffffff" stroke-width="1" opacity="0.8" />
+        </g>
         <!-- Pin Number Badge -->
-        <rect x="${bodyX + bodyWidth - 26}" y="${y - 9}" width="18" height="18" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
-        <text x="${bodyX + bodyWidth - 17}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="10" font-weight="800" text-anchor="middle">${pinNum}</text>
-        <!-- Pin Name & Pill -->
-        <g transform="translate(${bodyX + bodyWidth + 32}, ${y})">
-          <rect x="4" y="-10" width="90" height="20" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1" />
-          <text x="49" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+        <rect x="${bodyX + bodyWidth - 28}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
+        <text x="${bodyX + bodyWidth - 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${pinNum}</text>
+        <!-- Pin Name & Function Pill -->
+        <g transform="translate(${bodyX + bodyWidth + 34}, ${y})">
+          <rect x="4" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
+          <text x="50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
         </g>
       `;
     }
@@ -621,29 +726,24 @@ const SVG_COMPONENTS = {
           </filter>
         </defs>
 
-        <!-- Leads Behind Body -->
+        <!-- Silver Leads on Left & Right -->
         ${pinsLeftHtml}
         ${pinsRightHtml}
 
-        <!-- 3D Epoxy Plastic Body -->
-        <rect x="${bodyX}" y="${bodyY}" width="${bodyWidth}" height="${bodyHeight}" rx="6" fill="#151921" stroke="#334155" stroke-width="1.5" filter="url(#pkgShadow)" />
-        <rect x="${bodyX + 3}" y="${bodyY + 3}" width="${bodyWidth - 6}" height="${bodyHeight - 6}" rx="4" fill="none" stroke="#262f3f" stroke-width="1" opacity="0.6" />
+        <!-- 3D Matte Dark Charcoal Epoxy Plastic Body (matching reference image) -->
+        <rect x="${bodyX}" y="${bodyY}" width="${bodyWidth}" height="${bodyHeight}" rx="6" fill="#1c1e22" stroke="#2b2f36" stroke-width="1.5" filter="url(#pkgShadow)" />
+        <rect x="${bodyX + 3.5}" y="${bodyY + 3.5}" width="${bodyWidth - 7}" height="${bodyHeight - 7}" rx="4" fill="none" stroke="#272b32" stroke-width="1.2" />
 
-        <!-- Package Notch at Top Center -->
-        <path d="M ${bodyX + bodyWidth/2 - 14} ${bodyY} A 14 14 0 0 0 ${bodyX + bodyWidth/2 + 14} ${bodyY} Z" fill="#090c10" stroke="#334155" stroke-width="1" />
+        <!-- Semicircular Orientation Notch at Top Center -->
+        <path d="M ${bodyX + bodyWidth/2 - 16} ${bodyY} A 16 16 0 0 0 ${bodyX + bodyWidth/2 + 16} ${bodyY} Z" fill="#0d0e10" stroke="#2b2f36" stroke-width="1.2" />
+        <path d="M ${bodyX + bodyWidth/2 - 15} ${bodyY + 1} A 15 15 0 0 0 ${bodyX + bodyWidth/2 + 15} ${bodyY + 1}" fill="none" stroke="#000000" stroke-width="1.8" />
 
-        <!-- Pin 1 Dot -->
-        <circle cx="${bodyX + 18}" cy="${bodyY + 18}" r="3.5" fill="#090c10" stroke="#334155" stroke-width="1" />
+        <!-- Pin 1 Index Dot -->
+        <circle cx="${bodyX + 18}" cy="${bodyY + 20}" r="3.5" fill="#0d0e10" stroke="#2c3036" stroke-width="1" />
 
-        <!-- Laser Etched Center Silkscreen -->
+        <!-- Bold Part Number Printed in Center (matching reference image) -->
         <g transform="translate(${bodyX + bodyWidth / 2}, ${bodyY + bodyHeight / 2})">
-          <circle cx="0" cy="-34" r="10" fill="none" stroke="#64748b" stroke-width="1.2" opacity="0.7"/>
-          <text x="0" y="-30" fill="#94a3b8" font-family="var(--font-ui)" font-size="9" font-weight="900" text-anchor="middle">TI</text>
-
-          <text x="0" y="-12" fill="#f8fafc" font-family="var(--font-mono)" font-size="13" font-weight="800" letter-spacing="1.2" text-anchor="middle">${icDef.marking || ('SN' + icDef.name + 'N')}</text>
-          <text x="0" y="4" fill="#cbd5e1" font-family="var(--font-mono)" font-size="9.5" font-weight="700" letter-spacing="0.8" text-anchor="middle">[${icDef.name}]</text>
-          <text x="0" y="20" fill="#38bdf8" font-family="var(--font-mono)" font-size="9" font-weight="600" letter-spacing="1" text-anchor="middle">${icDef.package || ('DIP-' + pinCount)}</text>
-          <text x="0" y="34" fill="#64748b" font-family="var(--font-mono)" font-size="7.5" letter-spacing="1" text-anchor="middle">MALAYSIA 2418B</text>
+          <text x="0" y="8" fill="#ffffff" font-family="'Inter', -apple-system, var(--font-ui), sans-serif" font-size="28" font-weight="800" letter-spacing="2" text-anchor="middle" transform="rotate(-90)">${icDef.name}</text>
         </g>
       </svg>
     `;
@@ -680,7 +780,7 @@ const SVG_COMPONENTS = {
     `;
 
     return `
-      <g class="patch-cord-group ${isSelected ? 'selected' : ''} cord-animate-in" data-wire-id="${wire.id}">
+      <g class="patch-cord-group ${isSelected ? 'selected' : ''}" data-wire-id="${wire.id}">
         <title>Patch Cord ${wire.id}: ${wire.from} ↔ ${wire.to}</title>
         <!-- Soft Ground Shadow -->
         <path d="${shadowPath}" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" pointer-events="none" />
@@ -736,6 +836,57 @@ const SVG_COMPONENTS = {
         <circle cx="${p1.x}" cy="${p1.y}" r="6.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
         <circle cx="${p2.x}" cy="${p2.y}" r="6.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
       </g>
+    `;
+  },
+
+  // 12. drawDIPThumbnail: photorealistic vertical DIP chip graphic for IC Drawer catalog
+  drawDIPThumbnail(opts) {
+    const ic = (typeof opts === "string") ? (typeof IC_LIBRARY !== "undefined" ? IC_LIBRARY[opts] : { name: opts }) : (opts || {});
+    const chipName = ic.name || "7400";
+    const pinCount = ic.pinCount || (ic.pins ? ic.pins.length : 14);
+    const half = Math.min(20, Math.floor(pinCount / 2));
+
+    const pitch = 14;
+    const bodyW = 38;
+    const bodyH = (half - 1) * pitch + 32;
+    const legW = 10;
+    const legH = 7;
+    const totalW = bodyW + legW * 2 + 4;
+    const totalH = bodyH + 12;
+    const bodyX = legW + 2;
+    const bodyY = 6;
+
+    let legsLeft = "";
+    let legsRight = "";
+    for (let i = 0; i < half; i++) {
+      const py = bodyY + 16 + i * pitch;
+      legsLeft += `
+        <g transform="translate(${bodyX - legW}, ${py - legH/2})">
+          <rect x="0" y="0" width="${legW}" height="${legH}" rx="1.5" fill="url(#silverLegHoriz)" stroke="#334155" stroke-width="0.6" filter="url(#shadowBevel)" />
+          <line x1="2" y1="1.5" x2="${legW - 1}" y2="1.5" stroke="#ffffff" stroke-width="0.8" opacity="0.8" />
+        </g>
+      `;
+      legsRight += `
+        <g transform="translate(${bodyX + bodyW}, ${py - legH/2})">
+          <rect x="0" y="0" width="${legW}" height="${legH}" rx="1.5" fill="url(#silverLegHoriz)" stroke="#334155" stroke-width="0.6" filter="url(#shadowBevel)" />
+          <line x1="1" y1="1.5" x2="${legW - 2}" y2="1.5" stroke="#ffffff" stroke-width="0.8" opacity="0.8" />
+        </g>
+      `;
+    }
+
+    const fontSize = (chipName.length > 5) ? 12 : 14;
+
+    return `
+      <svg class="dip-chip-thumb-svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));">
+        <g class="chip-legs">${legsLeft}${legsRight}</g>
+        <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="3.5" fill="url(#icEpoxyBody)" stroke="#090a0d" stroke-width="1.2" />
+        <rect x="${bodyX + 1.2}" y="${bodyY + 1.2}" width="${bodyW - 2.4}" height="${bodyH - 2.4}" rx="2.5" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="0.8" />
+        <path d="M ${bodyX + bodyW/2 - 7} ${bodyY} A 7 7 0 0 0 ${bodyX + bodyW/2 + 7} ${bodyY}" fill="#0d0f12" stroke="#090a0d" stroke-width="1" />
+        <circle cx="${bodyX + 7}" cy="${bodyY + 13}" r="2.5" fill="#0d0f12" stroke="#252a33" stroke-width="0.8" />
+        <text x="${bodyX + bodyW/2}" y="${bodyY + bodyH/2}" fill="#f1f5f9" font-family="'JetBrains Mono', Inter, monospace" font-size="${fontSize}" font-weight="900" text-anchor="middle" transform="rotate(90, ${bodyX + bodyW/2}, ${bodyY + bodyH/2})" letter-spacing="1.5">
+          ${chipName}
+        </text>
+      </svg>
     `;
   }
 };
