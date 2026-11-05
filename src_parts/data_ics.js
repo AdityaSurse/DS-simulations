@@ -393,6 +393,127 @@ const IC_LIBRARY = {
     }
   },
 
+  "7474": {
+    name: "7474",
+    marking: "SN74LS74AN",
+    title: "Dual D-Type Positive-Edge-Triggered Flip-Flops",
+    description: "Contains two independent positive-edge-triggered D-type flip-flops with asynchronous active-low preset (1PR̅, 2PR̅) and clear (1CLR̅, 2CLR̅) inputs. When both PR̅ and CLR̅ are LOW, outputs Q and Q̅ are both forced HIGH.",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pinNames: {
+      1: "1CLR̅", 2: "1D", 3: "1CLK", 4: "1PR̅", 5: "1Q", 6: "1Q̅", 7: "GND",
+      8: "2Q̅", 9: "2Q", 10: "2PR̅", 11: "2CLK", 12: "2D", 13: "2CLR̅", 14: "VCC"
+    },
+    inputs: [1, 2, 3, 4, 10, 11, 12, 13],
+    outputs: [5, 6, 8, 9],
+    pins: [
+      { pin: 1, name: "1CLR̅", type: "in" },
+      { pin: 2, name: "1D", type: "in" },
+      { pin: 3, name: "1CLK", type: "in" },
+      { pin: 4, name: "1PR̅", type: "in" },
+      { pin: 5, name: "1Q", type: "out" },
+      { pin: 6, name: "1Q̅", type: "out" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "2Q̅", type: "out" },
+      { pin: 9, name: "2Q", type: "out" },
+      { pin: 10, name: "2PR̅", type: "in" },
+      { pin: 11, name: "2CLK", type: "in" },
+      { pin: 12, name: "2D", type: "in" },
+      { pin: 13, name: "2CLR̅", type: "in" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      const s = state || {
+        q1: Math.random() < 0.5 ? 0 : 1,
+        q2: Math.random() < 0.5 ? 0 : 1,
+        lastClk1: 0,
+        lastClk2: 0
+      };
+
+      // Section 1: 1CLR̅(1), 1D(2), 1CLK(3), 1PR̅(4) -> 1Q(5), 1Q̅(6)
+      const clr1 = get(1);
+      const d1 = get(2);
+      const clk1 = get(3);
+      const pr1 = get(4);
+
+      let q1 = s.q1;
+      let q1Bar = q1 === 1 ? 0 : 1;
+
+      if (pr1 === 0 && clr1 === 0) {
+        // Datasheet: both active-low overrides edge and forces both HIGH!
+        q1 = 1;
+        q1Bar = 1;
+      } else if (pr1 === 0) {
+        q1 = 1;
+        q1Bar = 0;
+      } else if (clr1 === 0) {
+        q1 = 0;
+        q1Bar = 1;
+      } else {
+        // Clocked operation on rising edge
+        if (s.lastClk1 === 0 && clk1 === 1) {
+          q1 = d1 === 1 ? 1 : 0;
+        }
+        q1Bar = q1 === 1 ? 0 : 1;
+      }
+
+      // Section 2: 2CLR̅(13), 2D(12), 2CLK(11), 2PR̅(10) -> 2Q(9), 2Q̅(8)
+      const clr2 = get(13);
+      const d2 = get(12);
+      const clk2 = get(11);
+      const pr2 = get(10);
+
+      let q2 = s.q2;
+      let q2Bar = q2 === 1 ? 0 : 1;
+
+      if (pr2 === 0 && clr2 === 0) {
+        q2 = 1;
+        q2Bar = 1;
+      } else if (pr2 === 0) {
+        q2 = 1;
+        q2Bar = 0;
+      } else if (clr2 === 0) {
+        q2 = 0;
+        q2Bar = 1;
+      } else {
+        // Clocked operation on rising edge
+        if (s.lastClk2 === 0 && clk2 === 1) {
+          q2 = d2 === 1 ? 1 : 0;
+        }
+        q2Bar = q2 === 1 ? 0 : 1;
+      }
+
+      return {
+        outputs: {
+          5: q1,
+          6: q1Bar,
+          9: q2,
+          8: q2Bar
+        },
+        nextState: {
+          q1,
+          q2,
+          lastClk1: clk1,
+          lastClk2: clk2
+        }
+      };
+    },
+    truthTable: {
+      headers: ["PR̅", "CLR̅", "CLK", "D", "Q", "Q̅"],
+      rows: [
+        [0, 1, "X", "X", 1, 0],
+        [1, 0, "X", "X", 0, 1],
+        [0, 0, "X", "X", 1, 1],
+        [1, 1, "↑", 1, 1, 0],
+        [1, 1, "↑", 0, 0, 1],
+        [1, 1, 0, "X", "Q0", "Q0̅"]
+      ]
+    }
+  },
+
   "7486": {
     name: "7486",
     marking: "SN7486N",
@@ -453,22 +574,22 @@ const IC_LIBRARY = {
 
   "74153": {
     name: "74153",
-    marking: "SN74153N",
+    marking: "SN74LS153N",
     title: "Dual 4-to-1 Multiplexer",
-    description: "Dual 4-line to 1-line data selectors/multiplexers with individual strobes and common binary address inputs.",
+    description: "Contains two independent 4-to-1 data selectors/multiplexers. Select inputs S1 (Pin 2) and S0 (Pin 14) are shared by both sections. Active-low strobe inputs 1G̅ (Pin 1) and 2G̅ (Pin 15). Output = selected input when G̅=0, else 0.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 16,
     gndPin: 8,
     pinNames: {
-      1: "1G'", 2: "B", 3: "1C3", 4: "1C2", 5: "1C1", 6: "1C0", 7: "1Y", 8: "GND",
-      9: "2Y", 10: "2C0", 11: "2C1", 12: "2C2", 13: "2C3", 14: "A", 15: "2G'", 16: "VCC"
+      1: "1G̅", 2: "S1", 3: "1C3", 4: "1C2", 5: "1C1", 6: "1C0", 7: "1Y", 8: "GND",
+      9: "2Y", 10: "2C0", 11: "2C1", 12: "2C2", 13: "2C3", 14: "S0", 15: "2G̅", 16: "VCC"
     },
     inputs: [1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15],
     outputs: [7, 9],
     pins: [
-      { pin: 1, name: "1G'", type: "in" },
-      { pin: 2, name: "B", type: "in" },
+      { pin: 1, name: "1G̅", type: "in" },
+      { pin: 2, name: "S1", type: "in" },
       { pin: 3, name: "1C3", type: "in" },
       { pin: 4, name: "1C2", type: "in" },
       { pin: 5, name: "1C1", type: "in" },
@@ -480,18 +601,18 @@ const IC_LIBRARY = {
       { pin: 11, name: "2C1", type: "in" },
       { pin: 12, name: "2C2", type: "in" },
       { pin: 13, name: "2C3", type: "in" },
-      { pin: 14, name: "A", type: "in" },
-      { pin: 15, name: "2G'", type: "in" },
+      { pin: 14, name: "S0", type: "in" },
+      { pin: 15, name: "2G̅", type: "in" },
       { pin: 16, name: "VCC", type: "pwr" }
     ],
     eval: (inMap, state) => {
       const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
-      const selA = get(14);
-      const selB = get(2);
-      const sel = (selB << 1) | selA;
+      const s1 = get(2);
+      const s0 = get(14);
+      const sel = (s1 << 1) | s0;
 
       let y1 = 0;
-      if (get(1) === 0) { // Active low enable 1G'
+      if (get(1) === 0) { // Active low enable 1G̅
         if (sel === 0) y1 = get(6);
         else if (sel === 1) y1 = get(5);
         else if (sel === 2) y1 = get(4);
@@ -499,7 +620,7 @@ const IC_LIBRARY = {
       }
 
       let y2 = 0;
-      if (get(15) === 0) { // Active low enable 2G'
+      if (get(15) === 0) { // Active low enable 2G̅
         if (sel === 0) y2 = get(10);
         else if (sel === 1) y2 = get(11);
         else if (sel === 2) y2 = get(12);
@@ -512,7 +633,7 @@ const IC_LIBRARY = {
       };
     },
     truthTable: {
-      headers: ["Select B", "Select A", "Strobe 1G'", "Output 1Y"],
+      headers: ["Select S1", "Select S0", "Strobe 1G̅", "Output 1Y"],
       rows: [
         ["X", "X", 1, 0],
         [0, 0, 0, "1C0"],
@@ -525,77 +646,78 @@ const IC_LIBRARY = {
 
   "74138": {
     name: "74138",
-    marking: "SN74138N",
+    marking: "SN74LS138N",
     title: "3-to-8 Line Decoder / Demultiplexer",
-    description: "3-line to 8-line decoder/demultiplexer featuring three enable inputs (one active-high, two active-low) and 8 active-low outputs.",
+    description: "3-line to 8-line decoder/demultiplexer featuring three enable inputs (E1̅ on Pin 4, E2̅ on Pin 5, E3 on Pin 6) and 8 active-low outputs (Y0̅..Y7̅). All outputs HIGH unless E1̅=0, E2̅=0, E3=1.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 16,
     gndPin: 8,
     pinNames: {
-      1: "A", 2: "B", 3: "C", 4: "G2A'", 5: "G2B'", 6: "G1", 7: "Y7'", 8: "GND",
-      9: "Y6'", 10: "Y5'", 11: "Y4'", 12: "Y3'", 13: "Y2'", 14: "Y1'", 15: "Y0'", 16: "VCC"
+      1: "A0", 2: "A1", 3: "A2", 4: "E1̅", 5: "E2̅", 6: "E3", 7: "Y7̅", 8: "GND",
+      9: "Y6̅", 10: "Y5̅", 11: "Y4̅", 12: "Y3̅", 13: "Y2̅", 14: "Y1̅", 15: "Y0̅", 16: "VCC"
     },
     inputs: [1, 2, 3, 4, 5, 6],
     outputs: [7, 9, 10, 11, 12, 13, 14, 15],
     pins: [
-      { pin: 1, name: "A", type: "in" },
-      { pin: 2, name: "B", type: "in" },
-      { pin: 3, name: "C", type: "in" },
-      { pin: 4, name: "G2A'", type: "in" },
-      { pin: 5, name: "G2B'", type: "in" },
-      { pin: 6, name: "G1", type: "in" },
-      { pin: 7, name: "Y7'", type: "out" },
+      { pin: 1, name: "A0", type: "in" },
+      { pin: 2, name: "A1", type: "in" },
+      { pin: 3, name: "A2", type: "in" },
+      { pin: 4, name: "E1̅", type: "in" },
+      { pin: 5, name: "E2̅", type: "in" },
+      { pin: 6, name: "E3", type: "in" },
+      { pin: 7, name: "Y7̅", type: "out" },
       { pin: 8, name: "GND", type: "gnd" },
-      { pin: 9, name: "Y6'", type: "out" },
-      { pin: 10, name: "Y5'", type: "out" },
-      { pin: 11, name: "Y4'", type: "out" },
-      { pin: 12, name: "Y3'", type: "out" },
-      { pin: 13, name: "Y2'", type: "out" },
-      { pin: 14, name: "Y1'", type: "out" },
-      { pin: 15, name: "Y0'", type: "out" },
+      { pin: 9, name: "Y6̅", type: "out" },
+      { pin: 10, name: "Y5̅", type: "out" },
+      { pin: 11, name: "Y4̅", type: "out" },
+      { pin: 12, name: "Y3̅", type: "out" },
+      { pin: 13, name: "Y2̅", type: "out" },
+      { pin: 14, name: "Y1̅", type: "out" },
+      { pin: 15, name: "Y0̅", type: "out" },
       { pin: 16, name: "VCC", type: "pwr" }
     ],
     eval: (inMap, state) => {
       const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
-      const g1 = get(6);
-      const g2a = get(4);
-      const g2b = get(5);
-      const enabled = (g1 === 1 && g2a === 0 && g2b === 0);
+      const e1 = get(4);
+      const e2 = get(5);
+      const e3 = get(6);
+      const enabled = (e1 === 0 && e2 === 0 && e3 === 1);
 
       const outputs = { 15: 1, 14: 1, 13: 1, 12: 1, 11: 1, 10: 1, 9: 1, 7: 1 };
       if (enabled) {
-        const a = get(1);
-        const b = get(2);
-        const c = get(3);
-        const val = (c << 2) | (b << 1) | a;
+        const a0 = get(1);
+        const a1 = get(2);
+        const a2 = get(3);
+        const addr = (a2 << 2) | (a1 << 1) | a0;
         const pinMap = [15, 14, 13, 12, 11, 10, 9, 7];
-        outputs[pinMap[val]] = 0;
+        outputs[pinMap[addr]] = 0;
       }
       return { outputs, nextState: state };
     },
     truthTable: {
-      headers: ["G1", "G2A'", "G2B'", "C", "B", "A", "Active Output (LOW)"],
+      headers: ["E3", "E2̅", "E1̅", "A2", "A1", "A0", "Active Output (LOW)"],
       rows: [
         [0, "X", "X", "X", "X", "X", "None (All HIGH)"],
         [1, 1, "X", "X", "X", "X", "None (All HIGH)"],
-        [1, 0, 0, 0, 0, 0, "Y0' = 0"],
-        [1, 0, 0, 0, 0, 1, "Y1' = 0"],
-        [1, 0, 0, 0, 1, 0, "Y2' = 0"],
-        [1, 0, 0, 0, 1, 1, "Y3' = 0"],
-        [1, 0, 0, 1, 0, 0, "Y4' = 0"],
-        [1, 0, 0, 1, 0, 1, "Y5' = 0"],
-        [1, 0, 0, 1, 1, 0, "Y6' = 0"],
-        [1, 0, 0, 1, 1, 1, "Y7' = 0"]
+        [1, "X", 1, "X", "X", "X", "None (All HIGH)"],
+        [1, 0, 0, 0, 0, 0, "Y0̅ = 0"],
+        [1, 0, 0, 0, 0, 1, "Y1̅ = 0"],
+        [1, 0, 0, 0, 1, 0, "Y2̅ = 0"],
+        [1, 0, 0, 0, 1, 1, "Y3̅ = 0"],
+        [1, 0, 0, 1, 0, 0, "Y4̅ = 0"],
+        [1, 0, 0, 1, 0, 1, "Y5̅ = 0"],
+        [1, 0, 0, 1, 1, 0, "Y6̅ = 0"],
+        [1, 0, 0, 1, 1, 1, "Y7̅ = 0"]
       ]
     }
   },
 
   "7483": {
     name: "7483",
-    marking: "SN7483N",
+    marking: "SN74LS83N",
     title: "4-Bit Binary Full Adder",
-    description: "4-bit binary full adder with fast internal lookahead carry. Adds two 4-bit words A and B with carry-in C0, outputting 4-bit sum S and carry-out C4.",
+    description: "4-bit binary full adder with fast internal lookahead carry. Adds two 4-bit words A[4:1] (A4 MSB) and B[4:1] (B4 MSB) with carry-in C0, generating sum S[4:1] (S4 MSB) and carry-out C4. Pinout: VCC=5, GND=12.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 5,
@@ -632,11 +754,11 @@ const IC_LIBRARY = {
       const sum = a + b + c0;
       return {
         outputs: {
-          9: sum & 1,
-          6: (sum >> 1) & 1,
-          2: (sum >> 2) & 1,
-          15: (sum >> 3) & 1,
-          14: (sum >> 4) & 1
+          9: sum & 1,          // S1 (LSB)
+          6: (sum >> 1) & 1,   // S2
+          2: (sum >> 2) & 1,   // S3
+          15: (sum >> 3) & 1,  // S4 (MSB)
+          14: (sum >> 4) & 1   // C4 (Cout)
         },
         nextState: state
       };
@@ -718,67 +840,79 @@ const IC_LIBRARY = {
 
   "7490": {
     name: "7490",
-    marking: "SN7490N",
-    title: "Decade Counter",
-    description: "Decade (BCD) counter containing four master-slave flip-flops configured as a divide-by-2 section (CKA) and a divide-by-5 section (CKB).",
+    marking: "SN74LS90N",
+    title: "Decade Counter (÷2 and ÷5)",
+    description: "Decade counter containing four master-slave flip-flops configured as a divide-by-2 section (CLKA on Pin 14 -> QA on Pin 12) and a divide-by-5 section (CLKB on Pin 1 -> QB on Pin 9, QC on Pin 8, QD on Pin 11). Pins 4 and 13 are No-Connect (NC). Resets: R0(1)&R0(2) reset to 0000; R9(1)&R9(2) set to 1001 with priority. FALLING-edge triggered.",
     package: "DIP-14",
     pinCount: 14,
     vccPin: 5,
     gndPin: 10,
     pinNames: {
-      1: "CKB", 2: "R0(1)", 3: "R0(2)", 4: "NC", 5: "VCC", 6: "R9(1)", 7: "R9(2)",
-      8: "QD", 9: "QB", 10: "GND", 11: "QC", 12: "QA", 13: "NC", 14: "CKA"
+      1: "CLKB", 2: "R0(1)", 3: "R0(2)", 4: "NC", 5: "VCC", 6: "R9(1)", 7: "R9(2)",
+      8: "QC", 9: "QB", 10: "GND", 11: "QD", 12: "QA", 13: "NC", 14: "CLKA"
     },
     inputs: [1, 2, 3, 6, 7, 14],
     outputs: [8, 9, 11, 12],
     pins: [
-      { pin: 1, name: "CKB", type: "in" },
+      { pin: 1, name: "CLKB", type: "in" },
       { pin: 2, name: "R0(1)", type: "in" },
       { pin: 3, name: "R0(2)", type: "in" },
       { pin: 4, name: "NC", type: "nc" },
       { pin: 5, name: "VCC", type: "pwr" },
       { pin: 6, name: "R9(1)", type: "in" },
       { pin: 7, name: "R9(2)", type: "in" },
-      { pin: 8, name: "QD", type: "out" },
+      { pin: 8, name: "QC", type: "out" },
       { pin: 9, name: "QB", type: "out" },
       { pin: 10, name: "GND", type: "gnd" },
-      { pin: 11, name: "QC", type: "out" },
+      { pin: 11, name: "QD", type: "out" },
       { pin: 12, name: "QA", type: "out" },
       { pin: 13, name: "NC", type: "nc" },
-      { pin: 14, name: "CKA", type: "in" }
+      { pin: 14, name: "CLKA", type: "in" }
     ],
     eval: (inMap, state) => {
       const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
-      const s = state || { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 1 };
+      const s = state || { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 1, history: [] };
       const curCkA = get(14);
       const curCkB = get(1);
 
       let qa = s.qa;
-      let bcd = s.bcd;
+      let bcd = s.bcd; // 0..4 for ÷5 sequence: 000, 001, 010, 011, 100
 
-      // Negative edge trigger on CKA
+      // Falling-edge trigger on CLKA (÷2)
       if (s.lastCkA === 1 && curCkA === 0) {
         qa = qa === 0 ? 1 : 0;
       }
-      // Negative edge trigger on CKB (counts 0 to 4)
+
+      // Falling-edge trigger on CLKB (÷5)
       if (s.lastCkB === 1 && curCkB === 0) {
         bcd = (bcd + 1) % 5;
       }
 
-      // Asynchronous resets
-      if (get(2) === 1 && get(3) === 1) {
-        qa = 0; bcd = 0;
-      } else if (get(6) === 1 && get(7) === 1) {
-        qa = 1; bcd = 4; // BCD 9 is QA=1, QD=1 (bcd=4)
+      // Asynchronous Resets: R9 has priority over R0!
+      if (get(6) === 1 && get(7) === 1) {
+        qa = 1;
+        bcd = 4; // QD=1, QC=0, QB=0 -> 1001 (BCD 9)
+      } else if (get(2) === 1 && get(3) === 1) {
+        qa = 0;
+        bcd = 0; // QD=0, QC=0, QB=0 -> 0000
       }
 
+      // Output mapping for ÷5 sequence (000 -> 001 -> 010 -> 011 -> 100)
       const qb = bcd & 1;
       const qc = (bcd >> 1) & 1;
       const qd = (bcd >> 2) & 1;
 
+      // Timing diagram capture: record last 32 transitions of CLKA, QA, QB, QC, QD
+      const history = s.history ? [...s.history] : [];
+      const lastEntry = history.length > 0 ? history[history.length - 1] : null;
+      if (!lastEntry || lastEntry.clk !== curCkA || lastEntry.qa !== qa || lastEntry.qb !== qb || lastEntry.qc !== qc || lastEntry.qd !== qd) {
+        history.push({ clk: curCkA, qa, qb, qc, qd, time: Date.now() });
+        if (history.length > 32) history.shift();
+      }
+
       return {
-        outputs: { 12: qa, 9: qb, 11: qc, 8: qd },
-        nextState: { qa, bcd, lastCkA: curCkA, lastCkB: curCkB }
+        outputs: { 12: qa, 9: qb, 8: qc, 11: qd },
+        nextState: { qa, bcd, lastCkA: curCkA, lastCkB: curCkB, history }
       };
     },
     truthTable: {
@@ -955,6 +1089,13 @@ const IC_LIBRARY = {
     }
   }
 };
+
+// Aliases for standard part numbering
+IC_LIBRARY["74LS153"] = IC_LIBRARY["74153"];
+IC_LIBRARY["74LS138"] = IC_LIBRARY["74138"];
+IC_LIBRARY["74LS83"] = IC_LIBRARY["7483"];
+IC_LIBRARY["74LS90"] = IC_LIBRARY["7490"];
+IC_LIBRARY["74LS74"] = IC_LIBRARY["7474"];
 
 if (typeof window !== "undefined") {
   window.IC_LIBRARY = IC_LIBRARY;

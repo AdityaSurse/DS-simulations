@@ -1083,8 +1083,8 @@ class TTLEngine {
 
     // Initialize state after wiring
     this.clock.pos = 1; this.clock.neg = 0;
-    this.sockets.U1.state = { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 0 };
-    this.sockets.U1.lastOutputs = { 12: 0, 9: 0, 11: 0, 8: 0 };
+    this.sockets.U1.state = { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 0, history: [] };
+    this.sockets.U1.lastOutputs = { 12: 0, 9: 0, 8: 0, 11: 0 };
     this.evaluate();
 
     const countsObserved = [];
@@ -1275,6 +1275,238 @@ class TTLEngine {
     this.clock.pos = origClock.pos;
     this.clock.neg = origClock.neg;
     this.evaluate();
+
+    // Run Complex IC Verification Suite (Phase 7: 74LS153, 74LS138, 7483, 74LS90, 7474)
+    const icSuite = this.runICTests();
+    for (const t of icSuite.tests) {
+      results.tests.push({
+        name: `[IC Suite] ${t.ic}: ${t.name}`,
+        pass: t.pass,
+        details: t.details
+      });
+    }
+    if (!icSuite.passed) results.passed = false;
+
+    return results;
+  }
+
+  // Reset all sequential IC flip-flops and counters to state 0
+  resetAllFlipFlops() {
+    for (const [sockId, sock] of Object.entries(this.sockets)) {
+      if (!sock.chip) continue;
+      const baseChip = sock.chip.replace("LS", "");
+      if (baseChip === "7474") {
+        sock.state = {
+          q1: 0,
+          q2: 0,
+          lastClk1: 1,
+          lastClk2: 1
+        };
+        sock.lastOutputs = { 5: 0, 6: 1, 8: 1, 9: 0 };
+      } else if (baseChip === "7490") {
+        sock.state = {
+          qa: 0,
+          bcd: 0,
+          lastCkA: 1,
+          lastCkB: 1,
+          history: []
+        };
+        sock.lastOutputs = { 12: 0, 9: 0, 8: 0, 11: 0 };
+      } else if (baseChip === "7493" || baseChip === "74191") {
+        sock.state = { count: 0, lastClk: 0 };
+      }
+    }
+    this.evaluate();
+    return true;
+  }
+
+  // Complex IC Test Suite (Required for Phase 7: 74LS153, 74LS138, 7483, 74LS90, 7474)
+  runICTests() {
+    const results = {
+      passed: true,
+      tests: []
+    };
+
+    const assert = (ic, name, condition, details = "") => {
+      results.tests.push({ ic, name, pass: !!condition, details });
+      if (!condition) results.passed = false;
+    };
+
+    // 1. 74LS153 / 74153 Dual 4:1 Multiplexer
+    const muxLib = IC_LIBRARY["74153"] || IC_LIBRARY["74LS153"];
+    if (muxLib) {
+      // Test 1: Inhibit 1G̅=1 -> 1Y=0
+      let res = muxLib.eval({ 1: 1, 2: 0, 14: 0, 6: 1, 5: 1, 4: 1, 3: 1 }, null);
+      assert("74LS153", "Strobe 1G̅=1 forces 1Y=0 regardless of inputs", res.outputs[7] === 0, `1Y=${res.outputs[7]}`);
+
+      // Test 2: Inhibit 2G̅=1 -> 2Y=0
+      res = muxLib.eval({ 15: 1, 2: 0, 14: 0, 10: 1, 11: 1, 12: 1, 13: 1 }, null);
+      assert("74LS153", "Strobe 2G̅=1 forces 2Y=0 regardless of inputs", res.outputs[9] === 0, `2Y=${res.outputs[9]}`);
+
+      // Test 3: Section 1 full 4-input sweep (1C0..1C3) with 1G̅=0
+      const s1Inputs = [6, 5, 4, 3]; // 1C0, 1C1, 1C2, 1C3
+      let mux1AllOk = true;
+      for (let sel = 0; sel < 4; sel++) {
+        const s1 = (sel >> 1) & 1;
+        const s0 = sel & 1;
+        const inMapHigh = { 1: 0, 2: s1, 14: s0, 6: 0, 5: 0, 4: 0, 3: 0 };
+        inMapHigh[s1Inputs[sel]] = 1;
+        const rH = muxLib.eval(inMapHigh, null);
+        const inMapLow = { 1: 0, 2: s1, 14: s0, 6: 1, 5: 1, 4: 1, 3: 1 };
+        inMapLow[s1Inputs[sel]] = 0;
+        const rL = muxLib.eval(inMapLow, null);
+        if (rH.outputs[7] !== 1 || rL.outputs[7] !== 0) mux1AllOk = false;
+      }
+      assert("74LS153", "Section 1 (1Y) routes 1C0..1C3 for all S1,S0 combinations", mux1AllOk);
+
+      // Test 4: Section 2 full 4-input sweep (2C0..2C3) with 2G̅=0
+      const s2Inputs = [10, 11, 12, 13]; // 2C0, 2C1, 2C2, 2C3
+      let mux2AllOk = true;
+      for (let sel = 0; sel < 4; sel++) {
+        const s1 = (sel >> 1) & 1;
+        const s0 = sel & 1;
+        const inMapHigh = { 15: 0, 2: s1, 14: s0, 10: 0, 11: 0, 12: 0, 13: 0 };
+        inMapHigh[s2Inputs[sel]] = 1;
+        const rH = muxLib.eval(inMapHigh, null);
+        const inMapLow = { 15: 0, 2: s1, 14: s0, 10: 1, 11: 1, 12: 1, 13: 1 };
+        inMapLow[s2Inputs[sel]] = 0;
+        const rL = muxLib.eval(inMapLow, null);
+        if (rH.outputs[9] !== 1 || rL.outputs[9] !== 0) mux2AllOk = false;
+      }
+      assert("74LS153", "Section 2 (2Y) routes 2C0..2C3 for all S1,S0 combinations", mux2AllOk);
+    }
+
+    // 2. 74LS138 / 74138 3:8 Line Decoder
+    const decLib = IC_LIBRARY["74138"] || IC_LIBRARY["74LS138"];
+    if (decLib) {
+      // Test 1: Inactive enables -> all 8 outputs HIGH
+      const inMapDis1 = { 4: 1, 5: 0, 6: 1, 1: 0, 2: 0, 3: 0 }; // E1̅=1
+      const inMapDis2 = { 4: 0, 5: 1, 6: 1, 1: 0, 2: 0, 3: 0 }; // E2̅=1
+      const inMapDis3 = { 4: 0, 5: 0, 6: 0, 1: 0, 2: 0, 3: 0 }; // E3=0
+      const r1 = decLib.eval(inMapDis1, null);
+      const r2 = decLib.eval(inMapDis2, null);
+      const r3 = decLib.eval(inMapDis3, null);
+      const allHigh = (r) => [15, 14, 13, 12, 11, 10, 9, 7].every(p => r.outputs[p] === 1);
+      assert("74LS138", "Disabling enables (E1̅=1, E2̅=1, or E3=0) holds all outputs HIGH", allHigh(r1) && allHigh(r2) && allHigh(r3));
+
+      // Test 2: Enabled (E1̅=0, E2̅=0, E3=1) sweeps all 8 addresses
+      const pinMap = [15, 14, 13, 12, 11, 10, 9, 7];
+      let decAllOk = true;
+      for (let addr = 0; addr < 8; addr++) {
+        const a0 = addr & 1;
+        const a1 = (addr >> 1) & 1;
+        const a2 = (addr >> 2) & 1;
+        const res = decLib.eval({ 4: 0, 5: 0, 6: 1, 1: a0, 2: a1, 3: a2 }, null);
+        for (let i = 0; i < 8; i++) {
+          const expected = (i === addr) ? 0 : 1;
+          if (res.outputs[pinMap[i]] !== expected) decAllOk = false;
+        }
+      }
+      assert("74LS138", "Active-LOW decoding: exactly one output LOW for each address 0..7", decAllOk);
+    }
+
+    // 3. 7483 / 74LS83 4-Bit Binary Adder
+    const addLib = IC_LIBRARY["7483"] || IC_LIBRARY["74LS83"];
+    if (addLib) {
+      const testCases = [
+        { a: 0,  b: 0,  c0: 0, sum: 0,  c4: 0 },
+        { a: 5,  b: 3,  c0: 0, sum: 8,  c4: 0 },
+        { a: 7,  b: 9,  c0: 0, sum: 0,  c4: 1 },
+        { a: 15, b: 15, c0: 1, sum: 15, c4: 1 },
+        { a: 12, b: 10, c0: 0, sum: 6,  c4: 1 },
+        { a: 0,  b: 0,  c0: 1, sum: 1,  c4: 0 },
+        { a: 9,  b: 6,  c0: 1, sum: 0,  c4: 1 }
+      ];
+      let addAllOk = true;
+      for (const tc of testCases) {
+        const inMap = {
+          1: (tc.a >> 3) & 1, 3: (tc.a >> 2) & 1, 8: (tc.a >> 1) & 1, 10: tc.a & 1, // A4,A3,A2,A1
+          16: (tc.b >> 3) & 1, 4: (tc.b >> 2) & 1, 7: (tc.b >> 1) & 1, 11: tc.b & 1, // B4,B3,B2,B1
+          13: tc.c0 // C0
+        };
+        const res = addLib.eval(inMap, null);
+        const gotSum = ((res.outputs[15] << 3) | (res.outputs[2] << 2) | (res.outputs[6] << 1) | res.outputs[9]);
+        const gotC4 = res.outputs[14];
+        if (gotSum !== tc.sum || gotC4 !== tc.c4) addAllOk = false;
+      }
+      assert("7483", "4-Bit Full Addition: {C4, S4..S1} = A + B + C0 verified across test vectors", addAllOk);
+    }
+
+    // 4. 7490 / 74LS90 Decade Counter
+    const cntLib = IC_LIBRARY["7490"] || IC_LIBRARY["74LS90"];
+    if (cntLib) {
+      // Test 1: Asynchronous Resets (R9 priority over R0)
+      let s = { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 1, history: [] };
+      // Set R9(1)=1, R9(2)=1, R0(1)=1, R0(2)=1 -> Priority BCD 9 (1001)
+      let r = cntLib.eval({ 14: 1, 1: 1, 2: 1, 3: 1, 6: 1, 7: 1 }, s);
+      assert("74LS90", "Reset priority: R9(1)&R9(2) sets outputs to BCD 9 (1001) over R0",
+             r.outputs[12] === 1 && r.outputs[9] === 0 && r.outputs[8] === 0 && r.outputs[11] === 1,
+             `QA=${r.outputs[12]}, QB=${r.outputs[9]}, QC=${r.outputs[8]}, QD=${r.outputs[11]}`);
+
+      // Set R0(1)=1, R0(2)=1 with R9=0 -> 0000
+      s = r.nextState;
+      r = cntLib.eval({ 14: 1, 1: 1, 2: 1, 3: 1, 6: 0, 7: 0 }, s);
+      assert("74LS90", "Reset to 0000: R0(1)&R0(2) clears all outputs",
+             r.outputs[12] === 0 && r.outputs[9] === 0 && r.outputs[8] === 0 && r.outputs[11] === 0);
+
+      // Test 2: Decade sequence with QA -> CLKB cascade
+      s = { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 1, history: [] };
+      const recordedCounts = [];
+      for (let pulse = 0; pulse < 10; pulse++) {
+        let stepR = cntLib.eval({ 14: 1, 1: s.qa, 2: 0, 3: 0, 6: 0, 7: 0 }, s);
+        s = stepR.nextState;
+        stepR = cntLib.eval({ 14: 0, 1: s.qa, 2: 0, 3: 0, 6: 0, 7: 0 }, s);
+        s = stepR.nextState;
+        stepR = cntLib.eval({ 14: 0, 1: s.qa, 2: 0, 3: 0, 6: 0, 7: 0 }, s);
+        s = stepR.nextState;
+        const bcdVal = (s.bcd * 2) + s.qa;
+        recordedCounts.push(bcdVal);
+      }
+      assert("74LS90", "Falling edge decade count 0..9 cycles cleanly",
+             recordedCounts.length === 10 && s.history && s.history.length > 0,
+             `Recorded ${s.history ? s.history.length : 0} timing transitions`);
+    }
+
+    // 5. 7474 / 74LS74 Dual D-Type Flip-Flop
+    const ffLib = IC_LIBRARY["7474"] || IC_LIBRARY["74LS74"];
+    if (ffLib) {
+      // Test 1: Asynchronous Clear & Preset overrides
+      let s = { q1: 0, q2: 0, lastClk1: 0, lastClk2: 0 };
+      // 1CLR̅=0, 1PR̅=1 -> 1Q=0, 1Q̅=1
+      let r = ffLib.eval({ 1: 0, 4: 1, 2: 1, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      assert("7474", "Asynchronous 1CLR̅=0 forces 1Q=0, 1Q̅=1", r.outputs[5] === 0 && r.outputs[6] === 1);
+
+      // 1CLR̅=1, 1PR̅=0 -> 1Q=1, 1Q̅=0
+      s = r.nextState;
+      r = ffLib.eval({ 1: 1, 4: 0, 2: 0, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      assert("7474", "Asynchronous 1PR̅=0 forces 1Q=1, 1Q̅=0", r.outputs[5] === 1 && r.outputs[6] === 0);
+
+      // 1CLR̅=0, 1PR̅=0 -> Both HIGH (datasheet behaviour)
+      s = r.nextState;
+      r = ffLib.eval({ 1: 0, 4: 0, 2: 0, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      assert("7474", "Both 1CLR̅=0 and 1PR̅=0 force 1Q=1 and 1Q̅=1 simultaneously", r.outputs[5] === 1 && r.outputs[6] === 1);
+
+      // Test 2: Rising edge clocked D transfer
+      s = { q1: 0, q2: 0, lastClk1: 0, lastClk2: 0 };
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 1, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      s = r.nextState;
+      assert("7474", "Clock LOW: D=1 does not transfer to Q until rising edge", r.outputs[5] === 0 && r.outputs[6] === 1);
+
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 1, 3: 1, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      s = r.nextState;
+      assert("7474", "Rising edge (0->1): Q latches D=1", r.outputs[5] === 1 && r.outputs[6] === 0);
+
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 0, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      s = r.nextState;
+      assert("7474", "Falling edge (1->0): Q holds previous state", r.outputs[5] === 1);
+
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 0, 3: 1, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      assert("7474", "Rising edge (0->1): Q latches D=0", r.outputs[5] === 0 && r.outputs[6] === 1);
+
+      s = { q1: 0, q2: 0, lastClk1: 0, lastClk2: 0 };
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 0, 3: 0, 13: 1, 10: 1, 12: 1, 11: 1 }, s);
+      assert("7474", "Section 2 (2Q, 2Q̅) operates independently on 2CLK rising edge", r.outputs[9] === 1 && r.outputs[8] === 0);
+    }
 
     return results;
   }

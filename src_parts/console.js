@@ -9,6 +9,8 @@ class LabConsole {
     this.currentRefChip = "7408";
     this.verificationResults = null;
     this.selfTestResults = null;
+    this.showSolutionWiring = false;
+    this.icSuiteResults = null;
 
     this.container = document.getElementById("laboratory-console");
     this.init();
@@ -262,6 +264,32 @@ class LabConsole {
           </button>
         </div>
 
+        <div style="margin-top: 8px;">
+          <button class="btn" id="btn-toggle-solution" style="width: 100%; font-size: 11px;">
+            ${this.showSolutionWiring ? "▲ Hide Solution Wiring" : "💡 Show Solution Wiring (" + (activeExp.recommendedWires ? activeExp.recommendedWires.length : 0) + " cords)"}
+          </button>
+          ${this.showSolutionWiring && activeExp.recommendedWires && activeExp.recommendedWires.length > 0 ? `
+            <div style="margin-top: 8px; background: rgba(0,0,0,0.35); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px;">
+              <div style="font-size: 11px; font-weight: 600; color: var(--accent-amber); margin-bottom: 6px;">Lab Manual Solution Patch Cords:</div>
+              <table class="truth-table" style="font-size: 10.5px;">
+                <thead>
+                  <tr><th>#</th><th>From Jack</th><th>To Jack</th><th>Wire Color</th></tr>
+                </thead>
+                <tbody>
+                  ${activeExp.recommendedWires.map((w, idx) => `
+                    <tr>
+                      <td><b>${idx + 1}</b></td>
+                      <td><code>${w.from}</code></td>
+                      <td><code>${w.to}</code></td>
+                      <td><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${w.color};vertical-align:middle;margin-right:6px;border:1px solid rgba(255,255,255,0.2);"></span><code>${w.color}</code></td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          ` : ""}
+        </div>
+
         ${this.verificationResults ? `
           <div class="verdict-banner ${this.verificationResults.passed ? 'success' : 'failure'}">
             ${this.verificationResults.message}
@@ -462,6 +490,119 @@ class LabConsole {
           </table>
         ` : ""}
       </div>
+
+      ${(ic.name === "7490" || ic.name === "74LS90") ? this.render7490TimingDiagram() : ""}
+    `;
+  }
+
+  render7490TimingDiagram() {
+    let liveHistory = null;
+    let socketId = null;
+    for (const [sId, s] of Object.entries(this.engine.sockets)) {
+      if (s.chip && (s.chip === "7490" || s.chip === "74LS90") && s.state && s.state.history && s.state.history.length > 0) {
+        liveHistory = s.state.history;
+        socketId = sId;
+        break;
+      }
+    }
+
+    let samples = [];
+    let isLive = false;
+    if (liveHistory && liveHistory.length >= 2) {
+      samples = liveHistory.slice(-32);
+      isLive = true;
+    } else {
+      for (let c = 0; c < 10; c++) {
+        const qa = c & 1;
+        const qb = (c >> 1) & 1;
+        const qc = (c >> 2) & 1;
+        const qd = (c >> 3) & 1;
+        samples.push({ clk: 1, qa, qb, qc, qd, label: `${c}` });
+        samples.push({ clk: 0, qa, qb, qc, qd, label: `${c}` });
+      }
+    }
+
+    const totalSteps = samples.length;
+    const svgWidth = 520;
+    const svgHeight = 220;
+    const leftGutter = 60;
+    const rightGutter = 15;
+    const plotWidth = svgWidth - leftGutter - rightGutter;
+    const stepWidth = plotWidth / Math.max(1, totalSteps);
+
+    const signals = [
+      { name: "CLKA", key: "clk", color: "#f59e0b", yTop: 20, yBot: 45 },
+      { name: "QA (÷2)", key: "qa", color: "#38bdf8", yTop: 60, yBot: 85 },
+      { name: "QB", key: "qb", color: "#34d399", yTop: 100, yBot: 125 },
+      { name: "QC", key: "qc", color: "#a78bfa", yTop: 140, yBot: 165 },
+      { name: "QD (MSB)", key: "qd", color: "#f472b6", yTop: 180, yBot: 205 }
+    ];
+
+    let tracesHtml = "";
+    for (const sig of signals) {
+      let pathD = "";
+      for (let i = 0; i < totalSteps; i++) {
+        const x1 = leftGutter + (i * stepWidth);
+        const x2 = leftGutter + ((i + 1) * stepWidth);
+        const val = samples[i][sig.key];
+        const yVal = val === 1 ? sig.yTop : sig.yBot;
+
+        if (i === 0) {
+          pathD += `M ${x1} ${yVal} L ${x2} ${yVal}`;
+        } else {
+          const prevVal = samples[i - 1][sig.key];
+          const prevY = prevVal === 1 ? sig.yTop : sig.yBot;
+          if (prevY !== yVal) {
+            pathD += ` L ${x1} ${yVal}`;
+          }
+          pathD += ` L ${x2} ${yVal}`;
+        }
+      }
+
+      tracesHtml += `
+        <text x="${leftGutter - 8}" y="${(sig.yTop + sig.yBot) / 2 + 4}" fill="${sig.color}" font-family="var(--font-mono)" font-size="9.5" font-weight="700" text-anchor="end">${sig.name}</text>
+        <line x1="${leftGutter}" y1="${sig.yBot}" x2="${svgWidth - rightGutter}" y2="${sig.yBot}" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+        <line x1="${leftGutter}" y1="${sig.yTop}" x2="${svgWidth - rightGutter}" y2="${sig.yTop}" stroke="#1e293b" stroke-width="0.5"/>
+        <path d="${pathD}" fill="none" stroke="${sig.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      `;
+    }
+
+    let gridHtml = "";
+    for (let i = 0; i <= totalSteps; i++) {
+      const x = leftGutter + (i * stepWidth);
+      gridHtml += `<line x1="${x}" y1="15" x2="${x}" y2="210" stroke="#1e293b" stroke-width="0.5"/>`;
+      if (samples[i] && samples[i].label) {
+        gridHtml += `<text x="${x + stepWidth / 2}" y="12" fill="#94a3b8" font-family="var(--font-mono)" font-size="9" text-anchor="middle">${samples[i].label}</text>`;
+      }
+    }
+
+    return `
+      <div class="card" style="margin-top: 12px;">
+        <div class="card-header">
+          <span class="card-title">⏱️ 74LS90 Timing Diagram (${isLive ? `Live in Socket ${socketId} &middot; ${samples.length} Transitions` : 'Reference Decade Sequence'})</span>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: ${isLive ? 'var(--accent-teal)' : '#94a3b8'}; font-weight: 700;">${isLive ? '🔴 LIVE CAPTURE' : 'IDEAL 0..9 BCD'}</span>
+        </div>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+          Displays digital waveform for divide-by-2 section (CLKA → QA) and divide-by-5 section (CLKB → QB, QC, QD).
+          Transitions trigger on <b>FALLING edges</b> (1 → 0).
+        </p>
+
+        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 10px; overflow-x: auto;">
+          <svg viewBox="0 0 ${svgWidth} ${svgHeight}" style="width: 100%; min-width: 440px; display: block;">
+            ${gridHtml}
+            ${tracesHtml}
+          </svg>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button class="btn btn-teal" id="btn-pulse-clk" style="flex: 1; font-size: 11px;">
+            ⚡ Pulse CLKA
+          </button>
+          <button class="btn" id="btn-clear-timing" style="flex: 1; font-size: 11px;">
+            🗑️ Clear Capture Buffer
+          </button>
+        </div>
+      </div>
     `;
   }
 
@@ -488,6 +629,45 @@ class LabConsole {
             ${this.engine.strictPowerMode ? "Strict (Active)" : "Auto-Power"}
           </button>
         </div>
+      </div>
+
+      <!-- Complex IC Suite Card (Required for Phase 7) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🔬 Complex IC Verification Suite (runICTests)</span>
+        </div>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+          Exhaustive logic tests for <b>74LS153</b> (dual 4:1 MUX), <b>74LS138</b> (3:8 decoder), <b>7483</b> (4-bit binary adder), <b>74LS90</b> (decade counter & resets), and <b>7474</b> (dual D flip-flop with asynchronous preset/clear & edge latching).
+        </p>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <button class="btn btn-teal" id="btn-run-icsuite" style="flex: 2;">
+            ▶ Run Complex IC Suite
+          </button>
+          <button class="btn" id="btn-reset-ffs" style="flex: 1;" title="Clear all sequential flip-flops and counters">
+            🔄 Reset All FFs
+          </button>
+        </div>
+
+        ${this.icSuiteResults ? `
+          <div class="verdict-banner ${this.icSuiteResults.passed ? 'success' : 'failure'}" style="margin-bottom: 8px;">
+            ${this.icSuiteResults.passed ? '✓ ALL COMPLEX IC TESTS PASSED (100%)' : '✗ COMPLEX IC SUITE FAILED'}
+          </div>
+          <table class="truth-table" style="font-size: 10.5px;">
+            <thead>
+              <tr><th>Status</th><th>IC</th><th>Test Specification</th><th>Details</th></tr>
+            </thead>
+            <tbody>
+              ${this.icSuiteResults.tests.map(t => `
+                <tr>
+                  <td style="color: ${t.pass ? '#86efac' : '#fca5a5'}; font-weight: 700;">${t.pass ? '✓ PASS' : '✗ FAIL'}</td>
+                  <td><b>${t.ic}</b></td>
+                  <td>${t.name}</td>
+                  <td style="font-family: var(--font-mono); color: #94a3b8;">${t.details || 'Verified'}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        ` : ""}
       </div>
 
       <!-- Self-Tests Card (Required by Phase 3 Spec) -->
@@ -654,6 +834,74 @@ class LabConsole {
     if (btnVerify) {
       btnVerify.addEventListener("click", () => {
         this.verifyExperiment();
+      });
+    }
+
+    // Solution wiring toggle
+    const btnToggleSolution = this.container.querySelector("#btn-toggle-solution");
+    if (btnToggleSolution) {
+      btnToggleSolution.addEventListener("click", () => {
+        this.showSolutionWiring = !this.showSolutionWiring;
+        this.render();
+      });
+    }
+
+    // Complex IC Suite button
+    const btnICSuite = this.container.querySelector("#btn-run-icsuite");
+    if (btnICSuite) {
+      btnICSuite.addEventListener("click", () => {
+        this.icSuiteResults = this.engine.runICTests();
+        this.render();
+      });
+    }
+
+    // Reset All Flip-Flops button
+    const btnResetFFs = this.container.querySelector("#btn-reset-ffs");
+    if (btnResetFFs) {
+      btnResetFFs.addEventListener("click", () => {
+        this.engine.resetAllFlipFlops();
+        this.board.render();
+        this.render();
+      });
+    }
+
+    // Pulse CLKA button for timing diagram
+    const btnPulseClk = this.container.querySelector("#btn-pulse-clk");
+    if (btnPulseClk) {
+      btnPulseClk.addEventListener("click", () => {
+        let found7490 = false;
+        for (const s of Object.values(this.engine.sockets)) {
+          if (s.chip && (s.chip === "7490" || s.chip === "74LS90")) {
+            found7490 = true;
+            // Generate full falling edge pulse on CLKA
+            this.engine.clock.pos = 1; this.engine.clock.neg = 0;
+            this.engine.evaluate();
+            this.engine.clock.pos = 0; this.engine.clock.neg = 1;
+            this.engine.evaluate();
+            break;
+          }
+        }
+        if (!found7490) {
+          // If no 7490 in socket, still cycle clock
+          this.engine.clock.pos = this.engine.clock.pos === 1 ? 0 : 1;
+          this.engine.clock.neg = this.engine.clock.pos === 1 ? 0 : 1;
+          this.engine.evaluate();
+        }
+        this.board.render();
+        this.render();
+      });
+    }
+
+    // Clear timing diagram buffer
+    const btnClearTiming = this.container.querySelector("#btn-clear-timing");
+    if (btnClearTiming) {
+      btnClearTiming.addEventListener("click", () => {
+        for (const s of Object.values(this.engine.sockets)) {
+          if (s.chip && (s.chip === "7490" || s.chip === "74LS90") && s.state) {
+            s.state.history = [];
+          }
+        }
+        this.render();
       });
     }
 

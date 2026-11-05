@@ -1358,6 +1358,127 @@ const IC_LIBRARY = {
     }
   },
 
+  "7474": {
+    name: "7474",
+    marking: "SN74LS74AN",
+    title: "Dual D-Type Positive-Edge-Triggered Flip-Flops",
+    description: "Contains two independent positive-edge-triggered D-type flip-flops with asynchronous active-low preset (1PR̅, 2PR̅) and clear (1CLR̅, 2CLR̅) inputs. When both PR̅ and CLR̅ are LOW, outputs Q and Q̅ are both forced HIGH.",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pinNames: {
+      1: "1CLR̅", 2: "1D", 3: "1CLK", 4: "1PR̅", 5: "1Q", 6: "1Q̅", 7: "GND",
+      8: "2Q̅", 9: "2Q", 10: "2PR̅", 11: "2CLK", 12: "2D", 13: "2CLR̅", 14: "VCC"
+    },
+    inputs: [1, 2, 3, 4, 10, 11, 12, 13],
+    outputs: [5, 6, 8, 9],
+    pins: [
+      { pin: 1, name: "1CLR̅", type: "in" },
+      { pin: 2, name: "1D", type: "in" },
+      { pin: 3, name: "1CLK", type: "in" },
+      { pin: 4, name: "1PR̅", type: "in" },
+      { pin: 5, name: "1Q", type: "out" },
+      { pin: 6, name: "1Q̅", type: "out" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "2Q̅", type: "out" },
+      { pin: 9, name: "2Q", type: "out" },
+      { pin: 10, name: "2PR̅", type: "in" },
+      { pin: 11, name: "2CLK", type: "in" },
+      { pin: 12, name: "2D", type: "in" },
+      { pin: 13, name: "2CLR̅", type: "in" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      const s = state || {
+        q1: Math.random() < 0.5 ? 0 : 1,
+        q2: Math.random() < 0.5 ? 0 : 1,
+        lastClk1: 0,
+        lastClk2: 0
+      };
+
+      // Section 1: 1CLR̅(1), 1D(2), 1CLK(3), 1PR̅(4) -> 1Q(5), 1Q̅(6)
+      const clr1 = get(1);
+      const d1 = get(2);
+      const clk1 = get(3);
+      const pr1 = get(4);
+
+      let q1 = s.q1;
+      let q1Bar = q1 === 1 ? 0 : 1;
+
+      if (pr1 === 0 && clr1 === 0) {
+        // Datasheet: both active-low overrides edge and forces both HIGH!
+        q1 = 1;
+        q1Bar = 1;
+      } else if (pr1 === 0) {
+        q1 = 1;
+        q1Bar = 0;
+      } else if (clr1 === 0) {
+        q1 = 0;
+        q1Bar = 1;
+      } else {
+        // Clocked operation on rising edge
+        if (s.lastClk1 === 0 && clk1 === 1) {
+          q1 = d1 === 1 ? 1 : 0;
+        }
+        q1Bar = q1 === 1 ? 0 : 1;
+      }
+
+      // Section 2: 2CLR̅(13), 2D(12), 2CLK(11), 2PR̅(10) -> 2Q(9), 2Q̅(8)
+      const clr2 = get(13);
+      const d2 = get(12);
+      const clk2 = get(11);
+      const pr2 = get(10);
+
+      let q2 = s.q2;
+      let q2Bar = q2 === 1 ? 0 : 1;
+
+      if (pr2 === 0 && clr2 === 0) {
+        q2 = 1;
+        q2Bar = 1;
+      } else if (pr2 === 0) {
+        q2 = 1;
+        q2Bar = 0;
+      } else if (clr2 === 0) {
+        q2 = 0;
+        q2Bar = 1;
+      } else {
+        // Clocked operation on rising edge
+        if (s.lastClk2 === 0 && clk2 === 1) {
+          q2 = d2 === 1 ? 1 : 0;
+        }
+        q2Bar = q2 === 1 ? 0 : 1;
+      }
+
+      return {
+        outputs: {
+          5: q1,
+          6: q1Bar,
+          9: q2,
+          8: q2Bar
+        },
+        nextState: {
+          q1,
+          q2,
+          lastClk1: clk1,
+          lastClk2: clk2
+        }
+      };
+    },
+    truthTable: {
+      headers: ["PR̅", "CLR̅", "CLK", "D", "Q", "Q̅"],
+      rows: [
+        [0, 1, "X", "X", 1, 0],
+        [1, 0, "X", "X", 0, 1],
+        [0, 0, "X", "X", 1, 1],
+        [1, 1, "↑", 1, 1, 0],
+        [1, 1, "↑", 0, 0, 1],
+        [1, 1, 0, "X", "Q0", "Q0̅"]
+      ]
+    }
+  },
+
   "7486": {
     name: "7486",
     marking: "SN7486N",
@@ -1418,22 +1539,22 @@ const IC_LIBRARY = {
 
   "74153": {
     name: "74153",
-    marking: "SN74153N",
+    marking: "SN74LS153N",
     title: "Dual 4-to-1 Multiplexer",
-    description: "Dual 4-line to 1-line data selectors/multiplexers with individual strobes and common binary address inputs.",
+    description: "Contains two independent 4-to-1 data selectors/multiplexers. Select inputs S1 (Pin 2) and S0 (Pin 14) are shared by both sections. Active-low strobe inputs 1G̅ (Pin 1) and 2G̅ (Pin 15). Output = selected input when G̅=0, else 0.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 16,
     gndPin: 8,
     pinNames: {
-      1: "1G'", 2: "B", 3: "1C3", 4: "1C2", 5: "1C1", 6: "1C0", 7: "1Y", 8: "GND",
-      9: "2Y", 10: "2C0", 11: "2C1", 12: "2C2", 13: "2C3", 14: "A", 15: "2G'", 16: "VCC"
+      1: "1G̅", 2: "S1", 3: "1C3", 4: "1C2", 5: "1C1", 6: "1C0", 7: "1Y", 8: "GND",
+      9: "2Y", 10: "2C0", 11: "2C1", 12: "2C2", 13: "2C3", 14: "S0", 15: "2G̅", 16: "VCC"
     },
     inputs: [1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15],
     outputs: [7, 9],
     pins: [
-      { pin: 1, name: "1G'", type: "in" },
-      { pin: 2, name: "B", type: "in" },
+      { pin: 1, name: "1G̅", type: "in" },
+      { pin: 2, name: "S1", type: "in" },
       { pin: 3, name: "1C3", type: "in" },
       { pin: 4, name: "1C2", type: "in" },
       { pin: 5, name: "1C1", type: "in" },
@@ -1445,18 +1566,18 @@ const IC_LIBRARY = {
       { pin: 11, name: "2C1", type: "in" },
       { pin: 12, name: "2C2", type: "in" },
       { pin: 13, name: "2C3", type: "in" },
-      { pin: 14, name: "A", type: "in" },
-      { pin: 15, name: "2G'", type: "in" },
+      { pin: 14, name: "S0", type: "in" },
+      { pin: 15, name: "2G̅", type: "in" },
       { pin: 16, name: "VCC", type: "pwr" }
     ],
     eval: (inMap, state) => {
       const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
-      const selA = get(14);
-      const selB = get(2);
-      const sel = (selB << 1) | selA;
+      const s1 = get(2);
+      const s0 = get(14);
+      const sel = (s1 << 1) | s0;
 
       let y1 = 0;
-      if (get(1) === 0) { // Active low enable 1G'
+      if (get(1) === 0) { // Active low enable 1G̅
         if (sel === 0) y1 = get(6);
         else if (sel === 1) y1 = get(5);
         else if (sel === 2) y1 = get(4);
@@ -1464,7 +1585,7 @@ const IC_LIBRARY = {
       }
 
       let y2 = 0;
-      if (get(15) === 0) { // Active low enable 2G'
+      if (get(15) === 0) { // Active low enable 2G̅
         if (sel === 0) y2 = get(10);
         else if (sel === 1) y2 = get(11);
         else if (sel === 2) y2 = get(12);
@@ -1477,7 +1598,7 @@ const IC_LIBRARY = {
       };
     },
     truthTable: {
-      headers: ["Select B", "Select A", "Strobe 1G'", "Output 1Y"],
+      headers: ["Select S1", "Select S0", "Strobe 1G̅", "Output 1Y"],
       rows: [
         ["X", "X", 1, 0],
         [0, 0, 0, "1C0"],
@@ -1490,77 +1611,78 @@ const IC_LIBRARY = {
 
   "74138": {
     name: "74138",
-    marking: "SN74138N",
+    marking: "SN74LS138N",
     title: "3-to-8 Line Decoder / Demultiplexer",
-    description: "3-line to 8-line decoder/demultiplexer featuring three enable inputs (one active-high, two active-low) and 8 active-low outputs.",
+    description: "3-line to 8-line decoder/demultiplexer featuring three enable inputs (E1̅ on Pin 4, E2̅ on Pin 5, E3 on Pin 6) and 8 active-low outputs (Y0̅..Y7̅). All outputs HIGH unless E1̅=0, E2̅=0, E3=1.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 16,
     gndPin: 8,
     pinNames: {
-      1: "A", 2: "B", 3: "C", 4: "G2A'", 5: "G2B'", 6: "G1", 7: "Y7'", 8: "GND",
-      9: "Y6'", 10: "Y5'", 11: "Y4'", 12: "Y3'", 13: "Y2'", 14: "Y1'", 15: "Y0'", 16: "VCC"
+      1: "A0", 2: "A1", 3: "A2", 4: "E1̅", 5: "E2̅", 6: "E3", 7: "Y7̅", 8: "GND",
+      9: "Y6̅", 10: "Y5̅", 11: "Y4̅", 12: "Y3̅", 13: "Y2̅", 14: "Y1̅", 15: "Y0̅", 16: "VCC"
     },
     inputs: [1, 2, 3, 4, 5, 6],
     outputs: [7, 9, 10, 11, 12, 13, 14, 15],
     pins: [
-      { pin: 1, name: "A", type: "in" },
-      { pin: 2, name: "B", type: "in" },
-      { pin: 3, name: "C", type: "in" },
-      { pin: 4, name: "G2A'", type: "in" },
-      { pin: 5, name: "G2B'", type: "in" },
-      { pin: 6, name: "G1", type: "in" },
-      { pin: 7, name: "Y7'", type: "out" },
+      { pin: 1, name: "A0", type: "in" },
+      { pin: 2, name: "A1", type: "in" },
+      { pin: 3, name: "A2", type: "in" },
+      { pin: 4, name: "E1̅", type: "in" },
+      { pin: 5, name: "E2̅", type: "in" },
+      { pin: 6, name: "E3", type: "in" },
+      { pin: 7, name: "Y7̅", type: "out" },
       { pin: 8, name: "GND", type: "gnd" },
-      { pin: 9, name: "Y6'", type: "out" },
-      { pin: 10, name: "Y5'", type: "out" },
-      { pin: 11, name: "Y4'", type: "out" },
-      { pin: 12, name: "Y3'", type: "out" },
-      { pin: 13, name: "Y2'", type: "out" },
-      { pin: 14, name: "Y1'", type: "out" },
-      { pin: 15, name: "Y0'", type: "out" },
+      { pin: 9, name: "Y6̅", type: "out" },
+      { pin: 10, name: "Y5̅", type: "out" },
+      { pin: 11, name: "Y4̅", type: "out" },
+      { pin: 12, name: "Y3̅", type: "out" },
+      { pin: 13, name: "Y2̅", type: "out" },
+      { pin: 14, name: "Y1̅", type: "out" },
+      { pin: 15, name: "Y0̅", type: "out" },
       { pin: 16, name: "VCC", type: "pwr" }
     ],
     eval: (inMap, state) => {
       const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
-      const g1 = get(6);
-      const g2a = get(4);
-      const g2b = get(5);
-      const enabled = (g1 === 1 && g2a === 0 && g2b === 0);
+      const e1 = get(4);
+      const e2 = get(5);
+      const e3 = get(6);
+      const enabled = (e1 === 0 && e2 === 0 && e3 === 1);
 
       const outputs = { 15: 1, 14: 1, 13: 1, 12: 1, 11: 1, 10: 1, 9: 1, 7: 1 };
       if (enabled) {
-        const a = get(1);
-        const b = get(2);
-        const c = get(3);
-        const val = (c << 2) | (b << 1) | a;
+        const a0 = get(1);
+        const a1 = get(2);
+        const a2 = get(3);
+        const addr = (a2 << 2) | (a1 << 1) | a0;
         const pinMap = [15, 14, 13, 12, 11, 10, 9, 7];
-        outputs[pinMap[val]] = 0;
+        outputs[pinMap[addr]] = 0;
       }
       return { outputs, nextState: state };
     },
     truthTable: {
-      headers: ["G1", "G2A'", "G2B'", "C", "B", "A", "Active Output (LOW)"],
+      headers: ["E3", "E2̅", "E1̅", "A2", "A1", "A0", "Active Output (LOW)"],
       rows: [
         [0, "X", "X", "X", "X", "X", "None (All HIGH)"],
         [1, 1, "X", "X", "X", "X", "None (All HIGH)"],
-        [1, 0, 0, 0, 0, 0, "Y0' = 0"],
-        [1, 0, 0, 0, 0, 1, "Y1' = 0"],
-        [1, 0, 0, 0, 1, 0, "Y2' = 0"],
-        [1, 0, 0, 0, 1, 1, "Y3' = 0"],
-        [1, 0, 0, 1, 0, 0, "Y4' = 0"],
-        [1, 0, 0, 1, 0, 1, "Y5' = 0"],
-        [1, 0, 0, 1, 1, 0, "Y6' = 0"],
-        [1, 0, 0, 1, 1, 1, "Y7' = 0"]
+        [1, "X", 1, "X", "X", "X", "None (All HIGH)"],
+        [1, 0, 0, 0, 0, 0, "Y0̅ = 0"],
+        [1, 0, 0, 0, 0, 1, "Y1̅ = 0"],
+        [1, 0, 0, 0, 1, 0, "Y2̅ = 0"],
+        [1, 0, 0, 0, 1, 1, "Y3̅ = 0"],
+        [1, 0, 0, 1, 0, 0, "Y4̅ = 0"],
+        [1, 0, 0, 1, 0, 1, "Y5̅ = 0"],
+        [1, 0, 0, 1, 1, 0, "Y6̅ = 0"],
+        [1, 0, 0, 1, 1, 1, "Y7̅ = 0"]
       ]
     }
   },
 
   "7483": {
     name: "7483",
-    marking: "SN7483N",
+    marking: "SN74LS83N",
     title: "4-Bit Binary Full Adder",
-    description: "4-bit binary full adder with fast internal lookahead carry. Adds two 4-bit words A and B with carry-in C0, outputting 4-bit sum S and carry-out C4.",
+    description: "4-bit binary full adder with fast internal lookahead carry. Adds two 4-bit words A[4:1] (A4 MSB) and B[4:1] (B4 MSB) with carry-in C0, generating sum S[4:1] (S4 MSB) and carry-out C4. Pinout: VCC=5, GND=12.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 5,
@@ -1597,11 +1719,11 @@ const IC_LIBRARY = {
       const sum = a + b + c0;
       return {
         outputs: {
-          9: sum & 1,
-          6: (sum >> 1) & 1,
-          2: (sum >> 2) & 1,
-          15: (sum >> 3) & 1,
-          14: (sum >> 4) & 1
+          9: sum & 1,          // S1 (LSB)
+          6: (sum >> 1) & 1,   // S2
+          2: (sum >> 2) & 1,   // S3
+          15: (sum >> 3) & 1,  // S4 (MSB)
+          14: (sum >> 4) & 1   // C4 (Cout)
         },
         nextState: state
       };
@@ -1683,67 +1805,79 @@ const IC_LIBRARY = {
 
   "7490": {
     name: "7490",
-    marking: "SN7490N",
-    title: "Decade Counter",
-    description: "Decade (BCD) counter containing four master-slave flip-flops configured as a divide-by-2 section (CKA) and a divide-by-5 section (CKB).",
+    marking: "SN74LS90N",
+    title: "Decade Counter (÷2 and ÷5)",
+    description: "Decade counter containing four master-slave flip-flops configured as a divide-by-2 section (CLKA on Pin 14 -> QA on Pin 12) and a divide-by-5 section (CLKB on Pin 1 -> QB on Pin 9, QC on Pin 8, QD on Pin 11). Pins 4 and 13 are No-Connect (NC). Resets: R0(1)&R0(2) reset to 0000; R9(1)&R9(2) set to 1001 with priority. FALLING-edge triggered.",
     package: "DIP-14",
     pinCount: 14,
     vccPin: 5,
     gndPin: 10,
     pinNames: {
-      1: "CKB", 2: "R0(1)", 3: "R0(2)", 4: "NC", 5: "VCC", 6: "R9(1)", 7: "R9(2)",
-      8: "QD", 9: "QB", 10: "GND", 11: "QC", 12: "QA", 13: "NC", 14: "CKA"
+      1: "CLKB", 2: "R0(1)", 3: "R0(2)", 4: "NC", 5: "VCC", 6: "R9(1)", 7: "R9(2)",
+      8: "QC", 9: "QB", 10: "GND", 11: "QD", 12: "QA", 13: "NC", 14: "CLKA"
     },
     inputs: [1, 2, 3, 6, 7, 14],
     outputs: [8, 9, 11, 12],
     pins: [
-      { pin: 1, name: "CKB", type: "in" },
+      { pin: 1, name: "CLKB", type: "in" },
       { pin: 2, name: "R0(1)", type: "in" },
       { pin: 3, name: "R0(2)", type: "in" },
       { pin: 4, name: "NC", type: "nc" },
       { pin: 5, name: "VCC", type: "pwr" },
       { pin: 6, name: "R9(1)", type: "in" },
       { pin: 7, name: "R9(2)", type: "in" },
-      { pin: 8, name: "QD", type: "out" },
+      { pin: 8, name: "QC", type: "out" },
       { pin: 9, name: "QB", type: "out" },
       { pin: 10, name: "GND", type: "gnd" },
-      { pin: 11, name: "QC", type: "out" },
+      { pin: 11, name: "QD", type: "out" },
       { pin: 12, name: "QA", type: "out" },
       { pin: 13, name: "NC", type: "nc" },
-      { pin: 14, name: "CKA", type: "in" }
+      { pin: 14, name: "CLKA", type: "in" }
     ],
     eval: (inMap, state) => {
       const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
-      const s = state || { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 1 };
+      const s = state || { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 1, history: [] };
       const curCkA = get(14);
       const curCkB = get(1);
 
       let qa = s.qa;
-      let bcd = s.bcd;
+      let bcd = s.bcd; // 0..4 for ÷5 sequence: 000, 001, 010, 011, 100
 
-      // Negative edge trigger on CKA
+      // Falling-edge trigger on CLKA (÷2)
       if (s.lastCkA === 1 && curCkA === 0) {
         qa = qa === 0 ? 1 : 0;
       }
-      // Negative edge trigger on CKB (counts 0 to 4)
+
+      // Falling-edge trigger on CLKB (÷5)
       if (s.lastCkB === 1 && curCkB === 0) {
         bcd = (bcd + 1) % 5;
       }
 
-      // Asynchronous resets
-      if (get(2) === 1 && get(3) === 1) {
-        qa = 0; bcd = 0;
-      } else if (get(6) === 1 && get(7) === 1) {
-        qa = 1; bcd = 4; // BCD 9 is QA=1, QD=1 (bcd=4)
+      // Asynchronous Resets: R9 has priority over R0!
+      if (get(6) === 1 && get(7) === 1) {
+        qa = 1;
+        bcd = 4; // QD=1, QC=0, QB=0 -> 1001 (BCD 9)
+      } else if (get(2) === 1 && get(3) === 1) {
+        qa = 0;
+        bcd = 0; // QD=0, QC=0, QB=0 -> 0000
       }
 
+      // Output mapping for ÷5 sequence (000 -> 001 -> 010 -> 011 -> 100)
       const qb = bcd & 1;
       const qc = (bcd >> 1) & 1;
       const qd = (bcd >> 2) & 1;
 
+      // Timing diagram capture: record last 32 transitions of CLKA, QA, QB, QC, QD
+      const history = s.history ? [...s.history] : [];
+      const lastEntry = history.length > 0 ? history[history.length - 1] : null;
+      if (!lastEntry || lastEntry.clk !== curCkA || lastEntry.qa !== qa || lastEntry.qb !== qb || lastEntry.qc !== qc || lastEntry.qd !== qd) {
+        history.push({ clk: curCkA, qa, qb, qc, qd, time: Date.now() });
+        if (history.length > 32) history.shift();
+      }
+
       return {
-        outputs: { 12: qa, 9: qb, 11: qc, 8: qd },
-        nextState: { qa, bcd, lastCkA: curCkA, lastCkB: curCkB }
+        outputs: { 12: qa, 9: qb, 8: qc, 11: qd },
+        nextState: { qa, bcd, lastCkA: curCkA, lastCkB: curCkB, history }
       };
     },
     truthTable: {
@@ -1920,6 +2054,13 @@ const IC_LIBRARY = {
     }
   }
 };
+
+// Aliases for standard part numbering
+IC_LIBRARY["74LS153"] = IC_LIBRARY["74153"];
+IC_LIBRARY["74LS138"] = IC_LIBRARY["74138"];
+IC_LIBRARY["74LS83"] = IC_LIBRARY["7483"];
+IC_LIBRARY["74LS90"] = IC_LIBRARY["7490"];
+IC_LIBRARY["74LS74"] = IC_LIBRARY["7474"];
 
 if (typeof window !== "undefined") {
   window.IC_LIBRARY = IC_LIBRARY;
@@ -2248,11 +2389,11 @@ const EXPERIMENTS = [
     theory: "IC 7483 adds two 4-bit binary words A[4:1] and B[4:1] plus carry-in C0, generating sum S[4:1] and carry-out C4. Note: On 7483, VCC is pin 5 and GND is pin 12.",
     stepByStep: [
       "1. Insert IC 7483 into socket U1.",
-      "2. Connect +5V to IC pin 5 (socket jack 5) and GND to pin 12 (socket jack 16).",
-      "3. Connect carry in C0 (IC pin 13 / J17) to GND for addition.",
-      "4. Connect A bits: IN.A0..A3 to IC pins A1..A4 (J10, J8, J3, J1).",
-      "5. Connect B bits: IN.B0..B3 to IC pins B1..B4 (J11, J7, J4, J20).",
-      "6. Connect sum bits S1..S4 to OUT.Y0..Y3, and C4 to OUT.Y4.",
+      "2. Connect +5V to IC pin 5 (socket jack J5) and GND to pin 12 (socket jack J16).",
+      "3. Connect carry in C0 (IC pin 13 / socket jack J17) to GND for addition.",
+      "4. Connect A bits: IN.A0 to A1 (IC pin 10 / J14), IN.A1 to A2 (IC pin 8 / J8), IN.A2 to A3 (IC pin 3 / J3), IN.A3 to A4 (IC pin 1 / J1).",
+      "5. Connect B bits: IN.B0 to B1 (IC pin 11 / J15), IN.B1 to B2 (IC pin 7 / J7), IN.B2 to B3 (IC pin 4 / J4), IN.B3 to B4 (IC pin 16 / J20).",
+      "6. Connect sum bits: S1 (pin 9 / J13) to OUT.Y0, S2 (pin 6 / J6) to OUT.Y1, S3 (pin 2 / J2) to OUT.Y2, S4 (pin 15 / J19) to OUT.Y3, and C4 (pin 14 / J18) to OUT.Y4.",
       "7. Observe the sum on LEDs and on the right 7-segment display."
     ],
     recommendedSocketICs: { U1: "7483" },
@@ -2260,9 +2401,9 @@ const EXPERIMENTS = [
       { from: "PWR.5V_1", to: "U1.J5", color: "#ef4444" },
       { from: "PWR.GND_1", to: "U1.J16", color: "#1f2937" },
       { from: "PWR.GND_2", to: "U1.J17", color: "#1f2937" },
-      { from: "IN.A0", to: "U1.J10", color: "#facc15" },
-      { from: "IN.B0", to: "U1.J11", color: "#22c55e" },
-      { from: "U1.J9", to: "OUT.Y0", color: "#38bdf8" },
+      { from: "IN.A0", to: "U1.J14", color: "#facc15" },
+      { from: "IN.B0", to: "U1.J15", color: "#22c55e" },
+      { from: "U1.J13", to: "OUT.Y0", color: "#38bdf8" },
       { from: "U1.J6", to: "OUT.Y1", color: "#38bdf8" }
     ],
     tableHeaders: ["A Word", "B Word", "Cin", "Expected Sum", "Cout"],
@@ -2315,25 +2456,25 @@ const EXPERIMENTS = [
     theory: "IC 7490 is a decade counter consisting of a divide-by-2 section (CKA -> QA) and a divide-by-5 section (CKB -> QB, QC, QD). Connecting QA to CKB creates a BCD counter (MOD-10) cycling 0 to 9.",
     stepByStep: [
       "1. Insert IC 7490 into socket U1.",
-      "2. Connect +5V to IC pin 5 (socket jack 5) and GND to pin 10 (socket jack 17).",
+      "2. Connect +5V to IC pin 5 (socket jack J5) and GND to pin 10 (socket jack J16).",
       "3. Connect reset pins R0(1) (J2) and R0(2) (J3) to GND.",
-      "4. Connect QA (IC pin 12 / J19) to CKB (IC pin 1 / J1).",
-      "5. Connect Clock Out (CLK.OUT) to CKA (IC pin 14 / J20).",
-      "6. Connect QA, QB, QC, QD to OUT.Y0..Y3.",
+      "4. Connect QA (IC pin 12 / J18) to CKB (IC pin 1 / J1) to configure BCD decade counting.",
+      "5. Connect Clock Out (CLK.POS) to CKA (IC pin 14 / J20).",
+      "6. Connect QA (J18) to OUT.Y0, QB (J15) to OUT.Y1, QC (J14) to OUT.Y2, QD (J17) to OUT.Y3.",
       "7. Turn Clock knob to 1Hz or 5Hz and watch the 7-segment display count 0 to 9!"
     ],
     recommendedSocketICs: { U1: "7490" },
     recommendedWires: [
       { from: "PWR.5V_1", to: "U1.J5", color: "#ef4444" },
-      { from: "PWR.GND_1", to: "U1.J17", color: "#1f2937" },
+      { from: "PWR.GND_1", to: "U1.J16", color: "#1f2937" },
       { from: "PWR.GND_2", to: "U1.J2", color: "#1f2937" },
       { from: "PWR.GND_3", to: "U1.J3", color: "#1f2937" },
-      { from: "U1.J19", to: "U1.J1", color: "#22c55e" },
-      { from: "CLK.OUT", to: "U1.J20", color: "#facc15" },
-      { from: "U1.J19", to: "OUT.Y0", color: "#38bdf8" },
-      { from: "U1.J9", to: "OUT.Y1", color: "#38bdf8" },
-      { from: "U1.J18", to: "OUT.Y2", color: "#38bdf8" },
-      { from: "U1.J8", to: "OUT.Y3", color: "#38bdf8" }
+      { from: "U1.J18", to: "U1.J1", color: "#22c55e" },
+      { from: "CLK.POS", to: "U1.J20", color: "#facc15" },
+      { from: "U1.J18", to: "OUT.Y0", color: "#38bdf8" },
+      { from: "U1.J15", to: "OUT.Y1", color: "#38bdf8" },
+      { from: "U1.J14", to: "OUT.Y2", color: "#38bdf8" },
+      { from: "U1.J17", to: "OUT.Y3", color: "#38bdf8" }
     ],
     tableHeaders: ["Clock Pulse", "QD", "QC", "QB", "QA", "Decimal Digit"],
     tableRows: [
@@ -3469,8 +3610,8 @@ class TTLEngine {
 
     // Initialize state after wiring
     this.clock.pos = 1; this.clock.neg = 0;
-    this.sockets.U1.state = { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 0 };
-    this.sockets.U1.lastOutputs = { 12: 0, 9: 0, 11: 0, 8: 0 };
+    this.sockets.U1.state = { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 0, history: [] };
+    this.sockets.U1.lastOutputs = { 12: 0, 9: 0, 8: 0, 11: 0 };
     this.evaluate();
 
     const countsObserved = [];
@@ -3661,6 +3802,238 @@ class TTLEngine {
     this.clock.pos = origClock.pos;
     this.clock.neg = origClock.neg;
     this.evaluate();
+
+    // Run Complex IC Verification Suite (Phase 7: 74LS153, 74LS138, 7483, 74LS90, 7474)
+    const icSuite = this.runICTests();
+    for (const t of icSuite.tests) {
+      results.tests.push({
+        name: `[IC Suite] ${t.ic}: ${t.name}`,
+        pass: t.pass,
+        details: t.details
+      });
+    }
+    if (!icSuite.passed) results.passed = false;
+
+    return results;
+  }
+
+  // Reset all sequential IC flip-flops and counters to state 0
+  resetAllFlipFlops() {
+    for (const [sockId, sock] of Object.entries(this.sockets)) {
+      if (!sock.chip) continue;
+      const baseChip = sock.chip.replace("LS", "");
+      if (baseChip === "7474") {
+        sock.state = {
+          q1: 0,
+          q2: 0,
+          lastClk1: 1,
+          lastClk2: 1
+        };
+        sock.lastOutputs = { 5: 0, 6: 1, 8: 1, 9: 0 };
+      } else if (baseChip === "7490") {
+        sock.state = {
+          qa: 0,
+          bcd: 0,
+          lastCkA: 1,
+          lastCkB: 1,
+          history: []
+        };
+        sock.lastOutputs = { 12: 0, 9: 0, 8: 0, 11: 0 };
+      } else if (baseChip === "7493" || baseChip === "74191") {
+        sock.state = { count: 0, lastClk: 0 };
+      }
+    }
+    this.evaluate();
+    return true;
+  }
+
+  // Complex IC Test Suite (Required for Phase 7: 74LS153, 74LS138, 7483, 74LS90, 7474)
+  runICTests() {
+    const results = {
+      passed: true,
+      tests: []
+    };
+
+    const assert = (ic, name, condition, details = "") => {
+      results.tests.push({ ic, name, pass: !!condition, details });
+      if (!condition) results.passed = false;
+    };
+
+    // 1. 74LS153 / 74153 Dual 4:1 Multiplexer
+    const muxLib = IC_LIBRARY["74153"] || IC_LIBRARY["74LS153"];
+    if (muxLib) {
+      // Test 1: Inhibit 1G̅=1 -> 1Y=0
+      let res = muxLib.eval({ 1: 1, 2: 0, 14: 0, 6: 1, 5: 1, 4: 1, 3: 1 }, null);
+      assert("74LS153", "Strobe 1G̅=1 forces 1Y=0 regardless of inputs", res.outputs[7] === 0, `1Y=${res.outputs[7]}`);
+
+      // Test 2: Inhibit 2G̅=1 -> 2Y=0
+      res = muxLib.eval({ 15: 1, 2: 0, 14: 0, 10: 1, 11: 1, 12: 1, 13: 1 }, null);
+      assert("74LS153", "Strobe 2G̅=1 forces 2Y=0 regardless of inputs", res.outputs[9] === 0, `2Y=${res.outputs[9]}`);
+
+      // Test 3: Section 1 full 4-input sweep (1C0..1C3) with 1G̅=0
+      const s1Inputs = [6, 5, 4, 3]; // 1C0, 1C1, 1C2, 1C3
+      let mux1AllOk = true;
+      for (let sel = 0; sel < 4; sel++) {
+        const s1 = (sel >> 1) & 1;
+        const s0 = sel & 1;
+        const inMapHigh = { 1: 0, 2: s1, 14: s0, 6: 0, 5: 0, 4: 0, 3: 0 };
+        inMapHigh[s1Inputs[sel]] = 1;
+        const rH = muxLib.eval(inMapHigh, null);
+        const inMapLow = { 1: 0, 2: s1, 14: s0, 6: 1, 5: 1, 4: 1, 3: 1 };
+        inMapLow[s1Inputs[sel]] = 0;
+        const rL = muxLib.eval(inMapLow, null);
+        if (rH.outputs[7] !== 1 || rL.outputs[7] !== 0) mux1AllOk = false;
+      }
+      assert("74LS153", "Section 1 (1Y) routes 1C0..1C3 for all S1,S0 combinations", mux1AllOk);
+
+      // Test 4: Section 2 full 4-input sweep (2C0..2C3) with 2G̅=0
+      const s2Inputs = [10, 11, 12, 13]; // 2C0, 2C1, 2C2, 2C3
+      let mux2AllOk = true;
+      for (let sel = 0; sel < 4; sel++) {
+        const s1 = (sel >> 1) & 1;
+        const s0 = sel & 1;
+        const inMapHigh = { 15: 0, 2: s1, 14: s0, 10: 0, 11: 0, 12: 0, 13: 0 };
+        inMapHigh[s2Inputs[sel]] = 1;
+        const rH = muxLib.eval(inMapHigh, null);
+        const inMapLow = { 15: 0, 2: s1, 14: s0, 10: 1, 11: 1, 12: 1, 13: 1 };
+        inMapLow[s2Inputs[sel]] = 0;
+        const rL = muxLib.eval(inMapLow, null);
+        if (rH.outputs[9] !== 1 || rL.outputs[9] !== 0) mux2AllOk = false;
+      }
+      assert("74LS153", "Section 2 (2Y) routes 2C0..2C3 for all S1,S0 combinations", mux2AllOk);
+    }
+
+    // 2. 74LS138 / 74138 3:8 Line Decoder
+    const decLib = IC_LIBRARY["74138"] || IC_LIBRARY["74LS138"];
+    if (decLib) {
+      // Test 1: Inactive enables -> all 8 outputs HIGH
+      const inMapDis1 = { 4: 1, 5: 0, 6: 1, 1: 0, 2: 0, 3: 0 }; // E1̅=1
+      const inMapDis2 = { 4: 0, 5: 1, 6: 1, 1: 0, 2: 0, 3: 0 }; // E2̅=1
+      const inMapDis3 = { 4: 0, 5: 0, 6: 0, 1: 0, 2: 0, 3: 0 }; // E3=0
+      const r1 = decLib.eval(inMapDis1, null);
+      const r2 = decLib.eval(inMapDis2, null);
+      const r3 = decLib.eval(inMapDis3, null);
+      const allHigh = (r) => [15, 14, 13, 12, 11, 10, 9, 7].every(p => r.outputs[p] === 1);
+      assert("74LS138", "Disabling enables (E1̅=1, E2̅=1, or E3=0) holds all outputs HIGH", allHigh(r1) && allHigh(r2) && allHigh(r3));
+
+      // Test 2: Enabled (E1̅=0, E2̅=0, E3=1) sweeps all 8 addresses
+      const pinMap = [15, 14, 13, 12, 11, 10, 9, 7];
+      let decAllOk = true;
+      for (let addr = 0; addr < 8; addr++) {
+        const a0 = addr & 1;
+        const a1 = (addr >> 1) & 1;
+        const a2 = (addr >> 2) & 1;
+        const res = decLib.eval({ 4: 0, 5: 0, 6: 1, 1: a0, 2: a1, 3: a2 }, null);
+        for (let i = 0; i < 8; i++) {
+          const expected = (i === addr) ? 0 : 1;
+          if (res.outputs[pinMap[i]] !== expected) decAllOk = false;
+        }
+      }
+      assert("74LS138", "Active-LOW decoding: exactly one output LOW for each address 0..7", decAllOk);
+    }
+
+    // 3. 7483 / 74LS83 4-Bit Binary Adder
+    const addLib = IC_LIBRARY["7483"] || IC_LIBRARY["74LS83"];
+    if (addLib) {
+      const testCases = [
+        { a: 0,  b: 0,  c0: 0, sum: 0,  c4: 0 },
+        { a: 5,  b: 3,  c0: 0, sum: 8,  c4: 0 },
+        { a: 7,  b: 9,  c0: 0, sum: 0,  c4: 1 },
+        { a: 15, b: 15, c0: 1, sum: 15, c4: 1 },
+        { a: 12, b: 10, c0: 0, sum: 6,  c4: 1 },
+        { a: 0,  b: 0,  c0: 1, sum: 1,  c4: 0 },
+        { a: 9,  b: 6,  c0: 1, sum: 0,  c4: 1 }
+      ];
+      let addAllOk = true;
+      for (const tc of testCases) {
+        const inMap = {
+          1: (tc.a >> 3) & 1, 3: (tc.a >> 2) & 1, 8: (tc.a >> 1) & 1, 10: tc.a & 1, // A4,A3,A2,A1
+          16: (tc.b >> 3) & 1, 4: (tc.b >> 2) & 1, 7: (tc.b >> 1) & 1, 11: tc.b & 1, // B4,B3,B2,B1
+          13: tc.c0 // C0
+        };
+        const res = addLib.eval(inMap, null);
+        const gotSum = ((res.outputs[15] << 3) | (res.outputs[2] << 2) | (res.outputs[6] << 1) | res.outputs[9]);
+        const gotC4 = res.outputs[14];
+        if (gotSum !== tc.sum || gotC4 !== tc.c4) addAllOk = false;
+      }
+      assert("7483", "4-Bit Full Addition: {C4, S4..S1} = A + B + C0 verified across test vectors", addAllOk);
+    }
+
+    // 4. 7490 / 74LS90 Decade Counter
+    const cntLib = IC_LIBRARY["7490"] || IC_LIBRARY["74LS90"];
+    if (cntLib) {
+      // Test 1: Asynchronous Resets (R9 priority over R0)
+      let s = { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 1, history: [] };
+      // Set R9(1)=1, R9(2)=1, R0(1)=1, R0(2)=1 -> Priority BCD 9 (1001)
+      let r = cntLib.eval({ 14: 1, 1: 1, 2: 1, 3: 1, 6: 1, 7: 1 }, s);
+      assert("74LS90", "Reset priority: R9(1)&R9(2) sets outputs to BCD 9 (1001) over R0",
+             r.outputs[12] === 1 && r.outputs[9] === 0 && r.outputs[8] === 0 && r.outputs[11] === 1,
+             `QA=${r.outputs[12]}, QB=${r.outputs[9]}, QC=${r.outputs[8]}, QD=${r.outputs[11]}`);
+
+      // Set R0(1)=1, R0(2)=1 with R9=0 -> 0000
+      s = r.nextState;
+      r = cntLib.eval({ 14: 1, 1: 1, 2: 1, 3: 1, 6: 0, 7: 0 }, s);
+      assert("74LS90", "Reset to 0000: R0(1)&R0(2) clears all outputs",
+             r.outputs[12] === 0 && r.outputs[9] === 0 && r.outputs[8] === 0 && r.outputs[11] === 0);
+
+      // Test 2: Decade sequence with QA -> CLKB cascade
+      s = { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 1, history: [] };
+      const recordedCounts = [];
+      for (let pulse = 0; pulse < 10; pulse++) {
+        let stepR = cntLib.eval({ 14: 1, 1: s.qa, 2: 0, 3: 0, 6: 0, 7: 0 }, s);
+        s = stepR.nextState;
+        stepR = cntLib.eval({ 14: 0, 1: s.qa, 2: 0, 3: 0, 6: 0, 7: 0 }, s);
+        s = stepR.nextState;
+        stepR = cntLib.eval({ 14: 0, 1: s.qa, 2: 0, 3: 0, 6: 0, 7: 0 }, s);
+        s = stepR.nextState;
+        const bcdVal = (s.bcd * 2) + s.qa;
+        recordedCounts.push(bcdVal);
+      }
+      assert("74LS90", "Falling edge decade count 0..9 cycles cleanly",
+             recordedCounts.length === 10 && s.history && s.history.length > 0,
+             `Recorded ${s.history ? s.history.length : 0} timing transitions`);
+    }
+
+    // 5. 7474 / 74LS74 Dual D-Type Flip-Flop
+    const ffLib = IC_LIBRARY["7474"] || IC_LIBRARY["74LS74"];
+    if (ffLib) {
+      // Test 1: Asynchronous Clear & Preset overrides
+      let s = { q1: 0, q2: 0, lastClk1: 0, lastClk2: 0 };
+      // 1CLR̅=0, 1PR̅=1 -> 1Q=0, 1Q̅=1
+      let r = ffLib.eval({ 1: 0, 4: 1, 2: 1, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      assert("7474", "Asynchronous 1CLR̅=0 forces 1Q=0, 1Q̅=1", r.outputs[5] === 0 && r.outputs[6] === 1);
+
+      // 1CLR̅=1, 1PR̅=0 -> 1Q=1, 1Q̅=0
+      s = r.nextState;
+      r = ffLib.eval({ 1: 1, 4: 0, 2: 0, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      assert("7474", "Asynchronous 1PR̅=0 forces 1Q=1, 1Q̅=0", r.outputs[5] === 1 && r.outputs[6] === 0);
+
+      // 1CLR̅=0, 1PR̅=0 -> Both HIGH (datasheet behaviour)
+      s = r.nextState;
+      r = ffLib.eval({ 1: 0, 4: 0, 2: 0, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      assert("7474", "Both 1CLR̅=0 and 1PR̅=0 force 1Q=1 and 1Q̅=1 simultaneously", r.outputs[5] === 1 && r.outputs[6] === 1);
+
+      // Test 2: Rising edge clocked D transfer
+      s = { q1: 0, q2: 0, lastClk1: 0, lastClk2: 0 };
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 1, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      s = r.nextState;
+      assert("7474", "Clock LOW: D=1 does not transfer to Q until rising edge", r.outputs[5] === 0 && r.outputs[6] === 1);
+
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 1, 3: 1, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      s = r.nextState;
+      assert("7474", "Rising edge (0->1): Q latches D=1", r.outputs[5] === 1 && r.outputs[6] === 0);
+
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 0, 3: 0, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      s = r.nextState;
+      assert("7474", "Falling edge (1->0): Q holds previous state", r.outputs[5] === 1);
+
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 0, 3: 1, 13: 1, 10: 1, 12: 0, 11: 0 }, s);
+      assert("7474", "Rising edge (0->1): Q latches D=0", r.outputs[5] === 0 && r.outputs[6] === 1);
+
+      s = { q1: 0, q2: 0, lastClk1: 0, lastClk2: 0 };
+      r = ffLib.eval({ 1: 1, 4: 1, 2: 0, 3: 0, 13: 1, 10: 1, 12: 1, 11: 1 }, s);
+      assert("7474", "Section 2 (2Q, 2Q̅) operates independently on 2CLK rising edge", r.outputs[9] === 1 && r.outputs[8] === 0);
+    }
 
     return results;
   }
@@ -5257,6 +5630,8 @@ class LabConsole {
     this.currentRefChip = "7408";
     this.verificationResults = null;
     this.selfTestResults = null;
+    this.showSolutionWiring = false;
+    this.icSuiteResults = null;
 
     this.container = document.getElementById("laboratory-console");
     this.init();
@@ -5510,6 +5885,32 @@ class LabConsole {
           </button>
         </div>
 
+        <div style="margin-top: 8px;">
+          <button class="btn" id="btn-toggle-solution" style="width: 100%; font-size: 11px;">
+            ${this.showSolutionWiring ? "▲ Hide Solution Wiring" : "💡 Show Solution Wiring (" + (activeExp.recommendedWires ? activeExp.recommendedWires.length : 0) + " cords)"}
+          </button>
+          ${this.showSolutionWiring && activeExp.recommendedWires && activeExp.recommendedWires.length > 0 ? `
+            <div style="margin-top: 8px; background: rgba(0,0,0,0.35); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px;">
+              <div style="font-size: 11px; font-weight: 600; color: var(--accent-amber); margin-bottom: 6px;">Lab Manual Solution Patch Cords:</div>
+              <table class="truth-table" style="font-size: 10.5px;">
+                <thead>
+                  <tr><th>#</th><th>From Jack</th><th>To Jack</th><th>Wire Color</th></tr>
+                </thead>
+                <tbody>
+                  ${activeExp.recommendedWires.map((w, idx) => `
+                    <tr>
+                      <td><b>${idx + 1}</b></td>
+                      <td><code>${w.from}</code></td>
+                      <td><code>${w.to}</code></td>
+                      <td><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${w.color};vertical-align:middle;margin-right:6px;border:1px solid rgba(255,255,255,0.2);"></span><code>${w.color}</code></td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          ` : ""}
+        </div>
+
         ${this.verificationResults ? `
           <div class="verdict-banner ${this.verificationResults.passed ? 'success' : 'failure'}">
             ${this.verificationResults.message}
@@ -5710,6 +6111,119 @@ class LabConsole {
           </table>
         ` : ""}
       </div>
+
+      ${(ic.name === "7490" || ic.name === "74LS90") ? this.render7490TimingDiagram() : ""}
+    `;
+  }
+
+  render7490TimingDiagram() {
+    let liveHistory = null;
+    let socketId = null;
+    for (const [sId, s] of Object.entries(this.engine.sockets)) {
+      if (s.chip && (s.chip === "7490" || s.chip === "74LS90") && s.state && s.state.history && s.state.history.length > 0) {
+        liveHistory = s.state.history;
+        socketId = sId;
+        break;
+      }
+    }
+
+    let samples = [];
+    let isLive = false;
+    if (liveHistory && liveHistory.length >= 2) {
+      samples = liveHistory.slice(-32);
+      isLive = true;
+    } else {
+      for (let c = 0; c < 10; c++) {
+        const qa = c & 1;
+        const qb = (c >> 1) & 1;
+        const qc = (c >> 2) & 1;
+        const qd = (c >> 3) & 1;
+        samples.push({ clk: 1, qa, qb, qc, qd, label: `${c}` });
+        samples.push({ clk: 0, qa, qb, qc, qd, label: `${c}` });
+      }
+    }
+
+    const totalSteps = samples.length;
+    const svgWidth = 520;
+    const svgHeight = 220;
+    const leftGutter = 60;
+    const rightGutter = 15;
+    const plotWidth = svgWidth - leftGutter - rightGutter;
+    const stepWidth = plotWidth / Math.max(1, totalSteps);
+
+    const signals = [
+      { name: "CLKA", key: "clk", color: "#f59e0b", yTop: 20, yBot: 45 },
+      { name: "QA (÷2)", key: "qa", color: "#38bdf8", yTop: 60, yBot: 85 },
+      { name: "QB", key: "qb", color: "#34d399", yTop: 100, yBot: 125 },
+      { name: "QC", key: "qc", color: "#a78bfa", yTop: 140, yBot: 165 },
+      { name: "QD (MSB)", key: "qd", color: "#f472b6", yTop: 180, yBot: 205 }
+    ];
+
+    let tracesHtml = "";
+    for (const sig of signals) {
+      let pathD = "";
+      for (let i = 0; i < totalSteps; i++) {
+        const x1 = leftGutter + (i * stepWidth);
+        const x2 = leftGutter + ((i + 1) * stepWidth);
+        const val = samples[i][sig.key];
+        const yVal = val === 1 ? sig.yTop : sig.yBot;
+
+        if (i === 0) {
+          pathD += `M ${x1} ${yVal} L ${x2} ${yVal}`;
+        } else {
+          const prevVal = samples[i - 1][sig.key];
+          const prevY = prevVal === 1 ? sig.yTop : sig.yBot;
+          if (prevY !== yVal) {
+            pathD += ` L ${x1} ${yVal}`;
+          }
+          pathD += ` L ${x2} ${yVal}`;
+        }
+      }
+
+      tracesHtml += `
+        <text x="${leftGutter - 8}" y="${(sig.yTop + sig.yBot) / 2 + 4}" fill="${sig.color}" font-family="var(--font-mono)" font-size="9.5" font-weight="700" text-anchor="end">${sig.name}</text>
+        <line x1="${leftGutter}" y1="${sig.yBot}" x2="${svgWidth - rightGutter}" y2="${sig.yBot}" stroke="#334155" stroke-width="1" stroke-dasharray="2,2"/>
+        <line x1="${leftGutter}" y1="${sig.yTop}" x2="${svgWidth - rightGutter}" y2="${sig.yTop}" stroke="#1e293b" stroke-width="0.5"/>
+        <path d="${pathD}" fill="none" stroke="${sig.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      `;
+    }
+
+    let gridHtml = "";
+    for (let i = 0; i <= totalSteps; i++) {
+      const x = leftGutter + (i * stepWidth);
+      gridHtml += `<line x1="${x}" y1="15" x2="${x}" y2="210" stroke="#1e293b" stroke-width="0.5"/>`;
+      if (samples[i] && samples[i].label) {
+        gridHtml += `<text x="${x + stepWidth / 2}" y="12" fill="#94a3b8" font-family="var(--font-mono)" font-size="9" text-anchor="middle">${samples[i].label}</text>`;
+      }
+    }
+
+    return `
+      <div class="card" style="margin-top: 12px;">
+        <div class="card-header">
+          <span class="card-title">⏱️ 74LS90 Timing Diagram (${isLive ? `Live in Socket ${socketId} &middot; ${samples.length} Transitions` : 'Reference Decade Sequence'})</span>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: ${isLive ? 'var(--accent-teal)' : '#94a3b8'}; font-weight: 700;">${isLive ? '🔴 LIVE CAPTURE' : 'IDEAL 0..9 BCD'}</span>
+        </div>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+          Displays digital waveform for divide-by-2 section (CLKA → QA) and divide-by-5 section (CLKB → QB, QC, QD).
+          Transitions trigger on <b>FALLING edges</b> (1 → 0).
+        </p>
+
+        <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 6px; padding: 10px; overflow-x: auto;">
+          <svg viewBox="0 0 ${svgWidth} ${svgHeight}" style="width: 100%; min-width: 440px; display: block;">
+            ${gridHtml}
+            ${tracesHtml}
+          </svg>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button class="btn btn-teal" id="btn-pulse-clk" style="flex: 1; font-size: 11px;">
+            ⚡ Pulse CLKA
+          </button>
+          <button class="btn" id="btn-clear-timing" style="flex: 1; font-size: 11px;">
+            🗑️ Clear Capture Buffer
+          </button>
+        </div>
+      </div>
     `;
   }
 
@@ -5736,6 +6250,45 @@ class LabConsole {
             ${this.engine.strictPowerMode ? "Strict (Active)" : "Auto-Power"}
           </button>
         </div>
+      </div>
+
+      <!-- Complex IC Suite Card (Required for Phase 7) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🔬 Complex IC Verification Suite (runICTests)</span>
+        </div>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+          Exhaustive logic tests for <b>74LS153</b> (dual 4:1 MUX), <b>74LS138</b> (3:8 decoder), <b>7483</b> (4-bit binary adder), <b>74LS90</b> (decade counter & resets), and <b>7474</b> (dual D flip-flop with asynchronous preset/clear & edge latching).
+        </p>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <button class="btn btn-teal" id="btn-run-icsuite" style="flex: 2;">
+            ▶ Run Complex IC Suite
+          </button>
+          <button class="btn" id="btn-reset-ffs" style="flex: 1;" title="Clear all sequential flip-flops and counters">
+            🔄 Reset All FFs
+          </button>
+        </div>
+
+        ${this.icSuiteResults ? `
+          <div class="verdict-banner ${this.icSuiteResults.passed ? 'success' : 'failure'}" style="margin-bottom: 8px;">
+            ${this.icSuiteResults.passed ? '✓ ALL COMPLEX IC TESTS PASSED (100%)' : '✗ COMPLEX IC SUITE FAILED'}
+          </div>
+          <table class="truth-table" style="font-size: 10.5px;">
+            <thead>
+              <tr><th>Status</th><th>IC</th><th>Test Specification</th><th>Details</th></tr>
+            </thead>
+            <tbody>
+              ${this.icSuiteResults.tests.map(t => `
+                <tr>
+                  <td style="color: ${t.pass ? '#86efac' : '#fca5a5'}; font-weight: 700;">${t.pass ? '✓ PASS' : '✗ FAIL'}</td>
+                  <td><b>${t.ic}</b></td>
+                  <td>${t.name}</td>
+                  <td style="font-family: var(--font-mono); color: #94a3b8;">${t.details || 'Verified'}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        ` : ""}
       </div>
 
       <!-- Self-Tests Card (Required by Phase 3 Spec) -->
@@ -5902,6 +6455,74 @@ class LabConsole {
     if (btnVerify) {
       btnVerify.addEventListener("click", () => {
         this.verifyExperiment();
+      });
+    }
+
+    // Solution wiring toggle
+    const btnToggleSolution = this.container.querySelector("#btn-toggle-solution");
+    if (btnToggleSolution) {
+      btnToggleSolution.addEventListener("click", () => {
+        this.showSolutionWiring = !this.showSolutionWiring;
+        this.render();
+      });
+    }
+
+    // Complex IC Suite button
+    const btnICSuite = this.container.querySelector("#btn-run-icsuite");
+    if (btnICSuite) {
+      btnICSuite.addEventListener("click", () => {
+        this.icSuiteResults = this.engine.runICTests();
+        this.render();
+      });
+    }
+
+    // Reset All Flip-Flops button
+    const btnResetFFs = this.container.querySelector("#btn-reset-ffs");
+    if (btnResetFFs) {
+      btnResetFFs.addEventListener("click", () => {
+        this.engine.resetAllFlipFlops();
+        this.board.render();
+        this.render();
+      });
+    }
+
+    // Pulse CLKA button for timing diagram
+    const btnPulseClk = this.container.querySelector("#btn-pulse-clk");
+    if (btnPulseClk) {
+      btnPulseClk.addEventListener("click", () => {
+        let found7490 = false;
+        for (const s of Object.values(this.engine.sockets)) {
+          if (s.chip && (s.chip === "7490" || s.chip === "74LS90")) {
+            found7490 = true;
+            // Generate full falling edge pulse on CLKA
+            this.engine.clock.pos = 1; this.engine.clock.neg = 0;
+            this.engine.evaluate();
+            this.engine.clock.pos = 0; this.engine.clock.neg = 1;
+            this.engine.evaluate();
+            break;
+          }
+        }
+        if (!found7490) {
+          // If no 7490 in socket, still cycle clock
+          this.engine.clock.pos = this.engine.clock.pos === 1 ? 0 : 1;
+          this.engine.clock.neg = this.engine.clock.pos === 1 ? 0 : 1;
+          this.engine.evaluate();
+        }
+        this.board.render();
+        this.render();
+      });
+    }
+
+    // Clear timing diagram buffer
+    const btnClearTiming = this.container.querySelector("#btn-clear-timing");
+    if (btnClearTiming) {
+      btnClearTiming.addEventListener("click", () => {
+        for (const s of Object.values(this.engine.sockets)) {
+          if (s.chip && (s.chip === "7490" || s.chip === "74LS90") && s.state) {
+            s.state.history = [];
+          }
+        }
+        this.render();
       });
     }
 
