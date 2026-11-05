@@ -883,21 +883,19 @@ class BoardRenderer {
 
     this.jackCoords["PWR.12V_1"] = { x: 436, y: 432 };
     this.jackCoords["PWR.12V_2"] = { x: 496, y: 432 };
-    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_1", type: "12V", cx: 436, cy: 432 });
-    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_2", type: "12V", cx: 496, cy: 432 });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_1", type: "12V", cx: 436, cy: 432, isSelected: this.selectedJack === "PWR.12V_1" });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_2", type: "12V", cx: 496, cy: 432, isSelected: this.selectedJack === "PWR.12V_2" });
 
     this.jackCoords["PWR.5V_1"] = { x: 596, y: 432 };
     this.jackCoords["PWR.5V_2"] = { x: 660, y: 432 };
-    this.jackCoords["PWR.5V_3"] = { x: 596, y: 432 };
-    this.jackCoords["PWR.5V_4"] = { x: 660, y: 432 };
-    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_1", type: "5V", cx: 596, cy: 432 });
-    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_2", type: "5V", cx: 660, cy: 432 });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_1", type: "5V", cx: 596, cy: 432, isSelected: this.selectedJack === "PWR.5V_1" });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_2", type: "5V", cx: 660, cy: 432, isSelected: this.selectedJack === "PWR.5V_2" });
 
     const gndX = [436, 510, 584, 660];
     for (let i = 1; i <= 4; i++) {
       const gId = `PWR.GND_${i}`;
       this.jackCoords[gId] = { x: gndX[i - 1], y: 516 };
-      svgContent += SVG_COMPONENTS.drawTerminal({ id: gId, type: "GND", cx: gndX[i - 1], cy: 516 });
+      svgContent += SVG_COMPONENTS.drawTerminal({ id: gId, type: "GND", cx: gndX[i - 1], cy: 516, isSelected: this.selectedJack === gId });
     }
 
     // 6. ZONE 5: Manual Pulser (x: 736, y: 348, w: 376, h: 204)

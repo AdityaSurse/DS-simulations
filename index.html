@@ -204,13 +204,15 @@ body {
 .master-power-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
+  min-width: 96px;
   gap: 8px;
   padding: 4px 12px;
   border-radius: 20px;
   border: 1px solid var(--border-strong);
   background: #090c10;
   cursor: pointer;
-  transition: all 0.2s ease;
+  user-select: none;
 }
 
 .master-power-btn.on {
@@ -428,7 +430,6 @@ body {
   height: 100%;
   max-width: 100%;
   max-height: 100%;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: center center;
 }
 
@@ -1227,15 +1228,8 @@ body.high-contrast .patch-cord-path {
   stroke-width: 2.5px !important;
 }
 
-/* 4. Smooth Cord Wobble Animation */
-@keyframes cord-rebound {
-  0% { transform: scale(1, 0.94); }
-  40% { transform: scale(1, 1.04); }
-  75% { transform: scale(1, 0.985); }
-  100% { transform: scale(1, 1); }
-}
-.cord-animate-in {
-  animation: cord-rebound 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* 4. Patch Cords */
+.patch-cord-group {
   transform-origin: center center;
 }
 
@@ -1428,7 +1422,9 @@ body.high-contrast .patch-cord-path {
   50% { transform: scale(1.3); opacity: 1; }
   100% { transform: scale(1); opacity: 0.8; }
 }
-.jack-selection-ring {
+.jack-selection-ring.active,
+.jack-group.selected .jack-selection-ring,
+.jack-group.target .jack-selection-ring {
   animation: pulse-ring 1.2s infinite ease-in-out;
   transform-origin: center center;
 }
@@ -5170,20 +5166,27 @@ class TTLEngine {
       const dt = Math.min(0.1, (timestamp - this.sim.lastRealTime) / 1000); // Max dt clamp 100ms
       this.sim.lastRealTime = timestamp;
 
-      if (this.masterPower && this.clock.running) {
-        this.advanceVirtualTime(dt);
-      }
+      if (this.masterPower) {
+        if (this.clock.running) {
+          this.advanceVirtualTime(dt);
+        }
 
-      // Check visual hold timers for pulsers
-      for (let i = 1; i <= 2; i++) {
-        const p = this.board.pulsers[i];
-        if (!p.pressed && timestamp < p.visualHoldUntil) {
-          // Keep visual LED lit during fast-click hold
-          this.board.leds[`LED_PULSER_${i}_POS`] = 1.0;
+        // Check visual hold timers for pulsers
+        for (let i = 1; i <= 2; i++) {
+          const p = this.board.pulsers[i];
+          if (!p.pressed && timestamp < p.visualHoldUntil) {
+            // Keep visual LED lit during fast-click hold
+            this.board.leds[`LED_PULSER_${i}_POS`] = 1.0;
+          }
+        }
+
+        this.updateDisplaySmoothing(dt);
+      } else {
+        // Master power is OFF: all LEDs are completely dark, no virtual time advances
+        for (const k of Object.keys(this.board.leds)) {
+          this.board.leds[k] = 0.0;
         }
       }
-
-      this.updateDisplaySmoothing(dt);
       this.rafId = requestAnimationFrame(loop);
     };
 
@@ -5261,6 +5264,11 @@ class TTLEngine {
   toggleMasterPower() {
     this.masterPower = !this.masterPower;
     this.playClickSound(this.masterPower ? 600 : 300);
+    if (!this.masterPower) {
+      for (const k of Object.keys(this.board.leds)) {
+        this.board.leds[k] = 0.0;
+      }
+    }
     this.evaluate();
     this.notify();
   }
@@ -7107,6 +7115,13 @@ const SVG_COMPONENTS = {
         <filter id="shadowBevel" x="-10%" y="-10%" width="120%" height="120%">
           <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
         </filter>
+        <filter id="glowTeal" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
         <filter id="shadowJack" x="-20%" y="-20%" width="140%" height="140%">
           <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity="0.7"/>
         </filter>
@@ -7147,13 +7162,11 @@ const SVG_COMPONENTS = {
     else if (labelSide === "right") { lx = cx + 18; ly = cy + 4; }
 
     const targetRing = (isTarget || isSelected) ? `
-      <circle r="14" fill="none" stroke="var(--accent-teal)" stroke-width="2.5" class="jack-selection-ring" opacity="1" />
-    ` : `
-      <circle r="13" fill="none" stroke="var(--accent-teal)" stroke-width="2" class="jack-selection-ring" opacity="0" />
-    `;
+      <circle r="14" fill="none" stroke="var(--accent-teal)" stroke-width="2.5" class="jack-selection-ring active" opacity="1" />
+    ` : "";
 
     return `
-      <g class="jack-group accessible-jack" data-jack="${id}" id="jack-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})" tabindex="0" role="button" aria-label="Terminal Jack ${id}">
+      <g class="jack-group accessible-jack ${isSelected ? 'selected' : ''} ${isTarget ? 'target' : ''}" data-jack="${id}" id="jack-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})" tabindex="0" role="button" aria-label="Terminal Jack ${id}">
         <circle r="22" fill="transparent" class="jack-hitbox" />
         <circle r="11" fill="url(#brassJack)" filter="url(#shadowJack)" />
         <circle r="11" fill="none" stroke="#3d2c02" stroke-width="0.75" />
@@ -7354,16 +7367,19 @@ const SVG_COMPONENTS = {
 
   // 7. drawTerminal: Binding post terminals for power (+5V red, GND black, +12V amber)
   drawTerminal(opts) {
-    const { id, type = "5V", cx, cy, label = null } = opts;
+    const { id, type = "5V", cx, cy, label = null, isSelected = false } = opts;
     const gradMap = {
       "5V": "url(#termRed)",
       "GND": "url(#termBlack)",
       "12V": "url(#termAmber)"
     };
     const fill = gradMap[type] || "url(#termRed)";
+    const targetRing = isSelected ? `
+      <circle r="16" fill="none" stroke="var(--accent-teal)" stroke-width="2.5" class="jack-selection-ring active" opacity="1" />
+    ` : "";
 
     return `
-      <g class="jack-group terminal-group" data-jack="${id}" id="term-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})">
+      <g class="jack-group terminal-group ${isSelected ? 'selected' : ''}" data-jack="${id}" id="term-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})">
         <!-- Colored insulator washer -->
         <circle r="14" fill="${fill}" filter="url(#shadowJack)" stroke="#111" stroke-width="1" />
         <!-- Brass hexagonal binding nut -->
@@ -7372,7 +7388,7 @@ const SVG_COMPONENTS = {
         <circle r="5.5" fill="url(#jackHole)" />
         <circle r="4.2" fill="#0a0a0a" />
         <circle r="3.8" fill="none" stroke="#c99700" stroke-width="0.7" opacity="0.8" />
-        <circle r="16" fill="none" stroke="var(--accent-teal)" stroke-width="2" class="jack-selection-ring" opacity="0" />
+        ${targetRing}
         <circle r="18" fill="transparent" class="jack-hitbox" />
       </g>
       ${label ? `<text x="${cx}" y="${cy + 22}" class="silkscreen-text" text-anchor="middle">${label}</text>` : ""}
@@ -7614,10 +7630,13 @@ const SVG_COMPONENTS = {
       const c = getColorForType(pinObj.type, pinObj.name);
 
       pinsLeftHtml += `
-        <!-- Silver Metallic Lead Pin ${i} -->
+        <!-- Silver Metallic Lead Pin ${i} (realistic shoulder + lead) -->
         <g class="ref-pin-lead">
-          <rect x="${bodyX - 26}" y="${y - 6}" width="26" height="12" rx="2" fill="url(#silverLegHoriz)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevel)" />
-          <line x1="${bodyX - 25}" y1="${y - 4}" x2="${bodyX - 2}" y2="${y - 4}" stroke="#ffffff" stroke-width="1" opacity="0.8" />
+          <!-- Wider shoulder at IC body -->
+          <rect x="${bodyX - 8}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
+          <!-- Extended lead pin -->
+          <rect x="${bodyX - 26}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
+          <line x1="${bodyX - 24}" y1="${y - 3.5}" x2="${bodyX - 2}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
         </g>
         <!-- Pin Number Badge -->
         <rect x="${bodyX + 8}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
@@ -7638,10 +7657,13 @@ const SVG_COMPONENTS = {
       const c = getColorForType(pinObj.type, pinObj.name);
 
       pinsRightHtml += `
-        <!-- Silver Metallic Lead Pin ${pinNum} -->
+        <!-- Silver Metallic Lead Pin ${pinNum} (realistic shoulder + lead) -->
         <g class="ref-pin-lead">
-          <rect x="${bodyX + bodyWidth}" y="${y - 6}" width="26" height="12" rx="2" fill="url(#silverLegHoriz)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevel)" />
-          <line x1="${bodyX + bodyWidth + 2}" y1="${y - 4}" x2="${bodyX + bodyWidth + 25}" y2="${y - 4}" stroke="#ffffff" stroke-width="1" opacity="0.8" />
+          <!-- Wider shoulder at IC body -->
+          <rect x="${bodyX + bodyWidth - 1}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
+          <!-- Extended lead pin -->
+          <rect x="${bodyX + bodyWidth + 6}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
+          <line x1="${bodyX + bodyWidth + 2}" y1="${y - 3.5}" x2="${bodyX + bodyWidth + 24}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
         </g>
         <!-- Pin Number Badge -->
         <rect x="${bodyX + bodyWidth - 28}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
@@ -7661,6 +7683,16 @@ const SVG_COMPONENTS = {
           <filter id="pkgShadow" x="-10%" y="-10%" width="120%" height="120%">
             <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity="0.8"/>
           </filter>
+          <filter id="shadowBevelRef" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
+          </filter>
+          <linearGradient id="silverLegHorizRef" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#94a3b8" />
+            <stop offset="25%" stop-color="#f8fafc" />
+            <stop offset="55%" stop-color="#e2e8f0" />
+            <stop offset="80%" stop-color="#cbd5e1" />
+            <stop offset="100%" stop-color="#64748b" />
+          </linearGradient>
         </defs>
 
         <!-- Silver Leads on Left & Right -->
@@ -7668,8 +7700,8 @@ const SVG_COMPONENTS = {
         ${pinsRightHtml}
 
         <!-- 3D Matte Dark Charcoal Epoxy Plastic Body (matching reference image) -->
-        <rect x="${bodyX}" y="${bodyY}" width="${bodyWidth}" height="${bodyHeight}" rx="6" fill="#1c1e22" stroke="#2b2f36" stroke-width="1.5" filter="url(#pkgShadow)" />
-        <rect x="${bodyX + 3.5}" y="${bodyY + 3.5}" width="${bodyWidth - 7}" height="${bodyHeight - 7}" rx="4" fill="none" stroke="#272b32" stroke-width="1.2" />
+        <rect x="${bodyX}" y="${bodyY}" width="${bodyWidth}" height="${bodyHeight}" rx="6" fill="#181a1f" stroke="#2b2f36" stroke-width="1.5" filter="url(#pkgShadow)" />
+        <rect x="${bodyX + 3.5}" y="${bodyY + 3.5}" width="${bodyWidth - 7}" height="${bodyHeight - 7}" rx="4" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1.2" />
 
         <!-- Semicircular Orientation Notch at Top Center -->
         <path d="M ${bodyX + bodyWidth/2 - 16} ${bodyY} A 16 16 0 0 0 ${bodyX + bodyWidth/2 + 16} ${bodyY} Z" fill="#0d0e10" stroke="#2b2f36" stroke-width="1.2" />
@@ -7678,9 +7710,9 @@ const SVG_COMPONENTS = {
         <!-- Pin 1 Index Dot -->
         <circle cx="${bodyX + 18}" cy="${bodyY + 20}" r="3.5" fill="#0d0e10" stroke="#2c3036" stroke-width="1" />
 
-        <!-- Bold Part Number Printed in Center (matching reference image) -->
+        <!-- Bold Part Number Printed in Center (matching reference image orientation) -->
         <g transform="translate(${bodyX + bodyWidth / 2}, ${bodyY + bodyHeight / 2})">
-          <text x="0" y="8" fill="#ffffff" font-family="'Inter', -apple-system, var(--font-ui), sans-serif" font-size="28" font-weight="800" letter-spacing="2" text-anchor="middle" transform="rotate(-90)">${icDef.name}</text>
+          <text x="0" y="8" fill="#ffffff" font-family="'Inter', -apple-system, var(--font-ui), sans-serif" font-size="28" font-weight="800" letter-spacing="2" text-anchor="middle" transform="rotate(90)">${icDef.name}</text>
         </g>
       </svg>
     `;
@@ -7777,6 +7809,7 @@ const SVG_COMPONENTS = {
   },
 
   // 12. drawDIPThumbnail: photorealistic vertical DIP chip graphic for IC Drawer catalog
+  // Matches physical reference image (matte epoxy body, silver lead shoulders, notch, pin 1 dot, vertical part name)
   drawDIPThumbnail(opts) {
     const ic = (typeof opts === "string") ? (typeof IC_LIBRARY !== "undefined" ? IC_LIBRARY[opts] : { name: opts }) : (opts || {});
     const chipName = ic.name || "7400";
@@ -7799,28 +7832,53 @@ const SVG_COMPONENTS = {
       const py = bodyY + 16 + i * pitch;
       legsLeft += `
         <g transform="translate(${bodyX - legW}, ${py - legH/2})">
-          <rect x="0" y="0" width="${legW}" height="${legH}" rx="1.5" fill="url(#silverLegHoriz)" stroke="#334155" stroke-width="0.6" filter="url(#shadowBevel)" />
-          <line x1="2" y1="1.5" x2="${legW - 1}" y2="1.5" stroke="#ffffff" stroke-width="0.8" opacity="0.8" />
+          <!-- Wider shoulder at IC body -->
+          <rect x="${legW - 4}" y="-1" width="4" height="${legH + 2}" rx="0.8" fill="url(#silverLegHorizThumb)" stroke="#334155" stroke-width="0.5" />
+          <!-- Extended lead pin -->
+          <rect x="0" y="0" width="${legW - 2}" height="${legH}" rx="1.2" fill="url(#silverLegHorizThumb)" stroke="#334155" stroke-width="0.6" filter="url(#shadowBevelThumb)" />
+          <line x1="1" y1="1.5" x2="${legW - 1}" y2="1.5" stroke="#ffffff" stroke-width="0.8" opacity="0.85" />
         </g>
       `;
       legsRight += `
         <g transform="translate(${bodyX + bodyW}, ${py - legH/2})">
-          <rect x="0" y="0" width="${legW}" height="${legH}" rx="1.5" fill="url(#silverLegHoriz)" stroke="#334155" stroke-width="0.6" filter="url(#shadowBevel)" />
-          <line x1="1" y1="1.5" x2="${legW - 2}" y2="1.5" stroke="#ffffff" stroke-width="0.8" opacity="0.8" />
+          <!-- Wider shoulder at IC body -->
+          <rect x="0" y="-1" width="4" height="${legH + 2}" rx="0.8" fill="url(#silverLegHorizThumb)" stroke="#334155" stroke-width="0.5" />
+          <!-- Extended lead pin -->
+          <rect x="2" y="0" width="${legW - 2}" height="${legH}" rx="1.2" fill="url(#silverLegHorizThumb)" stroke="#334155" stroke-width="0.6" filter="url(#shadowBevelThumb)" />
+          <line x1="3" y1="1.5" x2="${legW}" y2="1.5" stroke="#ffffff" stroke-width="0.8" opacity="0.85" />
         </g>
       `;
     }
 
-    const fontSize = (chipName.length > 5) ? 12 : 14;
+    const fontSize = (chipName.length > 5) ? 11 : 13;
 
     return `
       <svg class="dip-chip-thumb-svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}" xmlns="http://www.w3.org/2000/svg" style="display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));">
+        <defs>
+          <linearGradient id="silverLegHorizThumb" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#94a3b8" />
+            <stop offset="25%" stop-color="#f8fafc" />
+            <stop offset="55%" stop-color="#e2e8f0" />
+            <stop offset="80%" stop-color="#cbd5e1" />
+            <stop offset="100%" stop-color="#64748b" />
+          </linearGradient>
+          <linearGradient id="icEpoxyBodyThumb" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#262930" />
+            <stop offset="8%" stop-color="#1c1f26" />
+            <stop offset="50%" stop-color="#14161c" />
+            <stop offset="92%" stop-color="#101216" />
+            <stop offset="100%" stop-color="#0a0c0f" />
+          </linearGradient>
+          <filter id="shadowBevelThumb" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="#000" flood-opacity="0.6"/>
+          </filter>
+        </defs>
         <g class="chip-legs">${legsLeft}${legsRight}</g>
-        <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="3.5" fill="url(#icEpoxyBody)" stroke="#090a0d" stroke-width="1.2" />
+        <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="3.5" fill="url(#icEpoxyBodyThumb)" stroke="#090a0d" stroke-width="1.2" />
         <rect x="${bodyX + 1.2}" y="${bodyY + 1.2}" width="${bodyW - 2.4}" height="${bodyH - 2.4}" rx="2.5" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="0.8" />
         <path d="M ${bodyX + bodyW/2 - 7} ${bodyY} A 7 7 0 0 0 ${bodyX + bodyW/2 + 7} ${bodyY}" fill="#0d0f12" stroke="#090a0d" stroke-width="1" />
         <circle cx="${bodyX + 7}" cy="${bodyY + 13}" r="2.5" fill="#0d0f12" stroke="#252a33" stroke-width="0.8" />
-        <text x="${bodyX + bodyW/2}" y="${bodyY + bodyH/2}" fill="#f1f5f9" font-family="'JetBrains Mono', Inter, monospace" font-size="${fontSize}" font-weight="900" text-anchor="middle" transform="rotate(90, ${bodyX + bodyW/2}, ${bodyY + bodyH/2})" letter-spacing="1.5">
+        <text x="${bodyX + bodyW/2}" y="${bodyY + bodyH/2}" fill="#f8fafc" font-family="'JetBrains Mono', 'Inter', monospace" font-size="${fontSize}" font-weight="800" text-anchor="middle" transform="rotate(90, ${bodyX + bodyW/2}, ${bodyY + bodyH/2})" letter-spacing="1.5">
           ${chipName}
         </text>
       </svg>
@@ -8713,21 +8771,19 @@ class BoardRenderer {
 
     this.jackCoords["PWR.12V_1"] = { x: 436, y: 432 };
     this.jackCoords["PWR.12V_2"] = { x: 496, y: 432 };
-    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_1", type: "12V", cx: 436, cy: 432 });
-    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_2", type: "12V", cx: 496, cy: 432 });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_1", type: "12V", cx: 436, cy: 432, isSelected: this.selectedJack === "PWR.12V_1" });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.12V_2", type: "12V", cx: 496, cy: 432, isSelected: this.selectedJack === "PWR.12V_2" });
 
     this.jackCoords["PWR.5V_1"] = { x: 596, y: 432 };
     this.jackCoords["PWR.5V_2"] = { x: 660, y: 432 };
-    this.jackCoords["PWR.5V_3"] = { x: 596, y: 432 };
-    this.jackCoords["PWR.5V_4"] = { x: 660, y: 432 };
-    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_1", type: "5V", cx: 596, cy: 432 });
-    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_2", type: "5V", cx: 660, cy: 432 });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_1", type: "5V", cx: 596, cy: 432, isSelected: this.selectedJack === "PWR.5V_1" });
+    svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_2", type: "5V", cx: 660, cy: 432, isSelected: this.selectedJack === "PWR.5V_2" });
 
     const gndX = [436, 510, 584, 660];
     for (let i = 1; i <= 4; i++) {
       const gId = `PWR.GND_${i}`;
       this.jackCoords[gId] = { x: gndX[i - 1], y: 516 };
-      svgContent += SVG_COMPONENTS.drawTerminal({ id: gId, type: "GND", cx: gndX[i - 1], cy: 516 });
+      svgContent += SVG_COMPONENTS.drawTerminal({ id: gId, type: "GND", cx: gndX[i - 1], cy: 516, isSelected: this.selectedJack === gId });
     }
 
     // 6. ZONE 5: Manual Pulser (x: 736, y: 348, w: 376, h: 204)
@@ -10940,9 +10996,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (clockReadout) {
-      const runStatus = engine.clock.running ? "RUN" : "PAUSED";
-      const overrunBadge = engine.sim.overrun ? ' <span style="color:#ef4444; font-weight:700;">[OVERRUN]</span>' : '';
-      clockReadout.innerHTML = `CLK: ${engine.formatClockFreq()} (${runStatus})${overrunBadge}`;
+      if (!engine.masterPower) {
+        clockReadout.innerHTML = `CLK: ${engine.formatClockFreq()} <span style="color:#64748b; font-weight:600;">(OFF)</span>`;
+      } else {
+        const runStatus = engine.clock.running ? "RUN" : "PAUSED";
+        const overrunBadge = engine.sim.overrun ? ' <span style="color:#ef4444; font-weight:700;">[OVERRUN]</span>' : '';
+        clockReadout.innerHTML = `CLK: ${engine.formatClockFreq()} (${runStatus})${overrunBadge}`;
+      }
     }
 
     const masterPwrBtn = document.getElementById("master-pwr-header");

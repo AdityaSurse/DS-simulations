@@ -110,7 +110,9 @@ def build():
   50% { transform: scale(1.3); opacity: 1; }
   100% { transform: scale(1); opacity: 0.8; }
 }
-.jack-selection-ring {
+.jack-selection-ring.active,
+.jack-group.selected .jack-selection-ring,
+.jack-group.target .jack-selection-ring {
   animation: pulse-ring 1.2s infinite ease-in-out;
   transform-origin: center center;
 }

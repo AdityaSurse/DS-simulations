@@ -105,9 +105,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (clockReadout) {
-      const runStatus = engine.clock.running ? "RUN" : "PAUSED";
-      const overrunBadge = engine.sim.overrun ? ' <span style="color:#ef4444; font-weight:700;">[OVERRUN]</span>' : '';
-      clockReadout.innerHTML = `CLK: ${engine.formatClockFreq()} (${runStatus})${overrunBadge}`;
+      if (!engine.masterPower) {
+        clockReadout.innerHTML = `CLK: ${engine.formatClockFreq()} <span style="color:#64748b; font-weight:600;">(OFF)</span>`;
+      } else {
+        const runStatus = engine.clock.running ? "RUN" : "PAUSED";
+        const overrunBadge = engine.sim.overrun ? ' <span style="color:#ef4444; font-weight:700;">[OVERRUN]</span>' : '';
+        clockReadout.innerHTML = `CLK: ${engine.formatClockFreq()} (${runStatus})${overrunBadge}`;
+      }
     }
 
     const masterPwrBtn = document.getElementById("master-pwr-header");

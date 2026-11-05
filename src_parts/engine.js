@@ -281,20 +281,27 @@ class TTLEngine {
       const dt = Math.min(0.1, (timestamp - this.sim.lastRealTime) / 1000); // Max dt clamp 100ms
       this.sim.lastRealTime = timestamp;
 
-      if (this.masterPower && this.clock.running) {
-        this.advanceVirtualTime(dt);
-      }
+      if (this.masterPower) {
+        if (this.clock.running) {
+          this.advanceVirtualTime(dt);
+        }
 
-      // Check visual hold timers for pulsers
-      for (let i = 1; i <= 2; i++) {
-        const p = this.board.pulsers[i];
-        if (!p.pressed && timestamp < p.visualHoldUntil) {
-          // Keep visual LED lit during fast-click hold
-          this.board.leds[`LED_PULSER_${i}_POS`] = 1.0;
+        // Check visual hold timers for pulsers
+        for (let i = 1; i <= 2; i++) {
+          const p = this.board.pulsers[i];
+          if (!p.pressed && timestamp < p.visualHoldUntil) {
+            // Keep visual LED lit during fast-click hold
+            this.board.leds[`LED_PULSER_${i}_POS`] = 1.0;
+          }
+        }
+
+        this.updateDisplaySmoothing(dt);
+      } else {
+        // Master power is OFF: all LEDs are completely dark, no virtual time advances
+        for (const k of Object.keys(this.board.leds)) {
+          this.board.leds[k] = 0.0;
         }
       }
-
-      this.updateDisplaySmoothing(dt);
       this.rafId = requestAnimationFrame(loop);
     };
 
@@ -372,6 +379,11 @@ class TTLEngine {
   toggleMasterPower() {
     this.masterPower = !this.masterPower;
     this.playClickSound(this.masterPower ? 600 : 300);
+    if (!this.masterPower) {
+      for (const k of Object.keys(this.board.leds)) {
+        this.board.leds[k] = 0.0;
+      }
+    }
     this.evaluate();
     this.notify();
   }
