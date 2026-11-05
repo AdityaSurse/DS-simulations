@@ -595,32 +595,46 @@ class LabConsole {
     const btnExport = this.container.querySelector("#btn-export-wires");
     if (btnExport) {
       btnExport.addEventListener("click", () => {
-        const json = JSON.stringify(this.engine.wires, null, 2);
-        navigator.clipboard.writeText(json).then(() => {
-          alert("Wire configuration copied to clipboard!");
-        }).catch(() => {
-          prompt("Copy wire configuration JSON:", json);
-        });
+        const json = this.engine.exportCircuitJSON();
+        try {
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `dit9005_circuit_${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          prompt("Copy Circuit JSON:", json);
+        }
       });
     }
 
     const btnImport = this.container.querySelector("#btn-import-wires");
     if (btnImport) {
       btnImport.addEventListener("click", () => {
-        const json = prompt("Paste Wire configuration JSON:");
-        if (json) {
-          try {
-            const arr = JSON.parse(json);
-            if (Array.isArray(arr)) {
-              this.engine.wires = arr;
-              this.engine.evaluate();
-              this.board.render();
-              this.render();
-            }
-          } catch (err) {
-            alert("Invalid JSON format!");
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json,application/json";
+        input.onchange = (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (re) => {
+              const ok = this.engine.importCircuitJSON(re.target.result);
+              if (ok) {
+                this.board.render();
+                this.render();
+              } else {
+                alert("Failed to import circuit JSON: Invalid format.");
+              }
+            };
+            reader.readAsText(file);
           }
-        }
+        };
+        input.click();
       });
     }
   }

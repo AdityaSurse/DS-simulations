@@ -789,10 +789,23 @@ select:focus, input[type="text"]:focus {
   transition: opacity 0.15s ease;
 }
 .patch-cord-group:hover {
-  opacity: 0.85;
+  opacity: 0.95;
 }
-.patch-cord-group:hover path:nth-child(3) {
-  stroke-width: 7;
+.patch-cord-group:hover .cord-delete-handle,
+.patch-cord-group.selected .cord-delete-handle {
+  opacity: 1;
+  pointer-events: all;
+}
+.cord-delete-handle {
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.12s ease;
+}
+.cord-delete-handle:hover {
+  transform: scale(1.3);
+}
+.cord-delete-handle.visible {
+  opacity: 1;
+  pointer-events: all;
 }
 
 @keyframes pulse-ring {
@@ -802,6 +815,10 @@ select:focus, input[type="text"]:focus {
 }
 .jack-selection-ring {
   animation: pulse-ring 1.2s infinite ease-in-out;
+  transform-origin: center center;
+}
+.jack-drop-glow {
+  animation: pulse-ring 1s infinite ease-in-out;
   transform-origin: center center;
 }
 
@@ -837,18 +854,20 @@ select:focus, input[type="text"]:focus {
       <button class="btn" id="btn-open-guide" title="Open Lab Guide & Controls">📖 Guide</button>
       <button class="btn" id="btn-open-manual" title="View Datasheet Reference">📋 Manual</button>
       <button class="btn" id="btn-reset-trainer" title="Reset all patch cords and switches">↺ Reset</button>
+      <button class="btn" id="btn-clear-cords" title="Clear All Patch Cords">⊘ Clear Cords</button>
 
-      <!-- Wire Color Palette -->
+      <!-- Wire Color Palette (Yellow, Red, Blue, Green, White, Black) -->
       <div class="wire-palette">
         <div class="color-swatch active" data-color="#f5c518" style="background: #f5c518;" title="Yellow Wire (Default)"></div>
         <div class="color-swatch" data-color="#ef4444" style="background: #ef4444;" title="Red (+5V / VCC)"></div>
-        <div class="color-swatch" data-color="#1f2937" style="background: #1f2937;" title="Black (GND)"></div>
-        <div class="color-swatch" data-color="#38bdf8" style="background: #38bdf8;" title="Blue (Signals)"></div>
-        <div class="color-swatch" data-color="#22c55e" style="background: #22c55e;" title="Green (Clock/Pulse)"></div>
+        <div class="color-swatch" data-color="#3b82f6" style="background: #3b82f6;" title="Blue (Signals)"></div>
+        <div class="color-swatch" data-color="#10b981" style="background: #10b981;" title="Green (Clock/Pulse)"></div>
         <div class="color-swatch" data-color="#f8fafc" style="background: #f8fafc;" title="White"></div>
+        <div class="color-swatch" data-color="#1e293b" style="background: #1e293b;" title="Black (GND)"></div>
       </div>
 
       <button class="btn" id="btn-undo-wire" title="Undo Last Wire (Ctrl+Z)">⤺ Undo</button>
+      <button class="btn" id="btn-redo-wire" title="Redo Wire (Ctrl+Y)">⤻ Redo</button>
       <button class="btn" id="btn-delete-mode" title="Click wire to remove">✕ Delete Wire</button>
 
       <!-- Master Power Switch in Header -->
@@ -1925,8 +1944,10 @@ class TTLEngine {
   constructor() {
     this.masterPower = true;
     this.strictPowerMode = true; // Default strict mode from lab addendum
-    this.wires = []; // Array of { id, from, to, color }
+    this.wires = []; // Array of { id, from, to, a, b, color }
     this.nextWireId = 1;
+    this.undoStack = [];
+    this.redoStack = [];
 
     // Simulation Virtual Time (in seconds)
     this.sim = {
@@ -1940,6 +1961,7 @@ class TTLEngine {
 
     // Single unified board state object exposed for external access
     this.board = {
+      cords: this.wires,
       sockets: {
         U1: { id: "U1", chip: null, alignment: "left", leverLocked: true, state: {} },
         U2: { id: "U2", chip: null, alignment: "left", leverLocked: true, state: {} },
@@ -2237,6 +2259,7 @@ class TTLEngine {
     this.strictPowerMode = strict;
     this.evaluate();
     this.notify();
+    this.autoSave();
   }
 
   toggleInput(jackId) {
@@ -2245,6 +2268,7 @@ class TTLEngine {
       this.playClickSound(this.inputs[jackId] === 1 ? 950 : 700);
       this.evaluate();
       this.notify();
+      this.autoSave();
     }
   }
 
@@ -2257,6 +2281,7 @@ class TTLEngine {
       this.sockets[socketId].lastOutputs = null;
       this.evaluate();
       this.notify();
+      this.autoSave();
     }
   }
 
@@ -2267,6 +2292,7 @@ class TTLEngine {
       this.sockets[socketId].lastOutputs = null;
       this.evaluate();
       this.notify();
+      this.autoSave();
     }
   }
 
@@ -2276,6 +2302,7 @@ class TTLEngine {
       this.playClickSound(locked ? 500 : 750);
       this.evaluate();
       this.notify();
+      this.autoSave();
     }
   }
 
@@ -2310,8 +2337,17 @@ class TTLEngine {
     return null;
   }
 
-  // Wire Management
-  addWire(from, to, color = "#f5c518") {
+  // Wire / Patch Cord Management
+  emitCordsChanged() {
+    this.board.cords = this.wires;
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(new CustomEvent("cordsChanged", {
+        detail: { cords: this.board.cords, count: this.board.cords.length }
+      }));
+    }
+  }
+
+  addWire(from, to, color = "#f5c518", recordHistory = true) {
     if (!from || !to || from === to) return false;
     const exists = this.wires.some(w =>
       (w.from === from && w.to === to) || (w.from === to && w.to === from)
@@ -2322,45 +2358,251 @@ class TTLEngine {
       id: `W_${this.nextWireId++}`,
       from,
       to,
+      a: from,
+      b: to,
       color
     };
     this.wires.push(wire);
+    this.board.cords = this.wires;
+
+    if (recordHistory) {
+      this.undoStack.push({ type: "add", wire: { ...wire } });
+      this.redoStack = [];
+    }
+
     this.playClickSound(450);
     this.evaluate();
+    this.emitCordsChanged();
     this.notify();
+    this.autoSave();
     return wire;
   }
 
-  removeWire(wireId) {
+  removeWire(wireId, recordHistory = true) {
     const idx = this.wires.findIndex(w => w.id === wireId);
     if (idx !== -1) {
+      const removedWire = this.wires[idx];
       this.wires.splice(idx, 1);
+      this.board.cords = this.wires;
+
+      if (recordHistory) {
+        this.undoStack.push({ type: "remove", wire: { ...removedWire } });
+        this.redoStack = [];
+      }
+
       this.playClickSound(350);
       this.evaluate();
+      this.emitCordsChanged();
       this.notify();
+      this.autoSave();
       return true;
     }
     return false;
+  }
+
+  setWireColor(wireId, newColor, recordHistory = true) {
+    const w = this.wires.find(x => x.id === wireId);
+    if (w && w.color !== newColor) {
+      const oldColor = w.color;
+      w.color = newColor;
+
+      if (recordHistory) {
+        this.undoStack.push({ type: "color", wireId, oldColor, newColor });
+        this.redoStack = [];
+      }
+
+      this.playClickSound(400);
+      this.emitCordsChanged();
+      this.notify();
+      this.autoSave();
+      return true;
+    }
+    return false;
+  }
+
+  undo() {
+    if (this.undoStack.length === 0) return false;
+    const item = this.undoStack.pop();
+
+    if (item.type === "add") {
+      const idx = this.wires.findIndex(w => w.id === item.wire.id);
+      if (idx !== -1) {
+        this.wires.splice(idx, 1);
+        this.redoStack.push({ type: "add", wire: item.wire });
+      }
+    } else if (item.type === "remove") {
+      this.wires.push(item.wire);
+      this.redoStack.push({ type: "remove", wire: item.wire });
+    } else if (item.type === "clear") {
+      this.wires = [...item.wires];
+      this.redoStack.push({ type: "clear", wires: item.wires });
+    } else if (item.type === "color") {
+      const w = this.wires.find(x => x.id === item.wireId);
+      if (w) {
+        w.color = item.oldColor;
+        this.redoStack.push({ type: "color", wireId: item.wireId, oldColor: item.oldColor, newColor: item.newColor });
+      }
+    }
+
+    this.board.cords = this.wires;
+    this.playClickSound(350);
+    this.evaluate();
+    this.emitCordsChanged();
+    this.notify();
+    this.autoSave();
+    return true;
+  }
+
+  redo() {
+    if (this.redoStack.length === 0) return false;
+    const item = this.redoStack.pop();
+
+    if (item.type === "add") {
+      this.wires.push(item.wire);
+      this.undoStack.push({ type: "add", wire: item.wire });
+    } else if (item.type === "remove") {
+      const idx = this.wires.findIndex(w => w.id === item.wire.id);
+      if (idx !== -1) {
+        this.wires.splice(idx, 1);
+        this.undoStack.push({ type: "remove", wire: item.wire });
+      }
+    } else if (item.type === "clear") {
+      this.undoStack.push({ type: "clear", wires: [...this.wires] });
+      this.wires = [];
+    } else if (item.type === "color") {
+      const w = this.wires.find(x => x.id === item.wireId);
+      if (w) {
+        w.color = item.newColor;
+        this.undoStack.push({ type: "color", wireId: item.wireId, oldColor: item.oldColor, newColor: item.newColor });
+      }
+    }
+
+    this.board.cords = this.wires;
+    this.playClickSound(380);
+    this.evaluate();
+    this.emitCordsChanged();
+    this.notify();
+    this.autoSave();
+    return true;
   }
 
   undoWire() {
+    return this.undo();
+  }
+
+  clearWires(recordHistory = true) {
     if (this.wires.length > 0) {
-      this.wires.pop();
-      this.playClickSound(350);
+      if (recordHistory) {
+        this.undoStack.push({ type: "clear", wires: [...this.wires] });
+        this.redoStack = [];
+      }
+      this.wires = [];
+      this.board.cords = this.wires;
+      this.playClickSound(300);
       this.evaluate();
+      this.emitCordsChanged();
       this.notify();
+      this.autoSave();
       return true;
     }
     return false;
   }
 
-  clearWires() {
-    if (this.wires.length > 0) {
-      this.wires = [];
-      this.playClickSound(300);
+  // Circuit Persistence & JSON Export / Import
+  exportCircuitJSON() {
+    const data = {
+      appName: "DIT 9005 Simulator",
+      version: "1.0",
+      timestamp: new Date().toISOString(),
+      cords: this.wires.map(w => ({
+        id: w.id,
+        a: w.a || w.from,
+        b: w.b || w.to,
+        from: w.from,
+        to: w.to,
+        color: w.color
+      })),
+      sockets: Object.entries(this.sockets).reduce((acc, [k, v]) => {
+        acc[k] = { chip: v.chip, alignment: v.alignment, leverLocked: v.leverLocked };
+        return acc;
+      }, {}),
+      switches: { ...this.inputs },
+      strictPowerMode: this.strictPowerMode
+    };
+    return JSON.stringify(data, null, 2);
+  }
+
+  importCircuitJSON(jsonStr) {
+    try {
+      const data = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+      if (!data || !Array.isArray(data.cords)) {
+        throw new Error("Invalid circuit format: missing cords array");
+      }
+
+      this.clearWires(false);
+      this.undoStack = [];
+      this.redoStack = [];
+
+      if (data.sockets) {
+        for (const [sId, sInfo] of Object.entries(data.sockets)) {
+          if (this.sockets[sId]) {
+            this.sockets[sId].chip = sInfo.chip || null;
+            this.sockets[sId].alignment = sInfo.alignment || "left";
+            this.sockets[sId].leverLocked = sInfo.leverLocked !== undefined ? sInfo.leverLocked : true;
+            this.sockets[sId].state = {};
+            this.sockets[sId].lastOutputs = null;
+          }
+        }
+      }
+
+      if (data.switches) {
+        for (const [swId, val] of Object.entries(data.switches)) {
+          if (this.inputs[swId] !== undefined) this.inputs[swId] = val;
+        }
+      }
+
+      if (data.strictPowerMode !== undefined) {
+        this.strictPowerMode = !!data.strictPowerMode;
+      }
+
+      for (const c of data.cords) {
+        const from = c.a || c.from;
+        const to = c.b || c.to;
+        if (from && to) {
+          this.addWire(from, to, c.color || "#f5c518", false);
+        }
+      }
+
       this.evaluate();
+      this.emitCordsChanged();
       this.notify();
+      this.autoSave();
+      return true;
+    } catch (err) {
+      console.error("Failed to import circuit JSON:", err);
+      return false;
     }
+  }
+
+  autoSave() {
+    if (typeof localStorage === "undefined") return;
+    try {
+      const json = this.exportCircuitJSON();
+      localStorage.setItem("dit9005_circuit", json);
+    } catch (e) {
+      // Ignore storage quota or access issues
+    }
+  }
+
+  loadSavedCircuit() {
+    if (typeof localStorage === "undefined") return false;
+    try {
+      const saved = localStorage.getItem("dit9005_circuit");
+      if (saved) {
+        return this.importCircuitJSON(saved);
+      }
+    } catch (e) {}
+    return false;
   }
 
   // Simulation Evaluation
@@ -3274,36 +3516,69 @@ const SVG_COMPONENTS = {
     return this.drawICChip({ socketId, chipName, socketX, socketY, socketW, socketH, icPinCount, alignment });
   },
 
-  renderPatchCord(wire, p1, p2) {
+  renderPatchCord(wire, p1, p2, isSelected = false) {
     if (!p1 || !p2) return "";
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const dist = Math.hypot(dx, dy);
 
-    const droop = Math.max(30, 25 + dist * 0.16);
-    const midX = (p1.x + p2.x) / 2;
-    const midY = Math.max(p1.y, p2.y) + droop;
+    // Natural gravity sag proportional to cord length
+    const droop = Math.max(35, 25 + dist * 0.22);
+    const cx1 = p1.x + dx * 0.25;
+    const cy1 = p1.y + droop + Math.max(0, dy * 0.25);
+    const cx2 = p2.x - dx * 0.25;
+    const cy2 = p2.y + droop - Math.max(0, -dy * 0.25);
 
-    const pathData = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`;
-    const shadowPath = `M ${p1.x} ${p1.y + 6} Q ${midX} ${midY + 12} ${p2.x} ${p2.y + 6}`;
+    // Cubic Bezier curve paths
+    const pathData = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
+    const shadowPath = `M ${p1.x} ${p1.y + 8} C ${cx1} ${cy1 + 16}, ${cx2} ${cy2 + 16}, ${p2.x} ${p2.y + 8}`;
     const color = wire.color || "#f5c518";
 
+    // Midpoint on Cubic Bezier at t = 0.5
+    const mx = 0.125 * p1.x + 0.375 * cx1 + 0.375 * cx2 + 0.125 * p2.x;
+    const my = 0.125 * p1.y + 0.375 * cy1 + 0.375 * cy2 + 0.125 * p2.y;
+
     const renderBananaPlug = (pt) => `
-      <g transform="translate(${pt.x}, ${pt.y})">
-        <circle r="7.5" fill="${color}" stroke="#1e293b" stroke-width="1.2" filter="url(#shadowBevel)" />
-        <circle r="4.5" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.8" />
-        <circle r="6" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.5" />
+      <g transform="translate(${pt.x}, ${pt.y})" pointer-events="none">
+        <circle r="8" fill="${color}" stroke="#0f172a" stroke-width="1.4" filter="url(#shadowBevel)" />
+        <circle r="4.8" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.8" />
+        <circle r="6.2" fill="none" stroke="#ffffff" stroke-width="0.9" opacity="0.5" />
       </g>
     `;
 
     return `
-      <g class="patch-cord-group" data-wire-id="${wire.id}">
-        <path d="${shadowPath}" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" />
-        <path d="${pathData}" fill="none" stroke="#111827" stroke-width="7" stroke-linecap="round" />
-        <path d="${pathData}" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" />
-        <path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.45" />
+      <g class="patch-cord-group ${isSelected ? 'selected' : ''}" data-wire-id="${wire.id}">
+        <title>Patch Cord ${wire.id}: ${wire.from} ↔ ${wire.to}</title>
+        <!-- Soft Ground Shadow -->
+        <path d="${shadowPath}" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" pointer-events="none" />
+        
+        <!-- Selection Highlight Halo if Selected -->
+        ${isSelected ? `
+          <path d="${pathData}" fill="none" stroke="#38bdf8" stroke-width="11" stroke-linecap="round" opacity="0.9" filter="url(#glowTeal)" pointer-events="none" />
+          <path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="8" stroke-dasharray="8 6" stroke-linecap="round" opacity="0.9" pointer-events="none" />
+        ` : ''}
+
+        <!-- Dark Outer Border for 3D Depth -->
+        <path d="${pathData}" fill="none" stroke="#090d14" stroke-width="7" stroke-linecap="round" pointer-events="none" />
+        
+        <!-- Main Colored Cord Body -->
+        <path d="${pathData}" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" pointer-events="none" />
+        
+        <!-- Specular Highlight Ridge -->
+        <path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.55" pointer-events="none" />
+        
+        <!-- Invisible Wide Hit-testing Stroke -->
+        <path class="cord-hit-stroke" d="${pathData}" fill="none" stroke="transparent" stroke-width="20" stroke-linecap="round" pointer-events="stroke" cursor="pointer" />
+        
+        <!-- 3D Banana Plugs at both ends -->
         ${renderBananaPlug(p1)}
         ${renderBananaPlug(p2)}
+
+        <!-- Midpoint Delete Handle (Visible on hover or when selected) -->
+        <g class="cord-delete-handle ${isSelected ? 'visible' : ''}" data-wire-id="${wire.id}" transform="translate(${mx}, ${my})" cursor="pointer" pointer-events="all">
+          <circle r="10" fill="#ef4444" stroke="#ffffff" stroke-width="1.8" filter="url(#shadowBevel)" />
+          <path d="M -3.5 -3.5 L 3.5 3.5 M 3.5 -3.5 L -3.5 3.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+        </g>
       </g>
     `;
   }
@@ -3318,6 +3593,11 @@ class BoardRenderer {
 
     this.jackCoords = {};
     this.selectedJack = null;
+    this.dragStartJack = null;
+    this.dragStartPos = null;
+    this.isDraggingCord = false;
+    this.hoverTargetJack = null;
+    this.selectedCordId = null;
     this.tempMousePos = null;
     this.activeView = "full";
     this.activeColor = "#f5c518";
@@ -3376,7 +3656,7 @@ class BoardRenderer {
   }
 
   setWireColor(color) {
-    this.activeColor = color;
+    this.setColor(color);
   }
 
   setDeleteMode(val) {
@@ -3487,19 +3767,63 @@ class BoardRenderer {
   }
 
   bindEvents() {
-    // Click interactions
+    // Mousedown for starting wire drag, switch flips, pulsers, knob
+    this.svg.addEventListener("mousedown", (e) => {
+      if (this.isPanning || this.isDraggingKnob) return;
+      if (e.button !== 0) return; // Left click only for dragging
+
+      // Jack mousedown -> start drag-to-connect
+      const jackGroup = e.target.closest(".jack-group");
+      if (jackGroup) {
+        const jackId = jackGroup.dataset.jack;
+        this.dragStartJack = jackId;
+        this.dragStartPos = this.getSVGCoords(e);
+        this.tempMousePos = this.dragStartPos;
+        this.isDraggingCord = true;
+        this.updateRubberBand();
+        e.preventDefault();
+        return;
+      }
+
+      // Manual Pulser press
+      const btnGroup = e.target.closest(".pushbutton-group");
+      if (btnGroup) {
+        const pulserNum = parseInt(btnGroup.dataset.pulser, 10);
+        this.engine.setPulser(pulserNum, true);
+        e.preventDefault();
+      }
+    });
+
+    // Click interactions (switches, levers, clock controls, cord selection/deletion)
     this.svg.addEventListener("click", (e) => {
-      // Wire deletion
+      // 1. Midpoint ✕ delete handle on cord
+      const deleteHandle = e.target.closest(".cord-delete-handle");
+      if (deleteHandle) {
+        const wireId = deleteHandle.dataset.wireId;
+        this.engine.removeWire(wireId);
+        this.selectedCordId = null;
+        this.renderCordsOnly();
+        return;
+      }
+
+      // 2. Click on a patch cord (select it or delete in deleteMode)
       const wireGroup = e.target.closest(".patch-cord-group");
       if (wireGroup) {
         const wireId = wireGroup.dataset.wireId;
         if (this.deleteMode || e.altKey) {
           this.engine.removeWire(wireId);
+          this.selectedCordId = null;
+          this.renderCordsOnly();
           return;
         }
+
+        // Toggle selection
+        this.selectedCordId = (this.selectedCordId === wireId ? null : wireId);
+        this.renderCordsOnly();
+        return;
       }
 
-      // Toggle Switch
+      // 3. Toggle Switch
       const switchGroup = e.target.closest(".switch-group");
       if (switchGroup) {
         const swId = switchGroup.dataset.switch;
@@ -3507,7 +3831,7 @@ class BoardRenderer {
         return;
       }
 
-      // ZIF Socket Lever Toggle
+      // 4. ZIF Socket Lever Toggle
       const zifLever = e.target.closest(".zif-lever");
       if (zifLever) {
         const sId = zifLever.dataset.socket;
@@ -3516,58 +3840,95 @@ class BoardRenderer {
         return;
       }
 
-      // Clock Run/Pause button
+      // 5. Clock Run/Pause button
       const clkToggle = e.target.closest("#btn-clk-run-pause");
       if (clkToggle) {
         this.engine.toggleClockRun();
         return;
       }
 
-      // Clock Step button
+      // 6. Clock Step button
       const clkStep = e.target.closest("#btn-clk-step");
       if (clkStep) {
         this.engine.stepClock();
         return;
       }
 
-      // Jack interaction
-      const jackGroup = e.target.closest(".jack-group");
-      if (jackGroup) {
-        const jackId = jackGroup.dataset.jack;
-        if (this.deleteMode) {
-          const attached = this.engine.wires.filter(w => w.from === jackId || w.to === jackId);
-          attached.forEach(w => this.engine.removeWire(w.id));
-          return;
-        }
-
-        if (!this.selectedJack) {
-          this.selectedJack = jackId;
-          this.render();
-        } else {
-          if (this.selectedJack !== jackId) {
-            this.engine.addWire(this.selectedJack, jackId, this.activeColor);
-          }
-          this.selectedJack = null;
-          this.tempMousePos = null;
-          this.render();
-        }
-        return;
+      // 7. Clicked on empty board background -> deselect
+      if (this.selectedCordId) {
+        this.selectedCordId = null;
+        this.renderCordsOnly();
       }
-
-      // Clicked outside on board
-      if (this.selectedJack) {
+      if (this.selectedJack && !this.isDraggingCord) {
         this.selectedJack = null;
         this.tempMousePos = null;
-        this.render();
+        this.updateRubberBand();
       }
     });
 
-    // Right-click wire deletion
+    // Window mouseup: ends drag-and-drop connecting or pulser press
+    window.addEventListener("mouseup", (e) => {
+      // Pulser releases
+      if (this.engine.board.pulsers[1].pressed) this.engine.setPulser(1, false);
+      if (this.engine.board.pulsers[2].pressed) this.engine.setPulser(2, false);
+
+      // Handle cord dragging completion
+      if (this.isDraggingCord && this.dragStartJack) {
+        const curPos = this.getSVGCoords(e);
+        const movedDist = Math.hypot(curPos.x - this.dragStartPos.x, curPos.y - this.dragStartPos.y);
+
+        // Find drop target jack under pointer
+        const elem = document.elementFromPoint(e.clientX, e.clientY);
+        const targetGroup = elem ? elem.closest(".jack-group") : null;
+        const targetJack = targetGroup ? targetGroup.dataset.jack : null;
+
+        if (targetJack && targetJack !== this.dragStartJack) {
+          // Dragged and dropped onto a different jack!
+          this.engine.addWire(this.dragStartJack, targetJack, this.activeColor);
+          this.selectedJack = null;
+          this.selectedCordId = null;
+        } else if (movedDist < 8) {
+          // It was a click on the jack! Support click-to-click connection
+          if (!this.selectedJack) {
+            this.selectedJack = this.dragStartJack;
+          } else if (this.selectedJack === this.dragStartJack) {
+            this.selectedJack = null;
+          } else {
+            this.engine.addWire(this.selectedJack, this.dragStartJack, this.activeColor);
+            this.selectedJack = null;
+          }
+        } else {
+          // Dragged into empty space -> invalid drop cancelled gracefully
+          if (this.selectedJack === this.dragStartJack) {
+            this.selectedJack = null;
+          }
+        }
+
+        this.isDraggingCord = false;
+        this.dragStartJack = null;
+        this.dragStartPos = null;
+        this.hoverTargetJack = null;
+        this.tempMousePos = null;
+        this.updateRubberBand();
+        this.renderCordsOnly();
+      }
+    });
+
+    // Right-click cord deletion
     this.svg.addEventListener("contextmenu", (e) => {
       e.preventDefault();
+      const deleteHandle = e.target.closest(".cord-delete-handle");
+      if (deleteHandle) {
+        this.engine.removeWire(deleteHandle.dataset.wireId);
+        this.selectedCordId = null;
+        this.renderCordsOnly();
+        return;
+      }
       const wireGroup = e.target.closest(".patch-cord-group");
       if (wireGroup) {
         this.engine.removeWire(wireGroup.dataset.wireId);
+        this.selectedCordId = null;
+        this.renderCordsOnly();
         return;
       }
       const jackGroup = e.target.closest(".jack-group");
@@ -3576,17 +3937,30 @@ class BoardRenderer {
         const attached = this.engine.wires.filter(w => w.from === jackId || w.to === jackId);
         if (attached.length > 0) {
           this.engine.removeWire(attached[attached.length - 1].id);
+          this.selectedCordId = null;
+          this.renderCordsOnly();
         }
       }
     });
 
-    // Mouse move for rubber-band wire, probe HUD, and drop target highlight
+    // Mouse move for rubber-band wire, hover snap, and probe HUD
     this.svg.addEventListener("mousemove", (e) => {
       if (this.isPanning || this.isDraggingKnob) return;
       const coords = this.getSVGCoords(e);
-      if (this.selectedJack) {
+
+      if (this.isDraggingCord || this.selectedJack) {
         this.tempMousePos = coords;
+
+        // Check if mouse is hovering over candidate target jack
+        const jackGroup = e.target.closest(".jack-group");
+        const activeJack = this.dragStartJack || this.selectedJack;
+        if (jackGroup && jackGroup.dataset.jack !== activeJack) {
+          this.hoverTargetJack = jackGroup.dataset.jack;
+        } else {
+          this.hoverTargetJack = null;
+        }
         this.updateRubberBand();
+        return; // Suppress probe HUD while wiring
       }
 
       const jackGroup = e.target.closest(".jack-group");
@@ -3598,29 +3972,36 @@ class BoardRenderer {
       }
     });
 
-    // Manual Pulser press & release
-    this.svg.addEventListener("mousedown", (e) => {
-      const btnGroup = e.target.closest(".pushbutton-group");
-      if (btnGroup) {
-        const pulserNum = parseInt(btnGroup.dataset.pulser, 10);
-        this.engine.setPulser(pulserNum, true);
-        e.preventDefault();
-      }
-    });
-
-    window.addEventListener("mouseup", () => {
-      if (this.engine.board.pulsers[1].pressed) this.engine.setPulser(1, false);
-      if (this.engine.board.pulsers[2].pressed) this.engine.setPulser(2, false);
-    });
-
-    // Keyboard shortcuts
+    // Keyboard shortcuts: Delete, Escape, Undo/Redo, Pulsers, Clock
     window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (this.selectedCordId) {
+          e.preventDefault();
+          this.engine.removeWire(this.selectedCordId);
+          this.selectedCordId = null;
+          this.renderCordsOnly();
+        }
+      } else if (e.key === "Escape") {
         this.selectedJack = null;
+        this.selectedCordId = null;
+        this.isDraggingCord = false;
+        this.dragStartJack = null;
+        this.hoverTargetJack = null;
         this.tempMousePos = null;
-        this.render();
-      } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
-        this.engine.undoWire();
+        this.updateRubberBand();
+        this.renderCordsOnly();
+      } else if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          this.engine.redo();
+        } else {
+          this.engine.undo();
+        }
+        this.renderCordsOnly();
+      } else if ((e.key === "y" || e.key === "Y") && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        this.engine.redo();
+        this.renderCordsOnly();
       } else if (e.key === " " && !e.repeat && document.activeElement.tagName !== "INPUT") {
         e.preventDefault();
         this.engine.setPulser(1, true);
@@ -3640,43 +4021,135 @@ class BoardRenderer {
     });
   }
 
+  setColor(color) {
+    this.activeColor = color;
+    if (this.selectedCordId) {
+      this.engine.setWireColor(this.selectedCordId, color);
+      this.renderCordsOnly();
+    }
+  }
+
   updateRubberBand() {
     let rubberBand = this.svg.querySelector("#rubber-band-wire");
-    if (!this.selectedJack || !this.tempMousePos) {
+    const activeJack = this.dragStartJack || this.selectedJack;
+
+    if (!activeJack || !this.tempMousePos) {
       if (rubberBand) rubberBand.remove();
+      // Remove any leftover drop target glow rings
+      this.svg.querySelectorAll(".jack-drop-glow").forEach(el => el.remove());
       return;
     }
 
-    const p1 = this.jackCoords[this.selectedJack];
-    const p2 = this.tempMousePos;
+    const p1 = this.jackCoords[activeJack];
+    // If hovering over target jack, snap rubber band tip to that jack's center!
+    const p2 = (this.hoverTargetJack && this.jackCoords[this.hoverTargetJack])
+      ? this.jackCoords[this.hoverTargetJack]
+      : this.tempMousePos;
+
     if (!p1) return;
 
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const dist = Math.hypot(dx, dy);
-    const droop = Math.max(25, 20 + dist * 0.15);
-    const midX = (p1.x + p2.x) / 2;
-    const midY = Math.max(p1.y, p2.y) + droop;
 
-    const pathData = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`;
+    // Natural gravity sag using Cubic Bezier
+    const droop = Math.max(35, 25 + dist * 0.22);
+    const cx1 = p1.x + dx * 0.25;
+    const cy1 = p1.y + droop + Math.max(0, dy * 0.25);
+    const cx2 = p2.x - dx * 0.25;
+    const cy2 = p2.y + droop - Math.max(0, -dy * 0.25);
+
+    const pathData = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
+    const shadowPath = `M ${p1.x} ${p1.y + 8} C ${cx1} ${cy1 + 16}, ${cx2} ${cy2 + 16}, ${p2.x} ${p2.y + 8}`;
 
     if (!rubberBand) {
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
       g.setAttribute("id", "rubber-band-wire");
+      g.setAttribute("pointer-events", "none");
       g.innerHTML = `
-        <path class="rb-outer" fill="none" stroke="${this.activeColor}" stroke-width="5" stroke-linecap="round" opacity="0.8" />
-        <path class="rb-inner" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
-        <circle cx="${p2.x}" cy="${p2.y}" r="6" fill="${this.activeColor}" stroke="#fff" stroke-width="1.5" />
+        <path class="rb-shadow" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" />
+        <path class="rb-border" fill="none" stroke="#090d14" stroke-width="7" stroke-linecap="round" />
+        <path class="rb-body" fill="none" stroke="${this.activeColor}" stroke-width="5" stroke-linecap="round" opacity="0.95" />
+        <path class="rb-specular" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.6" />
+        <g class="rb-plug-start" transform="translate(${p1.x}, ${p1.y})">
+          <circle r="8" fill="${this.activeColor}" stroke="#0f172a" stroke-width="1.4" filter="url(#shadowBevel)" />
+          <circle r="4.8" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.8" />
+        </g>
+        <g class="rb-plug-end" transform="translate(${p2.x}, ${p2.y})">
+          <circle r="8" fill="${this.activeColor}" stroke="#0f172a" stroke-width="1.4" filter="url(#shadowBevel)" />
+          <circle r="4.8" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.8" />
+          <circle r="12" fill="none" stroke="${this.activeColor}" stroke-width="2" class="jack-selection-ring" opacity="0.9" />
+        </g>
       `;
       this.svg.querySelector("#wires-layer").appendChild(g);
       rubberBand = g;
     }
 
-    rubberBand.querySelector(".rb-outer").setAttribute("d", pathData);
-    rubberBand.querySelector(".rb-inner").setAttribute("d", pathData);
-    const cursorDot = rubberBand.querySelector("circle");
-    cursorDot.setAttribute("cx", p2.x);
-    cursorDot.setAttribute("cy", p2.y);
+    rubberBand.querySelector(".rb-shadow").setAttribute("d", shadowPath);
+    rubberBand.querySelector(".rb-border").setAttribute("d", pathData);
+    const bodyPath = rubberBand.querySelector(".rb-body");
+    bodyPath.setAttribute("d", pathData);
+    bodyPath.setAttribute("stroke", this.activeColor);
+    rubberBand.querySelector(".rb-specular").setAttribute("d", pathData);
+
+    const startPlug = rubberBand.querySelector(".rb-plug-start");
+    startPlug.setAttribute("transform", `translate(${p1.x}, ${p1.y})`);
+    startPlug.querySelector("circle").setAttribute("fill", this.activeColor);
+
+    const endPlug = rubberBand.querySelector(".rb-plug-end");
+    endPlug.setAttribute("transform", `translate(${p2.x}, ${p2.y})`);
+    endPlug.querySelector("circle").setAttribute("fill", this.activeColor);
+
+    // Drop target snap halo
+    let dropGlow = this.svg.querySelector(".jack-drop-glow");
+    if (this.hoverTargetJack && this.jackCoords[this.hoverTargetJack]) {
+      const hp = this.jackCoords[this.hoverTargetJack];
+      if (!dropGlow) {
+        dropGlow = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        dropGlow.setAttribute("class", "jack-drop-glow");
+        dropGlow.setAttribute("r", "16");
+        dropGlow.setAttribute("fill", "rgba(56, 189, 248, 0.2)");
+        dropGlow.setAttribute("stroke", "#38bdf8");
+        dropGlow.setAttribute("stroke-width", "2.5");
+        dropGlow.setAttribute("pointer-events", "none");
+        dropGlow.setAttribute("filter", "url(#glowTeal)");
+        this.svg.querySelector("#wires-layer").appendChild(dropGlow);
+      }
+      dropGlow.setAttribute("cx", hp.x);
+      dropGlow.setAttribute("cy", hp.y);
+    } else if (dropGlow) {
+      dropGlow.remove();
+    }
+  }
+
+  // High performance cord-layer update (instant 60fps with 60+ cords)
+  renderCordsOnly() {
+    const layer = this.svg.querySelector("#wires-layer");
+    if (!layer) return;
+
+    let svg = "";
+    for (const w of this.engine.wires) {
+      const p1 = this.jackCoords[w.from];
+      const p2 = this.jackCoords[w.to];
+      if (p1 && p2) {
+        svg += SVG_COMPONENTS.renderPatchCord(w, p1, p2, this.selectedCordId === w.id);
+      }
+    }
+    layer.innerHTML = svg;
+
+    // Highlight selected source jack if active
+    const activeJack = this.dragStartJack || this.selectedJack;
+    this.svg.querySelectorAll(".jack-selection-ring").forEach(el => el.setAttribute("opacity", "0"));
+    if (activeJack) {
+      const g = this.svg.querySelector(`[data-jack="${activeJack}"]`);
+      if (g) {
+        const ring = g.querySelector(".jack-selection-ring");
+        if (ring) {
+          ring.setAttribute("opacity", "1");
+          ring.setAttribute("stroke", this.activeColor);
+        }
+      }
+    }
   }
 
   render() {
@@ -4064,11 +4537,11 @@ class BoardRenderer {
       const p1 = this.jackCoords[w.from];
       const p2 = this.jackCoords[w.to];
       if (p1 && p2) {
-        wiresSvg += SVG_COMPONENTS.renderPatchCord(w, p1, p2);
+        wiresSvg += SVG_COMPONENTS.renderPatchCord(w, p1, p2, this.selectedCordId === w.id);
       }
     }
 
-    svgContent += `<g id="wires-layer">${wiresSvg}</g>`;
+    svgContent += `<g id="wires-layer" pointer-events="none">${wiresSvg}</g>`;
 
     this.svg.innerHTML = svgContent;
 
@@ -4682,32 +5155,46 @@ class LabConsole {
     const btnExport = this.container.querySelector("#btn-export-wires");
     if (btnExport) {
       btnExport.addEventListener("click", () => {
-        const json = JSON.stringify(this.engine.wires, null, 2);
-        navigator.clipboard.writeText(json).then(() => {
-          alert("Wire configuration copied to clipboard!");
-        }).catch(() => {
-          prompt("Copy wire configuration JSON:", json);
-        });
+        const json = this.engine.exportCircuitJSON();
+        try {
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `dit9005_circuit_${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          prompt("Copy Circuit JSON:", json);
+        }
       });
     }
 
     const btnImport = this.container.querySelector("#btn-import-wires");
     if (btnImport) {
       btnImport.addEventListener("click", () => {
-        const json = prompt("Paste Wire configuration JSON:");
-        if (json) {
-          try {
-            const arr = JSON.parse(json);
-            if (Array.isArray(arr)) {
-              this.engine.wires = arr;
-              this.engine.evaluate();
-              this.board.render();
-              this.render();
-            }
-          } catch (err) {
-            alert("Invalid JSON format!");
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json,application/json";
+        input.onchange = (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (re) => {
+              const ok = this.engine.importCircuitJSON(re.target.result);
+              if (ok) {
+                this.board.render();
+                this.render();
+              } else {
+                alert("Failed to import circuit JSON: Invalid format.");
+              }
+            };
+            reader.readAsText(file);
           }
-        }
+        };
+        input.click();
       });
     }
   }
@@ -4814,19 +5301,37 @@ document.addEventListener("DOMContentLoaded", () => {
     updateStatusBar();
   });
 
-  // 5. Header Control Bindings
+  // 5. Header Control Bindings & Event Listeners
+  window.addEventListener("cordsChanged", () => {
+    updateStatusBar();
+  });
+
   const colorSwatches = document.querySelectorAll(".color-swatch");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("active"));
       swatch.classList.add("active");
-      board.setWireColor(swatch.dataset.color);
+      board.setColor(swatch.dataset.color);
     });
   });
 
   const btnUndo = document.getElementById("btn-undo-wire");
   if (btnUndo) {
-    btnUndo.addEventListener("click", () => engine.undoWire());
+    btnUndo.addEventListener("click", () => engine.undo());
+  }
+
+  const btnRedo = document.getElementById("btn-redo-wire");
+  if (btnRedo) {
+    btnRedo.addEventListener("click", () => engine.redo());
+  }
+
+  const btnClearCords = document.getElementById("btn-clear-cords");
+  if (btnClearCords) {
+    btnClearCords.addEventListener("click", () => {
+      if (engine.wires.length > 0) {
+        engine.clearWires();
+      }
+    });
   }
 
   const btnReset = document.getElementById("btn-reset-trainer");
@@ -4913,8 +5418,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 7. Load Default Initial Circuit (Exp 1: AND gate)
-  consolePanel.autoWireExperiment(EXPERIMENTS[0]);
+  // 7. Load Circuit: Restore from localStorage if present, else load Exp 1
+  const hasSavedCircuit = engine.loadSavedCircuit();
+  if (!hasSavedCircuit) {
+    consolePanel.autoWireExperiment(EXPERIMENTS[0]);
+  }
   board.render();
   updateStatusBar();
 });

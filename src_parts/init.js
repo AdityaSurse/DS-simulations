@@ -99,19 +99,37 @@ document.addEventListener("DOMContentLoaded", () => {
     updateStatusBar();
   });
 
-  // 5. Header Control Bindings
+  // 5. Header Control Bindings & Event Listeners
+  window.addEventListener("cordsChanged", () => {
+    updateStatusBar();
+  });
+
   const colorSwatches = document.querySelectorAll(".color-swatch");
   colorSwatches.forEach(swatch => {
     swatch.addEventListener("click", () => {
       colorSwatches.forEach(s => s.classList.remove("active"));
       swatch.classList.add("active");
-      board.setWireColor(swatch.dataset.color);
+      board.setColor(swatch.dataset.color);
     });
   });
 
   const btnUndo = document.getElementById("btn-undo-wire");
   if (btnUndo) {
-    btnUndo.addEventListener("click", () => engine.undoWire());
+    btnUndo.addEventListener("click", () => engine.undo());
+  }
+
+  const btnRedo = document.getElementById("btn-redo-wire");
+  if (btnRedo) {
+    btnRedo.addEventListener("click", () => engine.redo());
+  }
+
+  const btnClearCords = document.getElementById("btn-clear-cords");
+  if (btnClearCords) {
+    btnClearCords.addEventListener("click", () => {
+      if (engine.wires.length > 0) {
+        engine.clearWires();
+      }
+    });
   }
 
   const btnReset = document.getElementById("btn-reset-trainer");
@@ -198,8 +216,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 7. Load Default Initial Circuit (Exp 1: AND gate)
-  consolePanel.autoWireExperiment(EXPERIMENTS[0]);
+  // 7. Load Circuit: Restore from localStorage if present, else load Exp 1
+  const hasSavedCircuit = engine.loadSavedCircuit();
+  if (!hasSavedCircuit) {
+    consolePanel.autoWireExperiment(EXPERIMENTS[0]);
+  }
   board.render();
   updateStatusBar();
 });

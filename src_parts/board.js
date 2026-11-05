@@ -7,6 +7,11 @@ class BoardRenderer {
 
     this.jackCoords = {};
     this.selectedJack = null;
+    this.dragStartJack = null;
+    this.dragStartPos = null;
+    this.isDraggingCord = false;
+    this.hoverTargetJack = null;
+    this.selectedCordId = null;
     this.tempMousePos = null;
     this.activeView = "full";
     this.activeColor = "#f5c518";
@@ -65,7 +70,7 @@ class BoardRenderer {
   }
 
   setWireColor(color) {
-    this.activeColor = color;
+    this.setColor(color);
   }
 
   setDeleteMode(val) {
@@ -176,19 +181,63 @@ class BoardRenderer {
   }
 
   bindEvents() {
-    // Click interactions
+    // Mousedown for starting wire drag, switch flips, pulsers, knob
+    this.svg.addEventListener("mousedown", (e) => {
+      if (this.isPanning || this.isDraggingKnob) return;
+      if (e.button !== 0) return; // Left click only for dragging
+
+      // Jack mousedown -> start drag-to-connect
+      const jackGroup = e.target.closest(".jack-group");
+      if (jackGroup) {
+        const jackId = jackGroup.dataset.jack;
+        this.dragStartJack = jackId;
+        this.dragStartPos = this.getSVGCoords(e);
+        this.tempMousePos = this.dragStartPos;
+        this.isDraggingCord = true;
+        this.updateRubberBand();
+        e.preventDefault();
+        return;
+      }
+
+      // Manual Pulser press
+      const btnGroup = e.target.closest(".pushbutton-group");
+      if (btnGroup) {
+        const pulserNum = parseInt(btnGroup.dataset.pulser, 10);
+        this.engine.setPulser(pulserNum, true);
+        e.preventDefault();
+      }
+    });
+
+    // Click interactions (switches, levers, clock controls, cord selection/deletion)
     this.svg.addEventListener("click", (e) => {
-      // Wire deletion
+      // 1. Midpoint ✕ delete handle on cord
+      const deleteHandle = e.target.closest(".cord-delete-handle");
+      if (deleteHandle) {
+        const wireId = deleteHandle.dataset.wireId;
+        this.engine.removeWire(wireId);
+        this.selectedCordId = null;
+        this.renderCordsOnly();
+        return;
+      }
+
+      // 2. Click on a patch cord (select it or delete in deleteMode)
       const wireGroup = e.target.closest(".patch-cord-group");
       if (wireGroup) {
         const wireId = wireGroup.dataset.wireId;
         if (this.deleteMode || e.altKey) {
           this.engine.removeWire(wireId);
+          this.selectedCordId = null;
+          this.renderCordsOnly();
           return;
         }
+
+        // Toggle selection
+        this.selectedCordId = (this.selectedCordId === wireId ? null : wireId);
+        this.renderCordsOnly();
+        return;
       }
 
-      // Toggle Switch
+      // 3. Toggle Switch
       const switchGroup = e.target.closest(".switch-group");
       if (switchGroup) {
         const swId = switchGroup.dataset.switch;
@@ -196,7 +245,7 @@ class BoardRenderer {
         return;
       }
 
-      // ZIF Socket Lever Toggle
+      // 4. ZIF Socket Lever Toggle
       const zifLever = e.target.closest(".zif-lever");
       if (zifLever) {
         const sId = zifLever.dataset.socket;
@@ -205,58 +254,95 @@ class BoardRenderer {
         return;
       }
 
-      // Clock Run/Pause button
+      // 5. Clock Run/Pause button
       const clkToggle = e.target.closest("#btn-clk-run-pause");
       if (clkToggle) {
         this.engine.toggleClockRun();
         return;
       }
 
-      // Clock Step button
+      // 6. Clock Step button
       const clkStep = e.target.closest("#btn-clk-step");
       if (clkStep) {
         this.engine.stepClock();
         return;
       }
 
-      // Jack interaction
-      const jackGroup = e.target.closest(".jack-group");
-      if (jackGroup) {
-        const jackId = jackGroup.dataset.jack;
-        if (this.deleteMode) {
-          const attached = this.engine.wires.filter(w => w.from === jackId || w.to === jackId);
-          attached.forEach(w => this.engine.removeWire(w.id));
-          return;
-        }
-
-        if (!this.selectedJack) {
-          this.selectedJack = jackId;
-          this.render();
-        } else {
-          if (this.selectedJack !== jackId) {
-            this.engine.addWire(this.selectedJack, jackId, this.activeColor);
-          }
-          this.selectedJack = null;
-          this.tempMousePos = null;
-          this.render();
-        }
-        return;
+      // 7. Clicked on empty board background -> deselect
+      if (this.selectedCordId) {
+        this.selectedCordId = null;
+        this.renderCordsOnly();
       }
-
-      // Clicked outside on board
-      if (this.selectedJack) {
+      if (this.selectedJack && !this.isDraggingCord) {
         this.selectedJack = null;
         this.tempMousePos = null;
-        this.render();
+        this.updateRubberBand();
       }
     });
 
-    // Right-click wire deletion
+    // Window mouseup: ends drag-and-drop connecting or pulser press
+    window.addEventListener("mouseup", (e) => {
+      // Pulser releases
+      if (this.engine.board.pulsers[1].pressed) this.engine.setPulser(1, false);
+      if (this.engine.board.pulsers[2].pressed) this.engine.setPulser(2, false);
+
+      // Handle cord dragging completion
+      if (this.isDraggingCord && this.dragStartJack) {
+        const curPos = this.getSVGCoords(e);
+        const movedDist = Math.hypot(curPos.x - this.dragStartPos.x, curPos.y - this.dragStartPos.y);
+
+        // Find drop target jack under pointer
+        const elem = document.elementFromPoint(e.clientX, e.clientY);
+        const targetGroup = elem ? elem.closest(".jack-group") : null;
+        const targetJack = targetGroup ? targetGroup.dataset.jack : null;
+
+        if (targetJack && targetJack !== this.dragStartJack) {
+          // Dragged and dropped onto a different jack!
+          this.engine.addWire(this.dragStartJack, targetJack, this.activeColor);
+          this.selectedJack = null;
+          this.selectedCordId = null;
+        } else if (movedDist < 8) {
+          // It was a click on the jack! Support click-to-click connection
+          if (!this.selectedJack) {
+            this.selectedJack = this.dragStartJack;
+          } else if (this.selectedJack === this.dragStartJack) {
+            this.selectedJack = null;
+          } else {
+            this.engine.addWire(this.selectedJack, this.dragStartJack, this.activeColor);
+            this.selectedJack = null;
+          }
+        } else {
+          // Dragged into empty space -> invalid drop cancelled gracefully
+          if (this.selectedJack === this.dragStartJack) {
+            this.selectedJack = null;
+          }
+        }
+
+        this.isDraggingCord = false;
+        this.dragStartJack = null;
+        this.dragStartPos = null;
+        this.hoverTargetJack = null;
+        this.tempMousePos = null;
+        this.updateRubberBand();
+        this.renderCordsOnly();
+      }
+    });
+
+    // Right-click cord deletion
     this.svg.addEventListener("contextmenu", (e) => {
       e.preventDefault();
+      const deleteHandle = e.target.closest(".cord-delete-handle");
+      if (deleteHandle) {
+        this.engine.removeWire(deleteHandle.dataset.wireId);
+        this.selectedCordId = null;
+        this.renderCordsOnly();
+        return;
+      }
       const wireGroup = e.target.closest(".patch-cord-group");
       if (wireGroup) {
         this.engine.removeWire(wireGroup.dataset.wireId);
+        this.selectedCordId = null;
+        this.renderCordsOnly();
         return;
       }
       const jackGroup = e.target.closest(".jack-group");
@@ -265,17 +351,30 @@ class BoardRenderer {
         const attached = this.engine.wires.filter(w => w.from === jackId || w.to === jackId);
         if (attached.length > 0) {
           this.engine.removeWire(attached[attached.length - 1].id);
+          this.selectedCordId = null;
+          this.renderCordsOnly();
         }
       }
     });
 
-    // Mouse move for rubber-band wire, probe HUD, and drop target highlight
+    // Mouse move for rubber-band wire, hover snap, and probe HUD
     this.svg.addEventListener("mousemove", (e) => {
       if (this.isPanning || this.isDraggingKnob) return;
       const coords = this.getSVGCoords(e);
-      if (this.selectedJack) {
+
+      if (this.isDraggingCord || this.selectedJack) {
         this.tempMousePos = coords;
+
+        // Check if mouse is hovering over candidate target jack
+        const jackGroup = e.target.closest(".jack-group");
+        const activeJack = this.dragStartJack || this.selectedJack;
+        if (jackGroup && jackGroup.dataset.jack !== activeJack) {
+          this.hoverTargetJack = jackGroup.dataset.jack;
+        } else {
+          this.hoverTargetJack = null;
+        }
         this.updateRubberBand();
+        return; // Suppress probe HUD while wiring
       }
 
       const jackGroup = e.target.closest(".jack-group");
@@ -287,29 +386,36 @@ class BoardRenderer {
       }
     });
 
-    // Manual Pulser press & release
-    this.svg.addEventListener("mousedown", (e) => {
-      const btnGroup = e.target.closest(".pushbutton-group");
-      if (btnGroup) {
-        const pulserNum = parseInt(btnGroup.dataset.pulser, 10);
-        this.engine.setPulser(pulserNum, true);
-        e.preventDefault();
-      }
-    });
-
-    window.addEventListener("mouseup", () => {
-      if (this.engine.board.pulsers[1].pressed) this.engine.setPulser(1, false);
-      if (this.engine.board.pulsers[2].pressed) this.engine.setPulser(2, false);
-    });
-
-    // Keyboard shortcuts
+    // Keyboard shortcuts: Delete, Escape, Undo/Redo, Pulsers, Clock
     window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (this.selectedCordId) {
+          e.preventDefault();
+          this.engine.removeWire(this.selectedCordId);
+          this.selectedCordId = null;
+          this.renderCordsOnly();
+        }
+      } else if (e.key === "Escape") {
         this.selectedJack = null;
+        this.selectedCordId = null;
+        this.isDraggingCord = false;
+        this.dragStartJack = null;
+        this.hoverTargetJack = null;
         this.tempMousePos = null;
-        this.render();
-      } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
-        this.engine.undoWire();
+        this.updateRubberBand();
+        this.renderCordsOnly();
+      } else if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          this.engine.redo();
+        } else {
+          this.engine.undo();
+        }
+        this.renderCordsOnly();
+      } else if ((e.key === "y" || e.key === "Y") && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        this.engine.redo();
+        this.renderCordsOnly();
       } else if (e.key === " " && !e.repeat && document.activeElement.tagName !== "INPUT") {
         e.preventDefault();
         this.engine.setPulser(1, true);
@@ -329,43 +435,135 @@ class BoardRenderer {
     });
   }
 
+  setColor(color) {
+    this.activeColor = color;
+    if (this.selectedCordId) {
+      this.engine.setWireColor(this.selectedCordId, color);
+      this.renderCordsOnly();
+    }
+  }
+
   updateRubberBand() {
     let rubberBand = this.svg.querySelector("#rubber-band-wire");
-    if (!this.selectedJack || !this.tempMousePos) {
+    const activeJack = this.dragStartJack || this.selectedJack;
+
+    if (!activeJack || !this.tempMousePos) {
       if (rubberBand) rubberBand.remove();
+      // Remove any leftover drop target glow rings
+      this.svg.querySelectorAll(".jack-drop-glow").forEach(el => el.remove());
       return;
     }
 
-    const p1 = this.jackCoords[this.selectedJack];
-    const p2 = this.tempMousePos;
+    const p1 = this.jackCoords[activeJack];
+    // If hovering over target jack, snap rubber band tip to that jack's center!
+    const p2 = (this.hoverTargetJack && this.jackCoords[this.hoverTargetJack])
+      ? this.jackCoords[this.hoverTargetJack]
+      : this.tempMousePos;
+
     if (!p1) return;
 
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const dist = Math.hypot(dx, dy);
-    const droop = Math.max(25, 20 + dist * 0.15);
-    const midX = (p1.x + p2.x) / 2;
-    const midY = Math.max(p1.y, p2.y) + droop;
 
-    const pathData = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`;
+    // Natural gravity sag using Cubic Bezier
+    const droop = Math.max(35, 25 + dist * 0.22);
+    const cx1 = p1.x + dx * 0.25;
+    const cy1 = p1.y + droop + Math.max(0, dy * 0.25);
+    const cx2 = p2.x - dx * 0.25;
+    const cy2 = p2.y + droop - Math.max(0, -dy * 0.25);
+
+    const pathData = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
+    const shadowPath = `M ${p1.x} ${p1.y + 8} C ${cx1} ${cy1 + 16}, ${cx2} ${cy2 + 16}, ${p2.x} ${p2.y + 8}`;
 
     if (!rubberBand) {
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
       g.setAttribute("id", "rubber-band-wire");
+      g.setAttribute("pointer-events", "none");
       g.innerHTML = `
-        <path class="rb-outer" fill="none" stroke="${this.activeColor}" stroke-width="5" stroke-linecap="round" opacity="0.8" />
-        <path class="rb-inner" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
-        <circle cx="${p2.x}" cy="${p2.y}" r="6" fill="${this.activeColor}" stroke="#fff" stroke-width="1.5" />
+        <path class="rb-shadow" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" />
+        <path class="rb-border" fill="none" stroke="#090d14" stroke-width="7" stroke-linecap="round" />
+        <path class="rb-body" fill="none" stroke="${this.activeColor}" stroke-width="5" stroke-linecap="round" opacity="0.95" />
+        <path class="rb-specular" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.6" />
+        <g class="rb-plug-start" transform="translate(${p1.x}, ${p1.y})">
+          <circle r="8" fill="${this.activeColor}" stroke="#0f172a" stroke-width="1.4" filter="url(#shadowBevel)" />
+          <circle r="4.8" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.8" />
+        </g>
+        <g class="rb-plug-end" transform="translate(${p2.x}, ${p2.y})">
+          <circle r="8" fill="${this.activeColor}" stroke="#0f172a" stroke-width="1.4" filter="url(#shadowBevel)" />
+          <circle r="4.8" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.8" />
+          <circle r="12" fill="none" stroke="${this.activeColor}" stroke-width="2" class="jack-selection-ring" opacity="0.9" />
+        </g>
       `;
       this.svg.querySelector("#wires-layer").appendChild(g);
       rubberBand = g;
     }
 
-    rubberBand.querySelector(".rb-outer").setAttribute("d", pathData);
-    rubberBand.querySelector(".rb-inner").setAttribute("d", pathData);
-    const cursorDot = rubberBand.querySelector("circle");
-    cursorDot.setAttribute("cx", p2.x);
-    cursorDot.setAttribute("cy", p2.y);
+    rubberBand.querySelector(".rb-shadow").setAttribute("d", shadowPath);
+    rubberBand.querySelector(".rb-border").setAttribute("d", pathData);
+    const bodyPath = rubberBand.querySelector(".rb-body");
+    bodyPath.setAttribute("d", pathData);
+    bodyPath.setAttribute("stroke", this.activeColor);
+    rubberBand.querySelector(".rb-specular").setAttribute("d", pathData);
+
+    const startPlug = rubberBand.querySelector(".rb-plug-start");
+    startPlug.setAttribute("transform", `translate(${p1.x}, ${p1.y})`);
+    startPlug.querySelector("circle").setAttribute("fill", this.activeColor);
+
+    const endPlug = rubberBand.querySelector(".rb-plug-end");
+    endPlug.setAttribute("transform", `translate(${p2.x}, ${p2.y})`);
+    endPlug.querySelector("circle").setAttribute("fill", this.activeColor);
+
+    // Drop target snap halo
+    let dropGlow = this.svg.querySelector(".jack-drop-glow");
+    if (this.hoverTargetJack && this.jackCoords[this.hoverTargetJack]) {
+      const hp = this.jackCoords[this.hoverTargetJack];
+      if (!dropGlow) {
+        dropGlow = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        dropGlow.setAttribute("class", "jack-drop-glow");
+        dropGlow.setAttribute("r", "16");
+        dropGlow.setAttribute("fill", "rgba(56, 189, 248, 0.2)");
+        dropGlow.setAttribute("stroke", "#38bdf8");
+        dropGlow.setAttribute("stroke-width", "2.5");
+        dropGlow.setAttribute("pointer-events", "none");
+        dropGlow.setAttribute("filter", "url(#glowTeal)");
+        this.svg.querySelector("#wires-layer").appendChild(dropGlow);
+      }
+      dropGlow.setAttribute("cx", hp.x);
+      dropGlow.setAttribute("cy", hp.y);
+    } else if (dropGlow) {
+      dropGlow.remove();
+    }
+  }
+
+  // High performance cord-layer update (instant 60fps with 60+ cords)
+  renderCordsOnly() {
+    const layer = this.svg.querySelector("#wires-layer");
+    if (!layer) return;
+
+    let svg = "";
+    for (const w of this.engine.wires) {
+      const p1 = this.jackCoords[w.from];
+      const p2 = this.jackCoords[w.to];
+      if (p1 && p2) {
+        svg += SVG_COMPONENTS.renderPatchCord(w, p1, p2, this.selectedCordId === w.id);
+      }
+    }
+    layer.innerHTML = svg;
+
+    // Highlight selected source jack if active
+    const activeJack = this.dragStartJack || this.selectedJack;
+    this.svg.querySelectorAll(".jack-selection-ring").forEach(el => el.setAttribute("opacity", "0"));
+    if (activeJack) {
+      const g = this.svg.querySelector(`[data-jack="${activeJack}"]`);
+      if (g) {
+        const ring = g.querySelector(".jack-selection-ring");
+        if (ring) {
+          ring.setAttribute("opacity", "1");
+          ring.setAttribute("stroke", this.activeColor);
+        }
+      }
+    }
   }
 
   render() {
@@ -753,11 +951,11 @@ class BoardRenderer {
       const p1 = this.jackCoords[w.from];
       const p2 = this.jackCoords[w.to];
       if (p1 && p2) {
-        wiresSvg += SVG_COMPONENTS.renderPatchCord(w, p1, p2);
+        wiresSvg += SVG_COMPONENTS.renderPatchCord(w, p1, p2, this.selectedCordId === w.id);
       }
     }
 
-    svgContent += `<g id="wires-layer">${wiresSvg}</g>`;
+    svgContent += `<g id="wires-layer" pointer-events="none">${wiresSvg}</g>`;
 
     this.svg.innerHTML = svgContent;
 

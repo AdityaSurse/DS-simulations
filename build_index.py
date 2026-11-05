@@ -86,10 +86,23 @@ def build():
   transition: opacity 0.15s ease;
 }
 .patch-cord-group:hover {
-  opacity: 0.85;
+  opacity: 0.95;
 }
-.patch-cord-group:hover path:nth-child(3) {
-  stroke-width: 7;
+.patch-cord-group:hover .cord-delete-handle,
+.patch-cord-group.selected .cord-delete-handle {
+  opacity: 1;
+  pointer-events: all;
+}
+.cord-delete-handle {
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.12s ease;
+}
+.cord-delete-handle:hover {
+  transform: scale(1.3);
+}
+.cord-delete-handle.visible {
+  opacity: 1;
+  pointer-events: all;
 }
 
 @keyframes pulse-ring {
@@ -99,6 +112,10 @@ def build():
 }
 .jack-selection-ring {
   animation: pulse-ring 1.2s infinite ease-in-out;
+  transform-origin: center center;
+}
+.jack-drop-glow {
+  animation: pulse-ring 1s infinite ease-in-out;
   transform-origin: center center;
 }
 """
@@ -147,18 +164,20 @@ def build():
       <button class="btn" id="btn-open-guide" title="Open Lab Guide & Controls">📖 Guide</button>
       <button class="btn" id="btn-open-manual" title="View Datasheet Reference">📋 Manual</button>
       <button class="btn" id="btn-reset-trainer" title="Reset all patch cords and switches">↺ Reset</button>
+      <button class="btn" id="btn-clear-cords" title="Clear All Patch Cords">⊘ Clear Cords</button>
 
-      <!-- Wire Color Palette -->
+      <!-- Wire Color Palette (Yellow, Red, Blue, Green, White, Black) -->
       <div class="wire-palette">
         <div class="color-swatch active" data-color="#f5c518" style="background: #f5c518;" title="Yellow Wire (Default)"></div>
         <div class="color-swatch" data-color="#ef4444" style="background: #ef4444;" title="Red (+5V / VCC)"></div>
-        <div class="color-swatch" data-color="#1f2937" style="background: #1f2937;" title="Black (GND)"></div>
-        <div class="color-swatch" data-color="#38bdf8" style="background: #38bdf8;" title="Blue (Signals)"></div>
-        <div class="color-swatch" data-color="#22c55e" style="background: #22c55e;" title="Green (Clock/Pulse)"></div>
+        <div class="color-swatch" data-color="#3b82f6" style="background: #3b82f6;" title="Blue (Signals)"></div>
+        <div class="color-swatch" data-color="#10b981" style="background: #10b981;" title="Green (Clock/Pulse)"></div>
         <div class="color-swatch" data-color="#f8fafc" style="background: #f8fafc;" title="White"></div>
+        <div class="color-swatch" data-color="#1e293b" style="background: #1e293b;" title="Black (GND)"></div>
       </div>
 
       <button class="btn" id="btn-undo-wire" title="Undo Last Wire (Ctrl+Z)">⤺ Undo</button>
+      <button class="btn" id="btn-redo-wire" title="Redo Wire (Ctrl+Y)">⤻ Redo</button>
       <button class="btn" id="btn-delete-mode" title="Click wire to remove">✕ Delete Wire</button>
 
       <!-- Master Power Switch in Header -->

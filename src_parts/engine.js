@@ -3,8 +3,10 @@ class TTLEngine {
   constructor() {
     this.masterPower = true;
     this.strictPowerMode = true; // Default strict mode from lab addendum
-    this.wires = []; // Array of { id, from, to, color }
+    this.wires = []; // Array of { id, from, to, a, b, color }
     this.nextWireId = 1;
+    this.undoStack = [];
+    this.redoStack = [];
 
     // Simulation Virtual Time (in seconds)
     this.sim = {
@@ -18,6 +20,7 @@ class TTLEngine {
 
     // Single unified board state object exposed for external access
     this.board = {
+      cords: this.wires,
       sockets: {
         U1: { id: "U1", chip: null, alignment: "left", leverLocked: true, state: {} },
         U2: { id: "U2", chip: null, alignment: "left", leverLocked: true, state: {} },
@@ -315,6 +318,7 @@ class TTLEngine {
     this.strictPowerMode = strict;
     this.evaluate();
     this.notify();
+    this.autoSave();
   }
 
   toggleInput(jackId) {
@@ -323,6 +327,7 @@ class TTLEngine {
       this.playClickSound(this.inputs[jackId] === 1 ? 950 : 700);
       this.evaluate();
       this.notify();
+      this.autoSave();
     }
   }
 
@@ -335,6 +340,7 @@ class TTLEngine {
       this.sockets[socketId].lastOutputs = null;
       this.evaluate();
       this.notify();
+      this.autoSave();
     }
   }
 
@@ -345,6 +351,7 @@ class TTLEngine {
       this.sockets[socketId].lastOutputs = null;
       this.evaluate();
       this.notify();
+      this.autoSave();
     }
   }
 
@@ -354,6 +361,7 @@ class TTLEngine {
       this.playClickSound(locked ? 500 : 750);
       this.evaluate();
       this.notify();
+      this.autoSave();
     }
   }
 
@@ -388,8 +396,17 @@ class TTLEngine {
     return null;
   }
 
-  // Wire Management
-  addWire(from, to, color = "#f5c518") {
+  // Wire / Patch Cord Management
+  emitCordsChanged() {
+    this.board.cords = this.wires;
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(new CustomEvent("cordsChanged", {
+        detail: { cords: this.board.cords, count: this.board.cords.length }
+      }));
+    }
+  }
+
+  addWire(from, to, color = "#f5c518", recordHistory = true) {
     if (!from || !to || from === to) return false;
     const exists = this.wires.some(w =>
       (w.from === from && w.to === to) || (w.from === to && w.to === from)
@@ -400,45 +417,251 @@ class TTLEngine {
       id: `W_${this.nextWireId++}`,
       from,
       to,
+      a: from,
+      b: to,
       color
     };
     this.wires.push(wire);
+    this.board.cords = this.wires;
+
+    if (recordHistory) {
+      this.undoStack.push({ type: "add", wire: { ...wire } });
+      this.redoStack = [];
+    }
+
     this.playClickSound(450);
     this.evaluate();
+    this.emitCordsChanged();
     this.notify();
+    this.autoSave();
     return wire;
   }
 
-  removeWire(wireId) {
+  removeWire(wireId, recordHistory = true) {
     const idx = this.wires.findIndex(w => w.id === wireId);
     if (idx !== -1) {
+      const removedWire = this.wires[idx];
       this.wires.splice(idx, 1);
+      this.board.cords = this.wires;
+
+      if (recordHistory) {
+        this.undoStack.push({ type: "remove", wire: { ...removedWire } });
+        this.redoStack = [];
+      }
+
       this.playClickSound(350);
       this.evaluate();
+      this.emitCordsChanged();
       this.notify();
+      this.autoSave();
       return true;
     }
     return false;
+  }
+
+  setWireColor(wireId, newColor, recordHistory = true) {
+    const w = this.wires.find(x => x.id === wireId);
+    if (w && w.color !== newColor) {
+      const oldColor = w.color;
+      w.color = newColor;
+
+      if (recordHistory) {
+        this.undoStack.push({ type: "color", wireId, oldColor, newColor });
+        this.redoStack = [];
+      }
+
+      this.playClickSound(400);
+      this.emitCordsChanged();
+      this.notify();
+      this.autoSave();
+      return true;
+    }
+    return false;
+  }
+
+  undo() {
+    if (this.undoStack.length === 0) return false;
+    const item = this.undoStack.pop();
+
+    if (item.type === "add") {
+      const idx = this.wires.findIndex(w => w.id === item.wire.id);
+      if (idx !== -1) {
+        this.wires.splice(idx, 1);
+        this.redoStack.push({ type: "add", wire: item.wire });
+      }
+    } else if (item.type === "remove") {
+      this.wires.push(item.wire);
+      this.redoStack.push({ type: "remove", wire: item.wire });
+    } else if (item.type === "clear") {
+      this.wires = [...item.wires];
+      this.redoStack.push({ type: "clear", wires: item.wires });
+    } else if (item.type === "color") {
+      const w = this.wires.find(x => x.id === item.wireId);
+      if (w) {
+        w.color = item.oldColor;
+        this.redoStack.push({ type: "color", wireId: item.wireId, oldColor: item.oldColor, newColor: item.newColor });
+      }
+    }
+
+    this.board.cords = this.wires;
+    this.playClickSound(350);
+    this.evaluate();
+    this.emitCordsChanged();
+    this.notify();
+    this.autoSave();
+    return true;
+  }
+
+  redo() {
+    if (this.redoStack.length === 0) return false;
+    const item = this.redoStack.pop();
+
+    if (item.type === "add") {
+      this.wires.push(item.wire);
+      this.undoStack.push({ type: "add", wire: item.wire });
+    } else if (item.type === "remove") {
+      const idx = this.wires.findIndex(w => w.id === item.wire.id);
+      if (idx !== -1) {
+        this.wires.splice(idx, 1);
+        this.undoStack.push({ type: "remove", wire: item.wire });
+      }
+    } else if (item.type === "clear") {
+      this.undoStack.push({ type: "clear", wires: [...this.wires] });
+      this.wires = [];
+    } else if (item.type === "color") {
+      const w = this.wires.find(x => x.id === item.wireId);
+      if (w) {
+        w.color = item.newColor;
+        this.undoStack.push({ type: "color", wireId: item.wireId, oldColor: item.oldColor, newColor: item.newColor });
+      }
+    }
+
+    this.board.cords = this.wires;
+    this.playClickSound(380);
+    this.evaluate();
+    this.emitCordsChanged();
+    this.notify();
+    this.autoSave();
+    return true;
   }
 
   undoWire() {
+    return this.undo();
+  }
+
+  clearWires(recordHistory = true) {
     if (this.wires.length > 0) {
-      this.wires.pop();
-      this.playClickSound(350);
+      if (recordHistory) {
+        this.undoStack.push({ type: "clear", wires: [...this.wires] });
+        this.redoStack = [];
+      }
+      this.wires = [];
+      this.board.cords = this.wires;
+      this.playClickSound(300);
       this.evaluate();
+      this.emitCordsChanged();
       this.notify();
+      this.autoSave();
       return true;
     }
     return false;
   }
 
-  clearWires() {
-    if (this.wires.length > 0) {
-      this.wires = [];
-      this.playClickSound(300);
+  // Circuit Persistence & JSON Export / Import
+  exportCircuitJSON() {
+    const data = {
+      appName: "DIT 9005 Simulator",
+      version: "1.0",
+      timestamp: new Date().toISOString(),
+      cords: this.wires.map(w => ({
+        id: w.id,
+        a: w.a || w.from,
+        b: w.b || w.to,
+        from: w.from,
+        to: w.to,
+        color: w.color
+      })),
+      sockets: Object.entries(this.sockets).reduce((acc, [k, v]) => {
+        acc[k] = { chip: v.chip, alignment: v.alignment, leverLocked: v.leverLocked };
+        return acc;
+      }, {}),
+      switches: { ...this.inputs },
+      strictPowerMode: this.strictPowerMode
+    };
+    return JSON.stringify(data, null, 2);
+  }
+
+  importCircuitJSON(jsonStr) {
+    try {
+      const data = typeof jsonStr === "string" ? JSON.parse(jsonStr) : jsonStr;
+      if (!data || !Array.isArray(data.cords)) {
+        throw new Error("Invalid circuit format: missing cords array");
+      }
+
+      this.clearWires(false);
+      this.undoStack = [];
+      this.redoStack = [];
+
+      if (data.sockets) {
+        for (const [sId, sInfo] of Object.entries(data.sockets)) {
+          if (this.sockets[sId]) {
+            this.sockets[sId].chip = sInfo.chip || null;
+            this.sockets[sId].alignment = sInfo.alignment || "left";
+            this.sockets[sId].leverLocked = sInfo.leverLocked !== undefined ? sInfo.leverLocked : true;
+            this.sockets[sId].state = {};
+            this.sockets[sId].lastOutputs = null;
+          }
+        }
+      }
+
+      if (data.switches) {
+        for (const [swId, val] of Object.entries(data.switches)) {
+          if (this.inputs[swId] !== undefined) this.inputs[swId] = val;
+        }
+      }
+
+      if (data.strictPowerMode !== undefined) {
+        this.strictPowerMode = !!data.strictPowerMode;
+      }
+
+      for (const c of data.cords) {
+        const from = c.a || c.from;
+        const to = c.b || c.to;
+        if (from && to) {
+          this.addWire(from, to, c.color || "#f5c518", false);
+        }
+      }
+
       this.evaluate();
+      this.emitCordsChanged();
       this.notify();
+      this.autoSave();
+      return true;
+    } catch (err) {
+      console.error("Failed to import circuit JSON:", err);
+      return false;
     }
+  }
+
+  autoSave() {
+    if (typeof localStorage === "undefined") return;
+    try {
+      const json = this.exportCircuitJSON();
+      localStorage.setItem("dit9005_circuit", json);
+    } catch (e) {
+      // Ignore storage quota or access issues
+    }
+  }
+
+  loadSavedCircuit() {
+    if (typeof localStorage === "undefined") return false;
+    try {
+      const saved = localStorage.getItem("dit9005_circuit");
+      if (saved) {
+        return this.importCircuitJSON(saved);
+      }
+    } catch (e) {}
+    return false;
   }
 
   // Simulation Evaluation

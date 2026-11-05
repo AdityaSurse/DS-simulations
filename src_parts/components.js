@@ -527,36 +527,69 @@ const SVG_COMPONENTS = {
     return this.drawICChip({ socketId, chipName, socketX, socketY, socketW, socketH, icPinCount, alignment });
   },
 
-  renderPatchCord(wire, p1, p2) {
+  renderPatchCord(wire, p1, p2, isSelected = false) {
     if (!p1 || !p2) return "";
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const dist = Math.hypot(dx, dy);
 
-    const droop = Math.max(30, 25 + dist * 0.16);
-    const midX = (p1.x + p2.x) / 2;
-    const midY = Math.max(p1.y, p2.y) + droop;
+    // Natural gravity sag proportional to cord length
+    const droop = Math.max(35, 25 + dist * 0.22);
+    const cx1 = p1.x + dx * 0.25;
+    const cy1 = p1.y + droop + Math.max(0, dy * 0.25);
+    const cx2 = p2.x - dx * 0.25;
+    const cy2 = p2.y + droop - Math.max(0, -dy * 0.25);
 
-    const pathData = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`;
-    const shadowPath = `M ${p1.x} ${p1.y + 6} Q ${midX} ${midY + 12} ${p2.x} ${p2.y + 6}`;
+    // Cubic Bezier curve paths
+    const pathData = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
+    const shadowPath = `M ${p1.x} ${p1.y + 8} C ${cx1} ${cy1 + 16}, ${cx2} ${cy2 + 16}, ${p2.x} ${p2.y + 8}`;
     const color = wire.color || "#f5c518";
 
+    // Midpoint on Cubic Bezier at t = 0.5
+    const mx = 0.125 * p1.x + 0.375 * cx1 + 0.375 * cx2 + 0.125 * p2.x;
+    const my = 0.125 * p1.y + 0.375 * cy1 + 0.375 * cy2 + 0.125 * p2.y;
+
     const renderBananaPlug = (pt) => `
-      <g transform="translate(${pt.x}, ${pt.y})">
-        <circle r="7.5" fill="${color}" stroke="#1e293b" stroke-width="1.2" filter="url(#shadowBevel)" />
-        <circle r="4.5" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.8" />
-        <circle r="6" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.5" />
+      <g transform="translate(${pt.x}, ${pt.y})" pointer-events="none">
+        <circle r="8" fill="${color}" stroke="#0f172a" stroke-width="1.4" filter="url(#shadowBevel)" />
+        <circle r="4.8" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.8" />
+        <circle r="6.2" fill="none" stroke="#ffffff" stroke-width="0.9" opacity="0.5" />
       </g>
     `;
 
     return `
-      <g class="patch-cord-group" data-wire-id="${wire.id}">
-        <path d="${shadowPath}" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" />
-        <path d="${pathData}" fill="none" stroke="#111827" stroke-width="7" stroke-linecap="round" />
-        <path d="${pathData}" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" />
-        <path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.45" />
+      <g class="patch-cord-group ${isSelected ? 'selected' : ''}" data-wire-id="${wire.id}">
+        <title>Patch Cord ${wire.id}: ${wire.from} ↔ ${wire.to}</title>
+        <!-- Soft Ground Shadow -->
+        <path d="${shadowPath}" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" pointer-events="none" />
+        
+        <!-- Selection Highlight Halo if Selected -->
+        ${isSelected ? `
+          <path d="${pathData}" fill="none" stroke="#38bdf8" stroke-width="11" stroke-linecap="round" opacity="0.9" filter="url(#glowTeal)" pointer-events="none" />
+          <path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="8" stroke-dasharray="8 6" stroke-linecap="round" opacity="0.9" pointer-events="none" />
+        ` : ''}
+
+        <!-- Dark Outer Border for 3D Depth -->
+        <path d="${pathData}" fill="none" stroke="#090d14" stroke-width="7" stroke-linecap="round" pointer-events="none" />
+        
+        <!-- Main Colored Cord Body -->
+        <path d="${pathData}" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" pointer-events="none" />
+        
+        <!-- Specular Highlight Ridge -->
+        <path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.55" pointer-events="none" />
+        
+        <!-- Invisible Wide Hit-testing Stroke -->
+        <path class="cord-hit-stroke" d="${pathData}" fill="none" stroke="transparent" stroke-width="20" stroke-linecap="round" pointer-events="stroke" cursor="pointer" />
+        
+        <!-- 3D Banana Plugs at both ends -->
         ${renderBananaPlug(p1)}
         ${renderBananaPlug(p2)}
+
+        <!-- Midpoint Delete Handle (Visible on hover or when selected) -->
+        <g class="cord-delete-handle ${isSelected ? 'visible' : ''}" data-wire-id="${wire.id}" transform="translate(${mx}, ${my})" cursor="pointer" pointer-events="all">
+          <circle r="10" fill="#ef4444" stroke="#ffffff" stroke-width="1.8" filter="url(#shadowBevel)" />
+          <path d="M -3.5 -3.5 L 3.5 3.5 M 3.5 -3.5 L -3.5 3.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+        </g>
       </g>
     `;
   }
