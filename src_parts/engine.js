@@ -83,8 +83,11 @@ class TTLEngine {
   get inputs() { return this.board.switches; }
   set inputs(val) { this.board.switches = val; }
   get sockets() { return this.board.sockets; }
+  set sockets(val) { this.board.sockets = val; }
   get pulsers() { return this.board.pulsers; }
+  set pulsers(val) { this.board.pulsers = val; }
   get clock() { return this.board.clock; }
+  set clock(val) { this.board.clock = val; }
 
   onChange(cb) {
     this.changeCallbacks.push(cb);
@@ -755,6 +758,8 @@ class TTLEngine {
 
     // Internal kit ties
     union("PWR.5V_1", "PWR.5V_2");
+    union("PWR.5V_2", "PWR.5V_3");
+    union("PWR.5V_3", "PWR.5V_4");
     union("PWR.12V_1", "PWR.12V_2");
     union("PWR.GND_1", "PWR.GND_2");
     union("PWR.GND_2", "PWR.GND_3");
@@ -780,7 +785,7 @@ class TTLEngine {
     };
 
     const allJacks = new Set([
-      "PWR.5V_1", "PWR.5V_2", "PWR.12V_1", "PWR.12V_2",
+      "PWR.5V_1", "PWR.5V_2", "PWR.5V_3", "PWR.5V_4", "PWR.12V_1", "PWR.12V_2",
       "PWR.GND_1", "PWR.GND_2", "PWR.GND_3", "PWR.GND_4",
       "CLK.POS", "CLK.NEG", "CLK.OUT", "CLK.DIV",
       "PULSER.1.POS", "PULSER.1.NEG", "PULSER.2.POS", "PULSER.2.NEG",
@@ -1290,6 +1295,52 @@ class TTLEngine {
     return results;
   }
 
+  // Clone engine state for non-destructive truth-table and sequence auto-checking
+  clone() {
+    const copy = new TTLEngine();
+    copy.masterPower = this.masterPower;
+    copy.strictPowerMode = this.strictPowerMode;
+    copy.wires = this.wires.map(w => ({ ...w }));
+    copy.nextWireId = this.nextWireId;
+
+    for (const [sId, sock] of Object.entries(this.sockets)) {
+      copy.sockets[sId] = {
+        id: sock.id,
+        chip: sock.chip,
+        alignment: sock.alignment,
+        leverLocked: sock.leverLocked,
+        state: sock.state ? JSON.parse(JSON.stringify(sock.state)) : {},
+        lastOutputs: sock.lastOutputs ? { ...sock.lastOutputs } : null
+      };
+    }
+
+    copy.inputs = { ...this.inputs };
+    copy.board.switches = { ...this.board.switches };
+    copy.outputs = { ...this.outputs };
+    copy.outputDuty = { ...this.outputDuty };
+    copy.pulsers = JSON.parse(JSON.stringify(this.pulsers));
+    copy.board.pulsers = copy.pulsers;
+    copy.clock = { ...this.clock };
+    copy.board.clock = copy.clock;
+
+    copy.evaluate();
+    return copy;
+  }
+
+  // Check if two jacks are electrically connected on the board
+  areJacksConnected(j1, j2) {
+    if (!j1 || !j2) return false;
+    if (j1 === j2) return true;
+    const p1 = this.probeJack(j1);
+    const p2 = this.probeJack(j2);
+    if (p1.netRoot && p2.netRoot && p1.netRoot === p2.netRoot) return true;
+    return this.wires.some(w => {
+      const from = w.from || w.a;
+      const to = w.to || w.b;
+      return (from === j1 && to === j2) || (from === j2 && to === j1);
+    });
+  }
+
   // Reset all sequential IC flip-flops and counters to state 0
   resetAllFlipFlops() {
     for (const [sockId, sock] of Object.entries(this.sockets)) {
@@ -1307,8 +1358,8 @@ class TTLEngine {
         sock.state = {
           qa: 0,
           bcd: 0,
-          lastCkA: 1,
-          lastCkB: 1,
+          lastCkA: 0,
+          lastCkB: 0,
           history: []
         };
         sock.lastOutputs = { 12: 0, 9: 0, 8: 0, 11: 0 };

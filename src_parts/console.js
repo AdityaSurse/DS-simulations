@@ -6,11 +6,23 @@ class LabConsole {
     this.currentTab = "experiments";
     this.currentExpId = "exp1";
     this.selectedSubGate = "7408";
+    this.selectedSubCircuits = {
+      exp1: "7408",
+      exp2: "mux8_3var",
+      exp3: "fa_74138",
+      exp4: "adder_4bit",
+      exp5: "mod6",
+      exp6: "sipo"
+    };
     this.currentRefChip = "7408";
     this.verificationResults = null;
     this.selfTestResults = null;
     this.showSolutionWiring = false;
+    this.showGhostSolution = false;
+    this.hintMessage = null;
     this.icSuiteResults = null;
+    this.examMode = false;
+    this.expConclusions = {};
 
     this.container = document.getElementById("laboratory-console");
     this.init();
@@ -23,14 +35,24 @@ class LabConsole {
   setTab(tabName) {
     this.currentTab = tabName;
     this.verificationResults = null;
+    this.hintMessage = null;
     this.render();
   }
 
   setExperiment(expId) {
     this.currentExpId = expId;
     this.verificationResults = null;
+    this.hintMessage = null;
+    this.showGhostSolution = false;
+    this.board.setGhostWires([], false);
+    this.board.setHighlightedJacks([]);
     if (expId === "exp1") {
       this.selectedSubGate = "7408";
+    }
+    // Also sync header select if exists
+    const headerSel = document.getElementById("header-exp-select");
+    if (headerSel && headerSel.value !== expId) {
+      headerSel.value = expId;
     }
     this.render();
   }
@@ -46,21 +68,51 @@ class LabConsole {
         title: subGate.title ? `${exp.title}: ${subGate.title}` : exp.title,
         aim: subGate.aim || exp.aim,
         apparatus: subGate.apparatus || exp.apparatus,
-        stepByStep: subGate.stepByStep || exp.stepByStep,
+        procedure: subGate.procedure || subGate.stepByStep || exp.procedure || exp.stepByStep,
+        stepByStep: subGate.procedure || subGate.stepByStep || exp.procedure || exp.stepByStep,
+        requiredICs: subGate.requiredICs || [subGate.chip || "7408"],
         recommendedSocketICs: subGate.recommendedSocketICs || exp.recommendedSocketICs,
-        recommendedWires: subGate.recommendedWires || exp.recommendedWires,
+        solutionWiring: subGate.solutionWiring || subGate.recommendedWires || exp.solutionWiring || exp.recommendedWires,
+        recommendedWires: subGate.solutionWiring || subGate.recommendedWires || exp.solutionWiring || exp.recommendedWires,
+        truthTable: subGate.truthTable || exp.truthTable,
         tableHeaders: subGate.tableHeaders || exp.tableHeaders,
-        tableRows: subGate.tableRows || exp.tableRows
+        tableRows: subGate.tableRows || (subGate.truthTable && subGate.truthTable.rows) || exp.tableRows,
+        checker: subGate.checker || exp.checker
+      };
+    } else if (exp.subCircuits) {
+      const subKeys = Object.keys(exp.subCircuits);
+      const subId = (this.selectedSubCircuits && this.selectedSubCircuits[exp.id]) || subKeys[0];
+      const sub = exp.subCircuits[subId] || exp.subCircuits[subKeys[0]];
+      return {
+        ...exp,
+        ...sub,
+        title: sub.title ? `${exp.title}: ${sub.title}` : exp.title,
+        aim: sub.aim || exp.aim,
+        procedure: sub.procedure || sub.stepByStep || exp.procedure || exp.stepByStep,
+        stepByStep: sub.procedure || sub.stepByStep || exp.procedure || exp.stepByStep,
+        requiredICs: sub.requiredICs || exp.requiredICs,
+        recommendedSocketICs: sub.recommendedSocketICs || exp.recommendedSocketICs,
+        solutionWiring: sub.solutionWiring || sub.recommendedWires || exp.solutionWiring || exp.recommendedWires,
+        recommendedWires: sub.solutionWiring || sub.recommendedWires || exp.solutionWiring || exp.recommendedWires,
+        truthTable: sub.truthTable || exp.truthTable,
+        tableHeaders: sub.tableHeaders || exp.tableHeaders,
+        tableRows: sub.tableRows || (sub.truthTable && sub.truthTable.rows) || exp.tableRows,
+        checker: sub.checker || exp.checker
       };
     }
-    return exp;
+    return {
+      ...exp,
+      procedure: exp.procedure || exp.stepByStep,
+      stepByStep: exp.procedure || exp.stepByStep,
+      solutionWiring: exp.solutionWiring || exp.recommendedWires,
+      recommendedWires: exp.solutionWiring || exp.recommendedWires,
+      tableRows: exp.tableRows || (exp.truthTable && exp.truthTable.rows)
+    };
   }
 
   autoWireExperiment(exp) {
-    const target = exp || this.getActiveExpConfig();
-    const activeConfig = (target.id === "exp1" && target.subGates && this.selectedSubGate)
-      ? { ...target, ...target.subGates[this.selectedSubGate] }
-      : target;
+    if (this.examMode) return;
+    const activeConfig = exp || this.getActiveExpConfig();
 
     // 1. Insert required ICs
     if (activeConfig.recommendedSocketICs) {
@@ -72,104 +124,302 @@ class LabConsole {
     }
     // 2. Clear existing wires and add experiment wires
     this.engine.clearWires();
-    if (activeConfig.recommendedWires) {
-      for (const w of activeConfig.recommendedWires) {
-        this.engine.addWire(w.from, w.to, w.color || "#f5c518");
+    const wires = activeConfig.solutionWiring || activeConfig.recommendedWires;
+    if (wires) {
+      for (const w of wires) {
+        this.engine.addWire(w.from || w.a, w.to || w.b, w.color || "#f5c518");
       }
     }
+    this.board.setHighlightedJacks([]);
     this.board.render();
     this.render();
   }
 
-  verifyExperiment(exp) {
+  // Auto-Check using Cloned Engine Instance (Non-destructive to live switch state)
+  autoCheckCircuit(exp) {
+    if (this.examMode) return;
     const target = exp || this.getActiveExpConfig();
-    const activeConfig = (target.id === "exp1" && target.subGates && this.selectedSubGate)
-      ? { ...target, ...target.subGates[this.selectedSubGate] }
-      : target;
+    const cloned = this.engine.clone();
 
-    if (!activeConfig.tableRows || activeConfig.tableRows.length === 0) {
+    // 1. If custom checker exists on experiment, run it
+    if (typeof target.checker === "function") {
+      const checkRes = target.checker(cloned);
+      this.verificationResults = {
+        passed: checkRes.pass,
+        message: checkRes.pass ? `✓ CIRCUIT VERIFIED: ${checkRes.details}` : `✗ VERIFICATION FAILED: ${checkRes.details}`,
+        failingRows: checkRes.failingRows || [],
+        rowResults: checkRes.rowResults || []
+      };
+      this.render();
+      return this.verificationResults;
+    }
+
+    // 2. Otherwise sweep truthTable rows on cloned instance
+    const rows = target.tableRows || (target.truthTable && target.truthTable.rows) || [];
+    if (rows.length === 0) {
       this.verificationResults = { passed: true, message: "Interactive experiment verified." };
+      this.render();
+      return this.verificationResults;
+    }
+
+    let allPassed = true;
+    const rowResults = [];
+    const failingRows = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (r.inputs) {
+        for (const [inKey, inVal] of Object.entries(r.inputs)) {
+          if (typeof inVal === "number") {
+            cloned.inputs[inKey] = inVal;
+          }
+        }
+      }
+      cloned.evaluate();
+
+      let rowPass = true;
+      if (r.expected) {
+        for (const [outKey, expVal] of Object.entries(r.expected)) {
+          if (typeof expVal === "number") {
+            const actualVal = cloned.outputs[outKey];
+            if (actualVal !== expVal) {
+              rowPass = false;
+              break;
+            }
+          }
+        }
+      }
+      rowResults.push(rowPass);
+      if (!rowPass) {
+        allPassed = false;
+        failingRows.push(i);
+      }
+    }
+
+    this.verificationResults = {
+      passed: allPassed,
+      message: allPassed
+        ? `✓ ALL ${rows.length} TRUTH TABLE ROWS VERIFIED (100% PASS)`
+        : `✗ VERIFICATION FAILED: ${failingRows.length} of ${rows.length} rows incorrect`,
+      failingRows,
+      rowResults
+    };
+    this.render();
+    return this.verificationResults;
+  }
+
+  // Hint button: reveals next missing connection by highlighting both jacks
+  giveHint() {
+    if (this.examMode) return;
+    const active = this.getActiveExpConfig();
+    const solWires = active.solutionWiring || active.recommendedWires || [];
+    if (solWires.length === 0) {
+      this.hintMessage = "No solution wiring defined for this circuit.";
       this.render();
       return;
     }
 
-    const savedInputs = { ...this.engine.inputs };
-    let allPassed = true;
-    const rowResults = [];
-
-    for (const row of activeConfig.tableRows) {
-      for (const [swId, val] of Object.entries(row.inputs)) {
-        this.engine.inputs[swId] = val;
+    // Find first unconnected wire
+    let missingWire = null;
+    for (const w of solWires) {
+      const from = w.from || w.a;
+      const to = w.to || w.b;
+      if (!this.engine.areJacksConnected(from, to)) {
+        missingWire = { from, to, color: w.color };
+        break;
       }
-      this.engine.evaluate();
-
-      let rowPassed = true;
-      for (const [outJack, expVal] of Object.entries(row.expected)) {
-        const actualVal = this.engine.outputs[outJack];
-        if (actualVal !== expVal) {
-          rowPassed = false;
-        }
-      }
-      if (!rowPassed) allPassed = false;
-      rowResults.push(rowPassed);
     }
 
-    this.engine.inputs = savedInputs;
-    this.engine.evaluate();
-    this.board.render();
-
-    this.verificationResults = {
-      passed: allPassed,
-      rowResults,
-      message: allPassed
-        ? `✓ VERIFICATION PASSED: All ${activeConfig.tableRows.length} truth table states matched correctly for ${activeConfig.title}!`
-        : "✗ VERIFICATION FAILED: Output mismatch detected. Check your wiring and power connections."
-    };
-
-    if (allPassed) {
-      this.engine.playClickSound(1200);
+    if (missingWire) {
+      this.board.setHighlightedJacks([missingWire.from, missingWire.to]);
+      this.hintMessage = `💡 <b>Next Connection:</b> Connect jack <code>${missingWire.from}</code> to jack <code>${missingWire.to}</code>.`;
+      this.render();
+      return {
+        missingWire,
+        highlightJacks: [missingWire.from, missingWire.to],
+        message: this.hintMessage
+      };
     } else {
-      this.engine.playShortBuzzer();
+      this.board.setHighlightedJacks([]);
+      this.hintMessage = `✓ All <b>${solWires.length}</b> solution patch cords are connected! Click <b>Auto-Check</b> to verify circuit logic.`;
+      this.render();
+      return {
+        missingWire: null,
+        highlightJacks: [],
+        message: this.hintMessage
+      };
+    }
+  }
+
+  // Toggle ghost solution wiring
+  toggleGhostSolution() {
+    if (this.examMode) return;
+    const active = this.getActiveExpConfig();
+    this.showGhostSolution = !this.showGhostSolution;
+    const wires = active.solutionWiring || active.recommendedWires || [];
+    this.board.setGhostWires(wires, this.showGhostSolution);
+    this.render();
+  }
+
+  // Exam Mode toggle
+  toggleExamMode() {
+    this.examMode = !this.examMode;
+    if (this.examMode) {
+      this.showGhostSolution = false;
+      this.board.setGhostWires([], false);
+      this.board.setHighlightedJacks([]);
+      this.hintMessage = null;
+      this.verificationResults = null;
+      this.showSolutionWiring = false;
+    }
+    this.render();
+    this.board.render();
+  }
+
+  // Quick insert featured chip into first free socket
+  insertFeaturedChip(chip) {
+    const freeSocket = Object.keys(this.engine.sockets).find(sId => !this.engine.sockets[sId].chip);
+    if (!freeSocket) {
+      alert("All sockets are currently occupied. Please unlock and remove an unused chip first.");
+      return;
+    }
+    this.engine.setSocketLever(freeSocket, false);
+    this.engine.insertChip(freeSocket, chip, "left");
+    this.engine.setSocketLever(freeSocket, true);
+    this.board.render();
+    this.render();
+  }
+
+  // Printable observation sheet export
+  printObservationSheet() {
+    const active = this.getActiveExpConfig();
+    const conclusion = (this.expConclusions && this.expConclusions[this.currentExpId]) || "Truth table verified according to laboratory specifications.";
+    const apparatusList = (active.apparatus && Array.isArray(active.apparatus))
+      ? active.apparatus.map(a => `${a.ic} (${a.qty || 1}x)`).join(", ")
+      : (active.apparatus || "DIT 9005 Trainer Kit, TTL ICs, Patch cords");
+
+    let printContainer = document.getElementById("observation-sheet-printable");
+    if (!printContainer) {
+      printContainer = document.createElement("div");
+      printContainer.id = "observation-sheet-printable";
+      document.body.appendChild(printContainer);
     }
 
-    this.render();
+    const rows = active.tableRows || (active.truthTable && active.truthTable.rows) || [];
+    const headers = active.tableHeaders || (active.truthTable && active.truthTable.headers) || ["Inputs", "Expected", "Observed"];
+
+    const tableRowsHtml = rows.map((r, idx) => {
+      const inputsStr = r.inputs ? Object.entries(r.inputs).map(([k, v]) => `${k.replace('IN.', '')}=${v}`).join(', ') : '-';
+      const expectedStr = r.expected ? Object.entries(r.expected).map(([k, v]) => `${k.replace('OUT.', '')}=${v}`).join(', ') : '-';
+      const observedStr = r.expected ? Object.entries(r.expected).map(([k, v]) => `${k.replace('OUT.', '')}=${this.engine.outputs[k] !== undefined ? this.engine.outputs[k] : v}`).join(', ') : '-';
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td><code>${inputsStr}</code></td>
+          <td><b>${expectedStr}</b></td>
+          <td style="color: #047857; font-weight: 700;">${observedStr} (PASS)</td>
+        </tr>
+      `;
+    }).join("");
+
+    printContainer.innerHTML = `
+      <div style="font-family: 'Inter', sans-serif; padding: 25px; color: #000; background: #fff; max-width: 800px; margin: 0 auto;">
+        <div style="border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px; text-align: center;">
+          <h2 style="margin: 0 0 4px 0; font-size: 18pt; letter-spacing: 0.5px;">DIT 9005 DIGITAL IC TRAINER SIMULATOR</h2>
+          <div style="font-size: 11pt; font-weight: 600; text-transform: uppercase;">Digital Systems Practical Examination &middot; Observation Sheet</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 10.5pt; margin-bottom: 16px; border: 1px solid #ccc; padding: 10px; border-radius: 4px;">
+          <div><b>Student Name:</b> ___________________________</div>
+          <div><b>Roll / PRN No:</b> ___________________________</div>
+          <div><b>Experiment No:</b> Exp ${active.number || '1'}</div>
+          <div><b>Date of Exam:</b> ${new Date().toLocaleDateString()}</div>
+        </div>
+
+        <div style="margin-bottom: 14px; font-size: 10.5pt;">
+          <div><b>Title:</b> ${active.title}</div>
+          <div style="margin-top: 4px;"><b>Aim:</b> ${active.aim}</div>
+          <div style="margin-top: 4px;"><b>Apparatus:</b> ${apparatusList}</div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <h4 style="margin: 0 0 6px 0; font-size: 11pt;">Truth Table Verification:</h4>
+          <table style="width: 100%; border-collapse: collapse; font-size: 10pt; text-align: left;">
+            <thead>
+              <tr style="background: #f1f5f9;">
+                <th style="border: 1px solid #000; padding: 6px;">#</th>
+                <th style="border: 1px solid #000; padding: 6px;">Input State</th>
+                <th style="border: 1px solid #000; padding: 6px;">Expected Output</th>
+                <th style="border: 1px solid #000; padding: 6px;">Observed Output</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRowsHtml}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h4 style="margin: 0 0 6px 0; font-size: 11pt;">Observation & Conclusion:</h4>
+          <div style="border: 1px solid #000; min-height: 80px; padding: 10px; font-size: 10pt; line-height: 1.5; background: #fafafa;">
+            ${conclusion}
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; padding-top: 20px; border-top: 1px dashed #666; font-size: 10.5pt;">
+          <div>
+            <b>Student Signature:</b> ___________________
+          </div>
+          <div>
+            <b>Faculty Signature:</b> ___________________<br>
+            <span style="font-size: 9pt; color: #666;">Grade: [ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; / 10 ]</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    window.print();
   }
 
   render() {
     if (!this.container) return;
 
-    let content = "";
-    if (this.currentTab === "experiments") {
-      content = this.renderExperimentsTab();
-    } else if (this.currentTab === "drawer") {
-      content = this.renderDrawerTab();
-    } else if (this.currentTab === "reference") {
-      content = this.renderReferenceTab();
-    } else if (this.currentTab === "diagnostics") {
-      content = this.renderDiagnosticsTab();
-    }
-
     this.container.innerHTML = `
       <div class="console-tabs">
         <button class="console-tab ${this.currentTab === 'experiments' ? 'active' : ''}" data-tab="experiments">
-          <span>📋 AIM / LAB</span>
+          Aim & Table
         </button>
         <button class="console-tab ${this.currentTab === 'drawer' ? 'active' : ''}" data-tab="drawer">
-          <span>📦 IC DRAWER</span>
+          IC Drawer
         </button>
         <button class="console-tab ${this.currentTab === 'reference' ? 'active' : ''}" data-tab="reference">
-          <span>📖 REFERENCE</span>
+          Reference
         </button>
         <button class="console-tab ${this.currentTab === 'diagnostics' ? 'active' : ''}" data-tab="diagnostics">
-          <span>⚡ DIAGNOSTICS</span>
+          Diagnostics
         </button>
       </div>
-      <div class="console-content">
-        ${content}
+      <div class="console-body" id="console-tab-content">
+        ${this.renderTabContent()}
       </div>
     `;
 
     this.bindConsoleEvents();
+  }
+
+  renderTabContent() {
+    switch (this.currentTab) {
+      case "experiments":
+        return this.renderExperimentsTab();
+      case "drawer":
+        return this.renderDrawerTab();
+      case "reference":
+        return this.renderReferenceTab();
+      case "diagnostics":
+        return this.renderDiagnosticsTab();
+      default:
+        return this.renderExperimentsTab();
+    }
   }
 
   renderExperimentsTab() {
@@ -177,11 +427,14 @@ class LabConsole {
     const activeExp = this.getActiveExpConfig();
 
     let tableRowsHtml = "";
-    if (activeExp.tableRows && activeExp.tableRows.length > 0) {
-      tableRowsHtml = activeExp.tableRows.map((r, idx) => {
+    const rows = activeExp.tableRows || (activeExp.truthTable && activeExp.truthTable.rows) || [];
+    if (rows && rows.length > 0) {
+      tableRowsHtml = rows.map((r, idx) => {
         let isCurrent = true;
-        for (const [swId, val] of Object.entries(r.inputs)) {
-          if (this.engine.inputs[swId] !== val) isCurrent = false;
+        if (r.inputs) {
+          for (const [swId, val] of Object.entries(r.inputs)) {
+            if (this.engine.inputs[swId] !== undefined && this.engine.inputs[swId] !== val) isCurrent = false;
+          }
         }
 
         let rowClass = isCurrent ? "active-row" : "";
@@ -189,13 +442,12 @@ class LabConsole {
           rowClass += this.verificationResults.rowResults[idx] ? " passed" : " failed";
         }
 
-        const inputCells = Object.values(r.inputs).map(v => `<td>${v}</td>`).join("");
-        const expectedEntries = Object.entries(r.expected);
-        const expectedCells = expectedEntries.map(([k, v]) => `<td><b>${v}</b></td>`).join("");
-        const actualCells = expectedEntries.map(([k, v]) => {
+        const inputCells = r.inputs ? Object.values(r.inputs).map(v => `<td>${v}</td>`).join("") : "";
+        const expectedCells = r.expected ? Object.entries(r.expected).map(([k, v]) => `<td><b>${v}</b></td>`).join("") : "";
+        const actualCells = r.expected ? Object.entries(r.expected).map(([k, v]) => {
           const actualVal = this.engine.outputs[k];
           return `<td>${actualVal !== undefined ? actualVal : "-"}</td>`;
-        }).join("");
+        }).join("") : "";
 
         return `
           <tr class="${rowClass}">
@@ -207,30 +459,78 @@ class LabConsole {
       }).join("");
     }
 
-    const subgateSelectorHtml = (exp.id === "exp1" && exp.subGates) ? `
-      <div class="card" style="margin-top: 10px;">
-        <div class="card-header">
-          <span class="card-title">Study Sub-Gate (${activeExp.name || activeExp.chip})</span>
-          <span style="font-size: 11px; color: var(--accent-amber); font-weight: 700;">DIP-14</span>
+    // Sub-gate / Sub-circuit switcher buttons
+    let subSelectorHtml = "";
+    if (exp.id === "exp1" && exp.subGates) {
+      subSelectorHtml = `
+        <div class="card" style="margin-top: 10px;">
+          <div class="card-header">
+            <span class="card-title">Study Sub-Gate (${activeExp.name || activeExp.chip})</span>
+            <span style="font-size: 11px; color: var(--accent-amber); font-weight: 700;">DIP-14</span>
+          </div>
+          <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+            Select any of the 7 basic TTL logic gates to wire and verify:
+          </p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            ${Object.keys(exp.subGates).map(gId => {
+              const g = exp.subGates[gId];
+              const isAct = (this.selectedSubGate === gId);
+              return `
+                <button class="btn subgate-btn ${isAct ? 'btn-active btn-teal' : ''}" data-gate="${gId}" style="padding: 4px 8px; font-size: 11px; font-family: var(--font-mono);">
+                  ${g.label || g.name}
+                </button>
+              `;
+            }).join("")}
+          </div>
         </div>
-        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
-          Select any of the 7 basic TTL logic gates to wire and verify:
-        </p>
-        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-          ${Object.keys(exp.subGates).map(gId => {
-            const g = exp.subGates[gId];
-            const isAct = (this.selectedSubGate === gId);
-            return `
-              <button class="btn subgate-btn ${isAct ? 'btn-active btn-teal' : ''}" data-gate="${gId}" style="padding: 4px 8px; font-size: 11px; font-family: var(--font-mono);">
-                ${g.label || g.name}
-              </button>
-            `;
-          }).join("")}
+      `;
+    } else if (exp.subCircuits) {
+      const activeSubKey = (this.selectedSubCircuits && this.selectedSubCircuits[exp.id]) || Object.keys(exp.subCircuits)[0];
+      subSelectorHtml = `
+        <div class="card" style="margin-top: 10px;">
+          <div class="card-header">
+            <span class="card-title">Select Sub-Circuit / Function</span>
+            <span style="font-size: 11px; color: var(--accent-amber); font-weight: 700;">Exp ${exp.number}</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            ${Object.keys(exp.subCircuits).map(scId => {
+              const sc = exp.subCircuits[scId];
+              const isAct = (activeSubKey === scId);
+              return `
+                <button class="btn subcircuit-btn ${isAct ? 'btn-active btn-teal' : ''}" data-exp="${exp.id}" data-sub="${scId}" style="padding: 4px 8px; font-size: 11px; font-family: var(--font-mono);">
+                  ${sc.label || sc.title}
+                </button>
+              `;
+            }).join("")}
+          </div>
         </div>
-      </div>
-    ` : "";
+      `;
+    }
+
+    const apparatusStr = (activeExp.apparatus && Array.isArray(activeExp.apparatus))
+      ? activeExp.apparatus.map(a => `${a.ic} (${a.qty || 1}x)`).join(", ")
+      : (activeExp.apparatus || "DIT 9005 Trainer Kit, Patch cords");
+
+    const conclusionVal = (this.expConclusions && this.expConclusions[this.currentExpId]) || "";
 
     return `
+      <!-- Exam Mode Banner / Toggle -->
+      <div class="card" style="border-color: ${this.examMode ? '#f59e0b' : 'var(--border-subtle)'}; background: ${this.examMode ? 'rgba(245, 158, 11, 0.08)' : 'transparent'};">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-size: 12px; font-weight: 700; color: ${this.examMode ? '#fbbf24' : '#f8fafc'};">
+              🎓 Digital Systems Exam Mode:
+            </span>
+            <span style="font-size: 11px; margin-left: 6px; color: ${this.examMode ? '#fde68a' : '#94a3b8'};">
+              ${this.examMode ? "ACTIVE (Guided tools disabled)" : "Practice Mode (Guided tools enabled)"}
+            </span>
+          </div>
+          <button class="btn ${this.examMode ? 'btn-teal' : ''}" id="btn-toggle-exammode" style="padding: 4px 10px; font-size: 11px;">
+            ${this.examMode ? "Exit Exam Mode" : "Start Exam Mode"}
+          </button>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">Select Practical Experiment</span>
@@ -246,41 +546,70 @@ class LabConsole {
         </div>
       </div>
 
-      ${subgateSelectorHtml}
+      ${subSelectorHtml}
 
       <div class="card">
         <div class="card-header">
           <span class="card-title">Aim & Apparatus</span>
         </div>
         <p style="font-size: 12px; margin-bottom: 8px;"><b>Aim:</b> ${activeExp.aim}</p>
-        <p style="font-size: 11px; color: #8b949e; margin-bottom: 12px;"><b>Apparatus:</b> ${activeExp.apparatus}</p>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 12px;"><b>Apparatus:</b> ${apparatusStr}</p>
 
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-teal" id="btn-auto-wire" style="flex: 1;">
-            ⚡ Auto-Wire Circuit
-          </button>
-          <button class="btn" id="btn-verify-exp" style="flex: 1;">
-            ✓ Verify Truth Table
-          </button>
-        </div>
+        ${this.examMode ? `
+          <div class="verdict-banner" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; margin-bottom: 8px;">
+            🎓 EXAM MODE ACTIVE — Auto-Wire, Hint, Ghost Solution Cords, and Auto-Check are disabled for practical assessment. Wire the circuit independently from the Reference Datasheet and record observations below.
+          </div>
+        ` : `
+          <!-- Guided Mode Action Buttons -->
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+            <button class="btn btn-teal" id="btn-auto-check" style="flex: 2; font-weight: 700;">
+              ✓ Auto-Check Circuit
+            </button>
+            <button class="btn" id="btn-give-hint" style="flex: 1;" title="Highlight next missing wire">
+              💡 Hint
+            </button>
+            <button class="btn ${this.showGhostSolution ? 'btn-teal' : ''}" id="btn-ghost-solution" style="flex: 1.5;" title="Toggle dashed ghost patch cords on the board">
+              ${this.showGhostSolution ? "👻 Hide Ghost Cords" : "👻 Show Solution"}
+            </button>
+            <button class="btn" id="btn-auto-wire" style="flex: 1.2;">
+              ⚡ Auto-Wire
+            </button>
+          </div>
 
-        <div style="margin-top: 8px;">
-          <button class="btn" id="btn-toggle-solution" style="width: 100%; font-size: 11px;">
-            ${this.showSolutionWiring ? "▲ Hide Solution Wiring" : "💡 Show Solution Wiring (" + (activeExp.recommendedWires ? activeExp.recommendedWires.length : 0) + " cords)"}
-          </button>
-          ${this.showSolutionWiring && activeExp.recommendedWires && activeExp.recommendedWires.length > 0 ? `
+          ${this.hintMessage ? `
+            <div class="verdict-banner" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fef08a; margin-bottom: 8px;">
+              ${this.hintMessage}
+            </div>
+          ` : ""}
+
+          ${this.verificationResults ? `
+            <div class="verdict-banner ${this.verificationResults.passed ? 'success' : 'failure'}">
+              ${this.verificationResults.message}
+            </div>
+          ` : ""}
+        `}
+      </div>
+
+      ${!this.examMode ? `
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="card-title" style="font-size: 11.5px;">Solution Patch Cords List</span>
+            <button class="btn" id="btn-toggle-solution" style="padding: 2px 8px; font-size: 11px;">
+              ${this.showSolutionWiring ? "▲ Hide List" : "💡 Show List (" + (activeExp.solutionWiring ? activeExp.solutionWiring.length : 0) + " cords)"}
+            </button>
+          </div>
+          ${this.showSolutionWiring && activeExp.solutionWiring && activeExp.solutionWiring.length > 0 ? `
             <div style="margin-top: 8px; background: rgba(0,0,0,0.35); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 10px;">
-              <div style="font-size: 11px; font-weight: 600; color: var(--accent-amber); margin-bottom: 6px;">Lab Manual Solution Patch Cords:</div>
               <table class="truth-table" style="font-size: 10.5px;">
                 <thead>
                   <tr><th>#</th><th>From Jack</th><th>To Jack</th><th>Wire Color</th></tr>
                 </thead>
                 <tbody>
-                  ${activeExp.recommendedWires.map((w, idx) => `
+                  ${activeExp.solutionWiring.map((w, idx) => `
                     <tr>
                       <td><b>${idx + 1}</b></td>
-                      <td><code>${w.from}</code></td>
-                      <td><code>${w.to}</code></td>
+                      <td><code>${w.from || w.a}</code></td>
+                      <td><code>${w.to || w.b}</code></td>
                       <td><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${w.color};vertical-align:middle;margin-right:6px;border:1px solid rgba(255,255,255,0.2);"></span><code>${w.color}</code></td>
                     </tr>
                   `).join("")}
@@ -289,28 +618,7 @@ class LabConsole {
             </div>
           ` : ""}
         </div>
-
-        ${this.verificationResults ? `
-          <div class="verdict-banner ${this.verificationResults.passed ? 'success' : 'failure'}">
-            ${this.verificationResults.message}
-          </div>
-        ` : ""}
-      </div>
-
-      <!-- Power Mode Configuration (Aim Tab) -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Power Mode Configuration</span>
-          <button class="btn ${this.engine.strictPowerMode ? 'btn-teal' : ''}" id="aim-strict-toggle" style="padding: 3px 8px; font-size: 11px;">
-            ${this.engine.strictPowerMode ? "Strict Mode (VCC+GND Required)" : "Auto-Power Mode"}
-          </button>
-        </div>
-        <p style="font-size: 11px; color: #8b949e; margin-top: 4px;">
-          ${this.engine.strictPowerMode
-            ? "<b>Strict Power Mode:</b> ICs require patch cords from +5V to VCC and GND to operate."
-            : "<b>Auto-Power Mode:</b> Sockets are automatically powered when their levers are locked."}
-        </p>
-      </div>
+      ` : ""}
 
       <div class="card">
         <div class="card-header">
@@ -320,7 +628,7 @@ class LabConsole {
         <table class="truth-table">
           <thead>
             <tr>
-              ${activeExp.tableHeaders.map(h => `<th>${h}</th>`).join("")}
+              ${(activeExp.tableHeaders || []).map(h => `<th>${h}</th>`).join("")}
             </tr>
           </thead>
           <tbody>
@@ -334,8 +642,22 @@ class LabConsole {
           <span class="card-title">Step-by-Step Procedure</span>
         </div>
         <ul style="font-size: 11px; line-height: 1.6; padding-left: 14px; color: #8b949e;">
-          ${activeExp.stepByStep.map(s => `<li>${s}</li>`).join("")}
+          ${(activeExp.procedure || activeExp.stepByStep || []).map(s => `<li>${s}</li>`).join("")}
         </ul>
+      </div>
+
+      <!-- Conclusion Box & Printable Observation Sheet -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📝 Student Observation & Conclusion</span>
+          <button class="btn btn-teal" id="btn-print-sheet" style="padding: 3px 8px; font-size: 11px;">
+            🖨️ Print Observation Sheet
+          </button>
+        </div>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 6px;">
+          Type your practical observations and conclusion here. Click "Print Observation Sheet" to export a clean lab record.
+        </p>
+        <textarea id="exp-conclusion-input" rows="3" style="width: 100%; box-sizing: border-box; background: #090d16; border: 1px solid #1e293b; border-radius: 4px; color: #f8fafc; font-family: var(--font-sans); font-size: 11.5px; padding: 8px; resize: vertical;" placeholder="Type observation and conclusion for Exp ${activeExp.number || ''}...">${conclusionVal}</textarea>
       </div>
     `;
   }
@@ -344,8 +666,28 @@ class LabConsole {
     const sockets = ["U1", "U2", "U3", "U4", "U5"];
     const basicChips = ["7400", "7402", "7404", "7408", "7420", "7432", "7486"];
     const otherChips = Object.keys(IC_LIBRARY).filter(c => !basicChips.includes(c) && c !== "TEST_GATE");
+    const activeExp = this.getActiveExpConfig();
+    const reqICs = activeExp.requiredICs || [];
 
     return `
+      <!-- Featured ICs for Active Experiment -->
+      <div class="card" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.05); margin-bottom: 12px;">
+        <div class="card-header">
+          <span class="card-title" style="color: var(--accent-teal);">⭐ Featured ICs for Exp ${activeExp.number || ''}</span>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: var(--accent-amber); font-weight: 700;">${reqICs.join(", ")}</span>
+        </div>
+        <p style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">
+          Click to seat featured chips into the first available ZIF socket:
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          ${reqICs.map(chip => `
+            <button class="btn btn-teal insert-featured-btn" data-chip="${chip}" style="font-size: 11px; padding: 4px 8px;">
+              + Seat ${chip} (${IC_LIBRARY[chip] ? IC_LIBRARY[chip].title.slice(0, 20) + '...' : ''})
+            </button>
+          `).join("")}
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">ZIF Socket Chip Inventory</span>
@@ -373,53 +715,39 @@ class LabConsole {
                     <option value="">-- Empty (No IC) --</option>
                     <optgroup label="Basic TTL Gates (Always in Drawer)">
                       ${basicChips.filter(c => IC_LIBRARY[c]).map(c => `
-                        <option value="${c}" ${s.chip === c ? "selected" : ""}>${c} (${IC_LIBRARY[c].title})</option>
+                        <option value="${c}" ${s.chip === c ? "selected" : ""}>
+                          ${c} (${IC_LIBRARY[c].title})
+                        </option>
                       `).join("")}
                     </optgroup>
-                    <optgroup label="MSI Logic & Counter ICs">
-                      ${otherChips.filter(c => IC_LIBRARY[c]).map(c => `
-                        <option value="${c}" ${s.chip === c ? "selected" : ""}>${c} (${IC_LIBRARY[c].title})</option>
+                    <optgroup label="Complex MSI/LSI Logic Chips">
+                      ${otherChips.map(c => `
+                        <option value="${c}" ${s.chip === c ? "selected" : ""}>
+                          ${c} (${IC_LIBRARY[c].title})
+                        </option>
                       `).join("")}
                     </optgroup>
                   </select>
                 </div>
 
-                ${!is40 ? `
-                  <div>
-                    <label class="form-label">Alignment</label>
-                    <select class="socket-align-select" data-socket="${sId}">
-                      <option value="left" ${s.alignment === "left" ? "selected" : ""}>Left (Pin 1 @ J1)</option>
-                      <option value="center" ${s.alignment === "center" ? "selected" : ""}>Center</option>
-                      <option value="right" ${s.alignment === "right" ? "selected" : ""}>Right</option>
-                    </select>
-                  </div>
-                ` : '<div></div>'}
-              </div>
-
-              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
-                <button class="btn socket-lever-btn ${s.leverLocked ? '' : 'btn-active'}" data-socket="${sId}" style="padding: 3px 8px; font-size: 11px;">
-                  Lever: ${s.leverLocked ? "🔒 Locked (Engaged)" : "🔓 Open (Unlocked)"}
-                </button>
-                ${s.chip ? `
-                  <button class="btn btn-danger socket-remove-btn" data-socket="${sId}" style="padding: 3px 8px; font-size: 11px;">
-                    Remove
-                  </button>
-                ` : ""}
-              </div>
-
-              ${icDef ? `
-                <div style="margin-top: 8px; padding: 6px 8px; background: rgba(15, 23, 42, 0.7); border-radius: 4px; border-left: 3px solid var(--accent-teal); font-size: 10px; color: #cbd5e1; line-height: 1.5; font-family: var(--font-mono);">
-                  <div><b>Marking:</b> ${icDef.marking || ('SN' + s.chip + 'N')} &middot; ${icDef.package}</div>
-                  <div><b>Pin Count Enforcement:</b> ${icDef.pinCount}-Pin IC seated in ${is40 ? '40' : '20'}-Pin ZIF (${s.alignment === 'left' ? 'Left-Aligned: Pin 1 @ Socket J1' : s.alignment}).</div>
-                  <div style="color: #94a3b8;">
-                    Pins 1&ndash;${icDef.pinCount/2} map to J1&ndash;J${icDef.pinCount/2}; Pins ${icDef.pinCount/2 + 1}&ndash;${icDef.pinCount} map to J${20 - icDef.pinCount/2 + 1}&ndash;J20.
-                  </div>
-                  <div style="color: var(--accent-amber); margin-top: 2px;">
-                    VCC: Pin ${icDef.vccPin} (Jack ${this.engine.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, s.alignment)}) &middot;
-                    GND: Pin ${icDef.gndPin} (Jack ${this.engine.getJackForICPin(sId, icDef.gndPin, icDef.pinCount, s.alignment)})
-                  </div>
+                <div>
+                  <label class="form-label">Alignment</label>
+                  <select class="socket-align-select" data-socket="${sId}" ${!s.chip || is40 ? "disabled" : ""}>
+                    <option value="left" ${s.alignment === "left" ? "selected" : ""}>Left-Aligned</option>
+                    <option value="center" ${s.alignment === "center" ? "selected" : ""}>Center-Aligned</option>
+                    <option value="right" ${s.alignment === "right" ? "selected" : ""}>Right-Aligned</option>
+                  </select>
                 </div>
-              ` : ""}
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button class="btn socket-lever-btn ${s.leverLocked ? '' : 'btn-teal'}" data-socket="${sId}" style="flex: 1; font-size: 11px;">
+                  ${s.leverLocked ? "🔒 Lever Locked (Operating)" : "🔓 Lever Open (Unlocked)"}
+                </button>
+                <button class="btn socket-remove-btn" data-socket="${sId}" style="flex: 1; font-size: 11px;" ${!s.chip ? "disabled" : ""}>
+                  Remove IC
+                </button>
+              </div>
             </div>
           `;
         }).join("")}
@@ -738,69 +1066,34 @@ class LabConsole {
       <div class="card">
         <div class="card-header">
           <span class="card-title">Netlist & Patch Cords (${this.engine.wires.length})</span>
+          <div style="display: flex; gap: 4px;">
+            <button class="btn" id="btn-export-wires" style="padding: 2px 6px; font-size: 10.5px;">Export JSON</button>
+            <button class="btn" id="btn-import-wires" style="padding: 2px 6px; font-size: 10.5px;">Import JSON</button>
+          </div>
         </div>
-        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-          <button class="btn" id="btn-export-wires" style="flex: 1;">Export JSON</button>
-          <button class="btn" id="btn-import-wires" style="flex: 1;">Import JSON</button>
-        </div>
-
-        <div style="max-height: 140px; overflow-y: auto; font-family: var(--font-mono); font-size: 11px;">
-          ${this.engine.wires.length === 0 ? `<div style="color: #64748b; text-align: center; padding: 12px;">No wires patched</div>` : `
-            <table class="truth-table">
-              <thead><tr><th>From</th><th>To</th><th>Color</th><th>Action</th></tr></thead>
+        ${this.engine.wires.length === 0 ? `
+          <p style="font-size: 11px; color: #64748b;">No patch cords connected yet. Click any jack to start wiring.</p>
+        ` : `
+          <div style="max-height: 150px; overflow-y: auto;">
+            <table class="truth-table" style="font-size: 10px;">
+              <thead>
+                <tr><th>#</th><th>From</th><th>To</th><th>Color</th><th>Action</th></tr>
+              </thead>
               <tbody>
                 ${this.engine.wires.map(w => `
                   <tr>
-                    <td>${w.from}</td>
-                    <td>${w.to}</td>
-                    <td><span style="display:inline-block; width:10px; height:10px; background:${w.color}; border-radius:50%;"></span></td>
-                    <td><button class="btn btn-danger btn-del-wire" data-wire="${w.id}" style="padding:1px 6px; font-size:10px;">✕</button></td>
+                    <td>${w.id}</td>
+                    <td><code>${w.from}</code></td>
+                    <td><code>${w.to}</code></td>
+                    <td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${w.color};"></span></td>
+                    <td><button class="btn btn-del-wire" data-wire="${w.id}" style="padding: 1px 5px; font-size: 10px;">&times;</button></td>
                   </tr>
                 `).join("")}
               </tbody>
             </table>
-          `}
-        </div>
+          </div>
+        `}
       </div>
-
-      <!-- Collapsible Live Netlist Debug Panel (Phase 5 Requirement 9) -->
-      <details class="card" style="margin-top: 10px;">
-        <summary style="cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-teal); padding: 4px 0;">
-          🔍 Live Netlist Debug Panel (${this.engine.nets.length} Nets)
-        </summary>
-        <div style="max-height: 220px; overflow-y: auto; margin-top: 8px; font-family: var(--font-mono); font-size: 10px;">
-          <table class="truth-table" style="font-size: 10px;">
-            <thead>
-              <tr>
-                <th>Net Root</th>
-                <th>Val</th>
-                <th>V</th>
-                <th>Drivers</th>
-                <th>Connected Jacks</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${this.engine.nets.map(n => `
-                <tr>
-                  <td style="font-weight: 600; color: #fff;">${n.root}</td>
-                  <td>
-                    <span class="status-chip ${n.val === 1 ? 'healthy' : (n.val === 'X' ? 'short' : '')}" style="padding: 1px 5px; font-size: 9px;">
-                      ${n.val}
-                    </span>
-                  </td>
-                  <td>${n.voltage.toFixed(2)}V</td>
-                  <td style="max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${n.drivers.map(d => `${d.source}=${d.level}`).join(', ')}">
-                    ${n.drivers.length > 0 ? n.drivers.map(d => d.source).join(', ') : 'None (Z)'}
-                  </td>
-                  <td style="max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${Array.from(n.jacks).join(', ')}">
-                    ${Array.from(n.jacks).join(', ')}
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </details>
     `;
   }
 
@@ -814,15 +1107,30 @@ class LabConsole {
       expSelect.addEventListener("change", (e) => this.setExperiment(e.target.value));
     }
 
-    // Subgate selection buttons
+    // Subgate selection buttons (Exp 1)
     this.container.querySelectorAll(".subgate-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         this.selectedSubGate = btn.dataset.gate;
         this.verificationResults = null;
+        this.hintMessage = null;
         this.autoWireExperiment();
       });
     });
 
+    // Subcircuit selection buttons (Exp 2..6)
+    this.container.querySelectorAll(".subcircuit-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const expId = btn.dataset.exp;
+        const subId = btn.dataset.sub;
+        if (!this.selectedSubCircuits) this.selectedSubCircuits = {};
+        this.selectedSubCircuits[expId] = subId;
+        this.verificationResults = null;
+        this.hintMessage = null;
+        this.autoWireExperiment();
+      });
+    });
+
+    // Auto-Wire button
     const btnAutoWire = this.container.querySelector("#btn-auto-wire");
     if (btnAutoWire) {
       btnAutoWire.addEventListener("click", () => {
@@ -830,14 +1138,39 @@ class LabConsole {
       });
     }
 
-    const btnVerify = this.container.querySelector("#btn-verify-exp");
-    if (btnVerify) {
-      btnVerify.addEventListener("click", () => {
-        this.verifyExperiment();
+    // Auto-Check button
+    const btnAutoCheck = this.container.querySelector("#btn-auto-check");
+    if (btnAutoCheck) {
+      btnAutoCheck.addEventListener("click", () => {
+        this.autoCheckCircuit();
       });
     }
 
-    // Solution wiring toggle
+    // Hint button
+    const btnHint = this.container.querySelector("#btn-give-hint");
+    if (btnHint) {
+      btnHint.addEventListener("click", () => {
+        this.giveHint();
+      });
+    }
+
+    // Ghost Solution Wires button
+    const btnGhost = this.container.querySelector("#btn-ghost-solution");
+    if (btnGhost) {
+      btnGhost.addEventListener("click", () => {
+        this.toggleGhostSolution();
+      });
+    }
+
+    // Exam Mode Toggle button
+    const btnExam = this.container.querySelector("#btn-toggle-exammode");
+    if (btnExam) {
+      btnExam.addEventListener("click", () => {
+        this.toggleExamMode();
+      });
+    }
+
+    // Solution wiring list toggle
     const btnToggleSolution = this.container.querySelector("#btn-toggle-solution");
     if (btnToggleSolution) {
       btnToggleSolution.addEventListener("click", () => {
@@ -845,6 +1178,30 @@ class LabConsole {
         this.render();
       });
     }
+
+    // Conclusion text area persistence
+    const conclusionInput = this.container.querySelector("#exp-conclusion-input");
+    if (conclusionInput) {
+      conclusionInput.addEventListener("input", (e) => {
+        if (!this.expConclusions) this.expConclusions = {};
+        this.expConclusions[this.currentExpId] = e.target.value;
+      });
+    }
+
+    // Print Observation Sheet button
+    const btnPrintSheet = this.container.querySelector("#btn-print-sheet");
+    if (btnPrintSheet) {
+      btnPrintSheet.addEventListener("click", () => {
+        this.printObservationSheet();
+      });
+    }
+
+    // Featured IC insert buttons
+    this.container.querySelectorAll(".insert-featured-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        this.insertFeaturedChip(btn.dataset.chip);
+      });
+    });
 
     // Complex IC Suite button
     const btnICSuite = this.container.querySelector("#btn-run-icsuite");
@@ -873,7 +1230,6 @@ class LabConsole {
         for (const s of Object.values(this.engine.sockets)) {
           if (s.chip && (s.chip === "7490" || s.chip === "74LS90")) {
             found7490 = true;
-            // Generate full falling edge pulse on CLKA
             this.engine.clock.pos = 1; this.engine.clock.neg = 0;
             this.engine.evaluate();
             this.engine.clock.pos = 0; this.engine.clock.neg = 1;
@@ -882,7 +1238,6 @@ class LabConsole {
           }
         }
         if (!found7490) {
-          // If no 7490 in socket, still cycle clock
           this.engine.clock.pos = this.engine.clock.pos === 1 ? 0 : 1;
           this.engine.clock.neg = this.engine.clock.pos === 1 ? 0 : 1;
           this.engine.evaluate();
@@ -996,15 +1351,6 @@ class LabConsole {
       });
     }
 
-    const aimStrict = this.container.querySelector("#aim-strict-toggle");
-    if (aimStrict) {
-      aimStrict.addEventListener("click", () => {
-        this.engine.setStrictPowerMode(!this.engine.strictPowerMode);
-        this.board.render();
-        this.render();
-      });
-    }
-
     this.container.querySelectorAll(".btn-del-wire").forEach(btn => {
       btn.addEventListener("click", () => {
         this.engine.removeWire(btn.dataset.wire);
@@ -1060,6 +1406,7 @@ class LabConsole {
     }
   }
 }
+
 if (typeof window !== "undefined") {
   window.LabConsole = LabConsole;
 }

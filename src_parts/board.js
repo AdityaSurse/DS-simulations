@@ -25,10 +25,26 @@ class BoardRenderer {
     // Clock knob dragging state
     this.isDraggingKnob = false;
 
+    // Guided Mode: Ghost solution cords & Hint pulsating jack highlights
+    this.showGhostWires = false;
+    this.ghostWires = [];
+    this.highlightedJacks = [];
+
     this.setupViewPresets();
     this.bindEvents();
     this.bindPanZoom();
     this.bindKnobDrag();
+  }
+
+  setGhostWires(wires, show = true) {
+    this.ghostWires = wires || [];
+    this.showGhostWires = !!show;
+    this.render();
+  }
+
+  setHighlightedJacks(jacks = []) {
+    this.highlightedJacks = jacks || [];
+    this.render();
   }
 
   setupViewPresets() {
@@ -750,6 +766,8 @@ class BoardRenderer {
 
     this.jackCoords["PWR.5V_1"] = { x: 596, y: 432 };
     this.jackCoords["PWR.5V_2"] = { x: 660, y: 432 };
+    this.jackCoords["PWR.5V_3"] = { x: 596, y: 432 };
+    this.jackCoords["PWR.5V_4"] = { x: 660, y: 432 };
     svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_1", type: "5V", cx: 596, cy: 432 });
     svgContent += SVG_COMPONENTS.drawTerminal({ id: "PWR.5V_2", type: "5V", cx: 660, cy: 432 });
 
@@ -947,13 +965,45 @@ class BoardRenderer {
       </g>
     `;
 
-    // 10. PATCH CORDS LAYER
+    // 10. PATCH CORDS LAYER & GUIDED MODE OVERLAYS
     let wiresSvg = "";
+
+    // A. Ghost Solution Cords (Dashed style preview when toggled on)
+    if (this.showGhostWires && this.ghostWires && this.ghostWires.length > 0) {
+      for (const gw of this.ghostWires) {
+        const fromJack = gw.from || gw.a;
+        const toJack = gw.to || gw.b;
+        const p1 = this.jackCoords[fromJack];
+        const p2 = this.jackCoords[toJack];
+        if (p1 && p2) {
+          wiresSvg += SVG_COMPONENTS.renderGhostPatchCord(gw, p1, p2);
+        }
+      }
+    }
+
+    // B. Real Student Patch Cords
     for (const w of this.engine.wires) {
       const p1 = this.jackCoords[w.from];
       const p2 = this.jackCoords[w.to];
       if (p1 && p2) {
         wiresSvg += SVG_COMPONENTS.renderPatchCord(w, p1, p2, this.selectedCordId === w.id);
+      }
+    }
+
+    // C. Hint Pulsating Rings for Missing Connections
+    if (this.highlightedJacks && this.highlightedJacks.length > 0) {
+      for (const jId of this.highlightedJacks) {
+        const coord = this.jackCoords[jId];
+        if (coord) {
+          wiresSvg += `
+            <g class="hint-jack-halo" pointer-events="none">
+              <circle cx="${coord.x}" cy="${coord.y}" r="17" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="4 3" class="hint-pulse-ring" />
+              <circle cx="${coord.x}" cy="${coord.y}" r="23" fill="none" stroke="#f59e0b" stroke-width="1.5" opacity="0.6" class="hint-pulse-outer" />
+              <rect x="${coord.x - 36}" y="${coord.y - 28}" width="72" height="15" rx="3" fill="rgba(15, 23, 42, 0.85)" stroke="#f59e0b" stroke-width="1" />
+              <text x="${coord.x}" y="${coord.y - 17}" fill="#f59e0b" font-family="var(--font-mono)" font-size="9" font-weight="700" text-anchor="middle">WIRE HERE</text>
+            </g>
+          `;
+        }
       }
     }
 

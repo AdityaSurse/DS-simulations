@@ -92,6 +92,17 @@ document.addEventListener("DOMContentLoaded", () => {
       masterPwrBtn.classList.toggle("on", engine.masterPower);
       masterPwrBtn.querySelector(".power-text").textContent = engine.masterPower ? "230V ON" : "OFF";
     }
+
+    const btnExamMode = document.getElementById("btn-exam-mode");
+    if (btnExamMode && typeof consolePanel !== "undefined") {
+      btnExamMode.classList.toggle("btn-active", !!consolePanel.examMode);
+      btnExamMode.textContent = consolePanel.examMode ? "🎓 Exam Mode (ON)" : "🎓 Exam Mode";
+    }
+
+    const expSelect = document.getElementById("header-exp-select");
+    if (expSelect && typeof consolePanel !== "undefined" && expSelect.value !== consolePanel.currentExpId) {
+      expSelect.value = consolePanel.currentExpId;
+    }
   };
 
   engine.onChange(() => {
@@ -162,6 +173,15 @@ document.addEventListener("DOMContentLoaded", () => {
       consolePanel.setTab("experiments");
       const exp = EXPERIMENTS.find(x => x.id === expId);
       if (exp) consolePanel.autoWireExperiment(exp);
+    });
+  }
+
+  const btnExamMode = document.getElementById("btn-exam-mode");
+  if (btnExamMode) {
+    btnExamMode.addEventListener("click", () => {
+      consolePanel.toggleExamMode();
+      btnExamMode.classList.toggle("btn-active", consolePanel.examMode);
+      btnExamMode.textContent = consolePanel.examMode ? "🎓 Exam Mode (ON)" : "🎓 Exam Mode";
     });
   }
 

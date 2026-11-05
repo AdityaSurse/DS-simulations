@@ -593,5 +593,28 @@ const SVG_COMPONENTS = {
         </g>
       </g>
     `;
+  },
+
+  renderGhostPatchCord(wire, p1, p2) {
+    if (!p1 || !p2) return "";
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const dist = Math.hypot(dx, dy);
+    const droop = Math.max(35, 25 + dist * 0.22);
+    const cx1 = p1.x + dx * 0.25;
+    const cy1 = p1.y + droop + Math.max(0, dy * 0.25);
+    const cx2 = p2.x - dx * 0.25;
+    const cy2 = p2.y + droop - Math.max(0, -dy * 0.25);
+    const pathData = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
+    const color = wire.color || "#38bdf8";
+
+    return `
+      <g class="ghost-patch-cord" pointer-events="none" opacity="0.75">
+        <path d="${pathData}" fill="none" stroke="#000000" stroke-width="5.5" stroke-linecap="round" opacity="0.35" />
+        <path d="${pathData}" fill="none" stroke="${color}" stroke-width="4.2" stroke-dasharray="7 5" stroke-linecap="round" />
+        <circle cx="${p1.x}" cy="${p1.y}" r="6.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
+        <circle cx="${p2.x}" cy="${p2.y}" r="6.5" fill="${color}" stroke="#ffffff" stroke-width="1.2" opacity="0.9" />
+      </g>
+    `;
   }
 };

@@ -151,16 +151,18 @@ def build():
 
     <div class="header-controls">
       <!-- Fast Experiment Switcher -->
-      <select id="header-exp-select" style="width: 170px; padding: 4px 8px; font-size: 11px;">
+      <select id="header-exp-select" style="width: 175px; padding: 4px 8px; font-size: 11px;">
         <option value="exp1">Exp 1: Logic Gates</option>
-        <option value="exp3">Exp 3: MUX 74153</option>
-        <option value="exp4">Exp 4: DEMUX 74138</option>
-        <option value="exp5">Exp 5: Adder 7483</option>
-        <option value="exp6">Exp 6: Comparator 7485</option>
-        <option value="exp7">Exp 7: Counter 7490</option>
+        <option value="exp2">Exp 2: MUX 74153</option>
+        <option value="exp3">Exp 3: DEMUX 74138</option>
+        <option value="exp4">Exp 4: Adder 7483</option>
+        <option value="exp5">Exp 5: Counter 7490</option>
+        <option value="exp6">Exp 6: Shift Reg 7474</option>
+        <option value="exp7">Exp 7: Comparator 7485</option>
         <option value="exp8">Exp 8: Counter 74191</option>
       </select>
 
+      <button class="btn" id="btn-exam-mode" title="Toggle Exam Mode (hides Auto-wire, Hint, and Auto-check for realistic exam practice)">🎓 Exam Mode</button>
       <button class="btn" id="btn-open-guide" title="Open Lab Guide & Controls">📖 Guide</button>
       <button class="btn" id="btn-open-manual" title="View Datasheet Reference">📋 Manual</button>
       <button class="btn" id="btn-reset-trainer" title="Reset all patch cords and switches">↺ Reset</button>
@@ -260,13 +262,17 @@ def build():
           <li><b>Wire Colors:</b> Choose Yellow (default), Red (Power), Black (GND), Blue (Signals), or Green (Clock) from the header palette.</li>
         </ul>
 
-        <h3 style="color: var(--accent-teal); font-size: 13px; margin-top: 4px;">Hardware Operation:</h3>
+        <h3 style="color: var(--accent-teal); font-size: 13px; margin-top: 4px;">Hardware Operation & Features:</h3>
         <ul style="padding-left: 18px;">
           <li><b>Pan & Zoom:</b> Use the mouse wheel to zoom in/out. Hold <b>Space + Drag</b> to pan around the board. Click <b>Fit</b> in the sub-bar to reset.</li>
           <li><b>Data Inputs:</b> Click any of the 12 metal toggle switches (C3–C0, B3–B0, A3–A0) to flip between 0 (Down) and 1 (Up).</li>
           <li><b>Strict Power Mode:</b> By default, ICs require patch cords from <b>+5V</b> to the IC's VCC pin and from <b>GND</b> to the GND pin.</li>
           <li><b>Auto-Wire Demo:</b> In the right console, click <b>"⚡ Auto-Wire Circuit"</b> to immediately load and wire any of the 8 syllabus experiments!</li>
-          <li><b>Verify Truth Table:</b> Click <b>"✓ Verify Truth Table"</b> to automatically test all input combinations and verify your circuit.</li>
+          <li><b>Auto-Check:</b> Click <b>"✓ Auto-Check"</b> to sweep all input combinations on a test engine without disturbing your live switch states.</li>
+          <li><b>Hint:</b> Click <b>"💡 Hint"</b> to highlight the next missing connection with pulsing golden rings around the target jacks.</li>
+          <li><b>Show Solution:</b> Click <b>"👁️ Show Solution"</b> to overlay ghost dashed patch cords for the current experiment.</li>
+          <li><b>Exam Mode:</b> Toggle <b>"🎓 Exam Mode"</b> to hide auto-wire, hints, and solutions for realistic practical exam practice.</li>
+          <li><b>Observation Sheet:</b> Click <b>"🖨️ Observation Sheet"</b> to export and print a completed lab observation sheet with roll number and conclusion.</li>
         </ul>
       </div>
     </div>
