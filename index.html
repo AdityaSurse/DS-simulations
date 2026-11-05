@@ -1,0 +1,4130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DIT 9005 Digital IC Trainer Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+/* ===== TOKENS ===== */
+:root {
+  --bg-app: #0c0f14;
+  --bg-shell: #12161f;
+  --bg-panel: #161c27;
+  --bg-panel-elevated: #1e2634;
+  --bg-panel-hover: #263042;
+  --border-subtle: #242c3d;
+  --border-strong: #38455d;
+  --text-main: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #5c6675;
+
+  --accent-cyan: #38bdf8;
+  --accent-cyan-glow: rgba(56, 189, 248, 0.35);
+  --accent-gold: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-green: #10b981;
+  --accent-blue: #3b82f6;
+
+  --pcb-surface: #0a351d;
+  --pcb-shadow: #051e10;
+  --pcb-trace: #0e4426;
+  --silkscreen: rgba(245, 250, 245, 0.92);
+  --wood-frame-1: #4a2810;
+  --wood-frame-2: #2d1808;
+  --wood-bevel: #693b19;
+
+  --ttl-high: #22c55e;
+  --ttl-low: #ef4444;
+  --ttl-float: #94a3b8;
+  --ttl-short: #f43f5e;
+
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.7);
+  --shadow-zif: 0 6px 16px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.15);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+/* App Header */
+.app-header {
+  height: 52px;
+  background: linear-gradient(180deg, #1b212c 0%, #131720 100%);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-badge {
+  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.brand-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+  border-left: 1px solid var(--border-strong);
+  padding-left: 8px;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wire-palette {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.3);
+  padding: 4px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+}
+
+.wire-palette-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.color-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch.active {
+  border-color: #ffffff;
+  transform: scale(1.2);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.btn {
+  background: linear-gradient(180deg, #263042 0%, #1a2230 100%);
+  color: var(--text-main);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.btn:hover {
+  background: linear-gradient(180deg, #303c52 0%, #222c3e 100%);
+  border-color: #4b5b7a;
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+  background: #18202d;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border-color: #38bdf8;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
+  border-color: #7dd3fc;
+}
+
+.btn-danger {
+  background: linear-gradient(180deg, #b91c1c 0%, #991b1b 100%);
+  border-color: #f87171;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.btn-active {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  border-color: #fde68a;
+  color: #000;
+  font-weight: 700;
+}
+
+/* Master Power Switch */
+.master-power-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border-strong);
+  background: #0f131a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.master-power-btn.on {
+  border-color: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+.power-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #334155;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+  transition: all 0.2s ease;
+}
+
+.master-power-btn.on .power-indicator {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e, 0 0 12px #22c55e;
+}
+
+.power-text {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+}
+
+/* Sub-bar / Patchfield navigation */
+.sub-bar {
+  height: 38px;
+  background: #11151c;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.view-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.view-tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.view-tab-btn.active {
+  color: #fff;
+  background: var(--bg-panel-elevated);
+  border-color: var(--border-strong);
+  font-weight: 600;
+}
+
+.subbar-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border-subtle);
+}
+
+.status-pill.alarm {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fca5a5;
+  animation: pulse-alarm 1s infinite alternate;
+}
+
+@keyframes pulse-alarm {
+  from { box-shadow: 0 0 4px rgba(239, 68, 68, 0.4); }
+  to { box-shadow: 0 0 12px rgba(239, 68, 68, 0.9); }
+}
+
+/* Main Workspace */
+.main-workspace {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Board Canvas Area */
+.board-container {
+  flex: 1;
+  background: radial-gradient(circle at center, #151a24 0%, #090c10 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#board-svg {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  cursor: crosshair;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center center;
+}
+
+/* Delete cursor state */
+body.delete-mode #board-svg {
+  cursor: not-allowed;
+}
+
+/* Laboratory Console (Sidebar) */
+.console-panel {
+  width: 380px;
+  min-width: 340px;
+  max-width: 460px;
+  background: var(--bg-shell);
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+}
+
+.console-tabs {
+  display: flex;
+  background: #0f131a;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.console-tab {
+  flex: 1;
+  padding: 10px 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.console-tab:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.console-tab.active {
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.console-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Custom Scrollbar */
+.console-content::-webkit-scrollbar {
+  width: 6px;
+}
+.console-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.console-content::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+/* Console Cards & Elements */
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 6px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Form inputs inside cards */
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+select, input[type="text"] {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid var(--border-strong);
+  color: var(--text-main);
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+select:focus, input[type="text"]:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 6px var(--accent-cyan-glow);
+}
+
+/* Truth Table in Console */
+.truth-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+.truth-table th, .truth-table td {
+  border: 1px solid var(--border-strong);
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.truth-table th {
+  background: #111822;
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.truth-table tr.active-row {
+  background: rgba(56, 189, 248, 0.2);
+  outline: 1px solid var(--accent-cyan);
+  font-weight: 700;
+}
+
+.truth-table tr.passed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #a7f3d0;
+}
+
+.truth-table tr.failed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+/* Floating HUD / Logic Probe readout */
+.probe-hud {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background: rgba(18, 22, 31, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  z-index: 80;
+  transition: opacity 0.2s ease;
+}
+
+.probe-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ttl-float);
+  box-shadow: 0 0 6px var(--ttl-float);
+}
+
+.probe-dot.high {
+  background: var(--ttl-high);
+  box-shadow: 0 0 8px var(--ttl-high);
+}
+
+.probe-dot.low {
+  background: var(--ttl-low);
+  box-shadow: 0 0 8px var(--ttl-low);
+}
+
+.probe-dot.short {
+  background: var(--ttl-short);
+  box-shadow: 0 0 10px var(--ttl-short);
+}
+
+/* Sockets in IC Drawer */
+.socket-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 10px;
+  background: #121721;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.socket-card:hover {
+  border-color: #3b475c;
+  background: #161c28;
+}
+
+.socket-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.socket-id {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #60a5fa;
+}
+
+.socket-chip-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+/* Verification Result Banner */
+.verdict-banner {
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.verdict-banner.success {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+
+.verdict-banner.failure {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+
+
+/* Silkscreen & Board SVG Typography */
+.silkscreen-title {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  fill: var(--silkscreen);
+  letter-spacing: 1px;
+}
+.silkscreen-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--silkscreen);
+}
+.silkscreen-text.bold {
+  font-weight: 700;
+  font-size: 11px;
+}
+.silkscreen-text.mini {
+  font-size: 8.5px;
+  fill: rgba(220, 235, 220, 0.75);
+}
+.brand-silkscreen {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 800;
+  fill: #ffffff;
+  letter-spacing: 1.5px;
+}
+.brand-silkscreen.gold {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 900;
+  fill: #f59e0b;
+  letter-spacing: 2px;
+}
+.brand-silkscreen.small {
+  font-size: 11px;
+  font-weight: 600;
+  fill: #94a3b8;
+  letter-spacing: 1px;
+}
+
+/* Hitboxes and cursors */
+.jack-hitbox, .switch-hitbox, .btn-hitbox, .knob-hitbox {
+  cursor: pointer;
+}
+.jack-group:hover .jack-hitbox {
+  cursor: crosshair;
+}
+.jack-group:hover circle:nth-child(2) {
+  filter: drop-shadow(0 0 6px rgba(255, 230, 100, 0.9));
+}
+.switch-group:hover rect:first-child {
+  stroke: #7dd3fc;
+}
+.pushbutton-group:hover circle:nth-child(3) {
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+}
+.knob-group:hover circle:nth-child(8) {
+  stroke: #7dd3fc;
+}
+
+.patch-cord-group {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.patch-cord-group:hover {
+  opacity: 0.85;
+}
+.patch-cord-group:hover path:nth-child(3) {
+  stroke-width: 7;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+.jack-selection-ring {
+  animation: pulse-ring 1.2s infinite ease-in-out;
+  transform-origin: center center;
+}
+
+  </style>
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <span class="brand-badge">HI-TECH</span>
+      <h1 class="brand-title">DIT 9005 <span style="font-weight: 400; color: #94a3b8; font-size: 14px;">Digital IC Trainer Simulator</span></h1>
+      <span class="brand-subtitle">Digital Systems Lab</span>
+    </div>
+
+    <div class="header-controls">
+      <!-- Wire Color Palette -->
+      <div class="wire-palette">
+        <span class="wire-palette-label">Wire:</span>
+        <div class="color-swatch active" data-color="#facc15" style="background: #facc15;" title="Yellow Wire (Default)"></div>
+        <div class="color-swatch" data-color="#ef4444" style="background: #ef4444;" title="Red (+5V / VCC)"></div>
+        <div class="color-swatch" data-color="#1f2937" style="background: #1f2937;" title="Black (GND)"></div>
+        <div class="color-swatch" data-color="#38bdf8" style="background: #38bdf8;" title="Blue (Signals)"></div>
+        <div class="color-swatch" data-color="#22c55e" style="background: #22c55e;" title="Green (Clock/Pulse)"></div>
+        <div class="color-swatch" data-color="#f8fafc" style="background: #f8fafc;" title="White"></div>
+      </div>
+
+      <button class="btn" id="btn-undo-wire" title="Undo Last Wire (Ctrl+Z)">⤺ Undo</button>
+      <button class="btn" id="btn-delete-mode" title="Click wire to remove">✕ Delete Wire</button>
+      <button class="btn btn-danger" id="btn-clear-wires" title="Remove all patch cords">Clear Wires</button>
+
+      <!-- Master Power Switch in Header -->
+      <button class="master-power-btn on" id="master-pwr-header" title="Master 230V Mains Power">
+        <div class="power-indicator"></div>
+        <span class="power-text">230V ON</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Sub-bar: Patch field navigation & quick status -->
+  <div class="sub-bar">
+    <div class="view-tabs">
+      <span style="font-size: 11px; color: var(--text-dim); margin-right: 6px; font-weight: 600;">PATCH FIELD:</span>
+      <button class="view-tab-btn active" data-view="full">Full Board</button>
+      <button class="view-tab-btn" data-view="zif">ZIF Sockets (U1–U4)</button>
+      <button class="view-tab-btn" data-view="inputs">Inputs & Power</button>
+      <button class="view-tab-btn" data-view="outputs">Outputs & 7-Seg</button>
+      <button class="view-tab-btn" data-view="u5">40-Pin ZIF (U5)</button>
+    </div>
+
+    <div class="subbar-status">
+      <span class="status-pill" id="status-wire-count">0 Wires</span>
+      <span class="status-pill" id="status-alarm-pill">✓ Healthy</span>
+    </div>
+  </div>
+
+  <!-- Main Workspace -->
+  <main class="main-workspace">
+    <!-- Board Canvas -->
+    <div class="board-container">
+      <svg id="board-svg" viewBox="0 0 1600 1160" preserveAspectRatio="xMidYMid meet"></svg>
+
+      <!-- Floating Logic Probe HUD -->
+      <div class="probe-hud" id="probe-hud" style="opacity: 0;">
+        <div class="probe-dot" id="probe-dot"></div>
+        <div>
+          <div style="font-size: 10px; color: var(--text-muted);">PROBE TEST POINT</div>
+          <div style="font-weight: 700; color: #fff;" id="probe-jack-name">--</div>
+        </div>
+        <div style="border-left: 1px solid var(--border-strong); padding-left: 10px;">
+          <div style="font-size: 10px; color: var(--text-muted);" id="probe-state">--</div>
+          <div style="font-weight: 700; color: #38bdf8;" id="probe-voltage">0.00 V</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Laboratory Console Sidebar -->
+    <aside class="console-panel" id="laboratory-console"></aside>
+  </main>
+
+  <script>
+/* ===== DATA: ICs ===== */
+const IC_LIBRARY = {
+  "7404": {
+    name: "7404",
+    title: "Hex Inverter",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pins: [
+      { pin: 1, name: "1A", type: "in" },
+      { pin: 2, name: "1Y", type: "out" },
+      { pin: 3, name: "2A", type: "in" },
+      { pin: 4, name: "2Y", type: "out" },
+      { pin: 5, name: "3A", type: "in" },
+      { pin: 6, name: "3Y", type: "out" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "4Y", type: "out" },
+      { pin: 9, name: "4A", type: "in" },
+      { pin: 10, name: "5Y", type: "out" },
+      { pin: 11, name: "5A", type: "in" },
+      { pin: 12, name: "6Y", type: "out" },
+      { pin: 13, name: "6A", type: "in" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      return {
+        outputs: {
+          2: get(1) === 1 ? 0 : 1,
+          4: get(3) === 1 ? 0 : 1,
+          6: get(5) === 1 ? 0 : 1,
+          8: get(9) === 1 ? 0 : 1,
+          10: get(11) === 1 ? 0 : 1,
+          12: get(13) === 1 ? 0 : 1
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Input A", "Output Y"],
+      rows: [
+        [0, 1],
+        [1, 0]
+      ]
+    }
+  },
+
+  "7408": {
+    name: "7408",
+    title: "Quad 2-Input AND Gate",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pins: [
+      { pin: 1, name: "1A", type: "in" },
+      { pin: 2, name: "1B", type: "in" },
+      { pin: 3, name: "1Y", type: "out" },
+      { pin: 4, name: "2A", type: "in" },
+      { pin: 5, name: "2B", type: "in" },
+      { pin: 6, name: "2Y", type: "out" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "3Y", type: "out" },
+      { pin: 9, name: "3A", type: "in" },
+      { pin: 10, name: "3B", type: "in" },
+      { pin: 11, name: "4Y", type: "out" },
+      { pin: 12, name: "4A", type: "in" },
+      { pin: 13, name: "4B", type: "in" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      return {
+        outputs: {
+          3: (get(1) === 1 && get(2) === 1) ? 1 : 0,
+          6: (get(4) === 1 && get(5) === 1) ? 1 : 0,
+          8: (get(9) === 1 && get(10) === 1) ? 1 : 0,
+          11: (get(12) === 1 && get(13) === 1) ? 1 : 0
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Input A", "Input B", "Output Y"],
+      rows: [
+        [0, 0, 0],
+        [0, 1, 0],
+        [1, 0, 0],
+        [1, 1, 1]
+      ]
+    }
+  },
+
+  "7432": {
+    name: "7432",
+    title: "Quad 2-Input OR Gate",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pins: [
+      { pin: 1, name: "1A", type: "in" },
+      { pin: 2, name: "1B", type: "in" },
+      { pin: 3, name: "1Y", type: "out" },
+      { pin: 4, name: "2A", type: "in" },
+      { pin: 5, name: "2B", type: "in" },
+      { pin: 6, name: "2Y", type: "out" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "3Y", type: "out" },
+      { pin: 9, name: "3A", type: "in" },
+      { pin: 10, name: "3B", type: "in" },
+      { pin: 11, name: "4Y", type: "out" },
+      { pin: 12, name: "4A", type: "in" },
+      { pin: 13, name: "4B", type: "in" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      return {
+        outputs: {
+          3: (get(1) === 1 || get(2) === 1) ? 1 : 0,
+          6: (get(4) === 1 || get(5) === 1) ? 1 : 0,
+          8: (get(9) === 1 || get(10) === 1) ? 1 : 0,
+          11: (get(12) === 1 || get(13) === 1) ? 1 : 0
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Input A", "Input B", "Output Y"],
+      rows: [
+        [0, 0, 0],
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1]
+      ]
+    }
+  },
+
+  "7400": {
+    name: "7400",
+    title: "Quad 2-Input NAND Gate",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pins: [
+      { pin: 1, name: "1A", type: "in" },
+      { pin: 2, name: "1B", type: "in" },
+      { pin: 3, name: "1Y", type: "out" },
+      { pin: 4, name: "2A", type: "in" },
+      { pin: 5, name: "2B", type: "in" },
+      { pin: 6, name: "2Y", type: "out" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "3Y", type: "out" },
+      { pin: 9, name: "3A", type: "in" },
+      { pin: 10, name: "3B", type: "in" },
+      { pin: 11, name: "4Y", type: "out" },
+      { pin: 12, name: "4A", type: "in" },
+      { pin: 13, name: "4B", type: "in" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      return {
+        outputs: {
+          3: (get(1) === 1 && get(2) === 1) ? 0 : 1,
+          6: (get(4) === 1 && get(5) === 1) ? 0 : 1,
+          8: (get(9) === 1 && get(10) === 1) ? 0 : 1,
+          11: (get(12) === 1 && get(13) === 1) ? 0 : 1
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Input A", "Input B", "Output Y"],
+      rows: [
+        [0, 0, 1],
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 0]
+      ]
+    }
+  },
+
+  "7402": {
+    name: "7402",
+    title: "Quad 2-Input NOR Gate",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pins: [
+      { pin: 1, name: "1Y", type: "out" },
+      { pin: 2, name: "1A", type: "in" },
+      { pin: 3, name: "1B", type: "in" },
+      { pin: 4, name: "2Y", type: "out" },
+      { pin: 5, name: "2A", type: "in" },
+      { pin: 6, name: "2B", type: "in" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "3A", type: "in" },
+      { pin: 9, name: "3B", type: "in" },
+      { pin: 10, name: "3Y", type: "out" },
+      { pin: 11, name: "4A", type: "in" },
+      { pin: 12, name: "4B", type: "in" },
+      { pin: 13, name: "4Y", type: "out" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      return {
+        outputs: {
+          1: (get(2) === 0 && get(3) === 0) ? 1 : 0,
+          4: (get(5) === 0 && get(6) === 0) ? 1 : 0,
+          10: (get(8) === 0 && get(9) === 0) ? 1 : 0,
+          13: (get(11) === 0 && get(12) === 0) ? 1 : 0
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Input A", "Input B", "Output Y"],
+      rows: [
+        [0, 0, 1],
+        [0, 1, 0],
+        [1, 0, 0],
+        [1, 1, 0]
+      ]
+    }
+  },
+
+  "7486": {
+    name: "7486",
+    title: "Quad 2-Input Exclusive-OR (XOR) Gate",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pins: [
+      { pin: 1, name: "1A", type: "in" },
+      { pin: 2, name: "1B", type: "in" },
+      { pin: 3, name: "1Y", type: "out" },
+      { pin: 4, name: "2A", type: "in" },
+      { pin: 5, name: "2B", type: "in" },
+      { pin: 6, name: "2Y", type: "out" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "3Y", type: "out" },
+      { pin: 9, name: "3A", type: "in" },
+      { pin: 10, name: "3B", type: "in" },
+      { pin: 11, name: "4Y", type: "out" },
+      { pin: 12, name: "4A", type: "in" },
+      { pin: 13, name: "4B", type: "in" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      return {
+        outputs: {
+          3: (get(1) ^ get(2)) ? 1 : 0,
+          6: (get(4) ^ get(5)) ? 1 : 0,
+          8: (get(9) ^ get(10)) ? 1 : 0,
+          11: (get(12) ^ get(13)) ? 1 : 0
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Input A", "Input B", "Output Y"],
+      rows: [
+        [0, 0, 0],
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 0]
+      ]
+    }
+  },
+
+  "74153": {
+    name: "74153",
+    title: "Dual 4-to-1 Multiplexer",
+    package: "DIP-16",
+    pinCount: 16,
+    vccPin: 16,
+    gndPin: 8,
+    pins: [
+      { pin: 1, name: "1G'", type: "in" },
+      { pin: 2, name: "B", type: "in" },
+      { pin: 3, name: "1C3", type: "in" },
+      { pin: 4, name: "1C2", type: "in" },
+      { pin: 5, name: "1C1", type: "in" },
+      { pin: 6, name: "1C0", type: "in" },
+      { pin: 7, name: "1Y", type: "out" },
+      { pin: 8, name: "GND", type: "gnd" },
+      { pin: 9, name: "2Y", type: "out" },
+      { pin: 10, name: "2C0", type: "in" },
+      { pin: 11, name: "2C1", type: "in" },
+      { pin: 12, name: "2C2", type: "in" },
+      { pin: 13, name: "2C3", type: "in" },
+      { pin: 14, name: "A", type: "in" },
+      { pin: 15, name: "2G'", type: "in" },
+      { pin: 16, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      const selA = get(14);
+      const selB = get(2);
+      const sel = (selB << 1) | selA;
+
+      let y1 = 0;
+      if (get(1) === 0) { // Active low enable 1G'
+        if (sel === 0) y1 = get(6);
+        else if (sel === 1) y1 = get(5);
+        else if (sel === 2) y1 = get(4);
+        else if (sel === 3) y1 = get(3);
+      }
+
+      let y2 = 0;
+      if (get(15) === 0) { // Active low enable 2G'
+        if (sel === 0) y2 = get(10);
+        else if (sel === 1) y2 = get(11);
+        else if (sel === 2) y2 = get(12);
+        else if (sel === 3) y2 = get(13);
+      }
+
+      return {
+        outputs: { 7: y1, 9: y2 },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Select B", "Select A", "Strobe 1G'", "Output 1Y"],
+      rows: [
+        ["X", "X", 1, 0],
+        [0, 0, 0, "1C0"],
+        [0, 1, 0, "1C1"],
+        [1, 0, 0, "1C2"],
+        [1, 1, 0, "1C3"]
+      ]
+    }
+  },
+
+  "74138": {
+    name: "74138",
+    title: "3-to-8 Line Decoder / Demultiplexer",
+    package: "DIP-16",
+    pinCount: 16,
+    vccPin: 16,
+    gndPin: 8,
+    pins: [
+      { pin: 1, name: "A", type: "in" },
+      { pin: 2, name: "B", type: "in" },
+      { pin: 3, name: "C", type: "in" },
+      { pin: 4, name: "G2A'", type: "in" },
+      { pin: 5, name: "G2B'", type: "in" },
+      { pin: 6, name: "G1", type: "in" },
+      { pin: 7, name: "Y7'", type: "out" },
+      { pin: 8, name: "GND", type: "gnd" },
+      { pin: 9, name: "Y6'", type: "out" },
+      { pin: 10, name: "Y5'", type: "out" },
+      { pin: 11, name: "Y4'", type: "out" },
+      { pin: 12, name: "Y3'", type: "out" },
+      { pin: 13, name: "Y2'", type: "out" },
+      { pin: 14, name: "Y1'", type: "out" },
+      { pin: 15, name: "Y0'", type: "out" },
+      { pin: 16, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      const g1 = get(6);
+      const g2a = get(4);
+      const g2b = get(5);
+      const enabled = (g1 === 1 && g2a === 0 && g2b === 0);
+
+      const outputs = { 15: 1, 14: 1, 13: 1, 12: 1, 11: 1, 10: 1, 9: 1, 7: 1 };
+      if (enabled) {
+        const a = get(1);
+        const b = get(2);
+        const c = get(3);
+        const val = (c << 2) | (b << 1) | a;
+        const pinMap = [15, 14, 13, 12, 11, 10, 9, 7];
+        outputs[pinMap[val]] = 0;
+      }
+      return { outputs, nextState: state };
+    },
+    truthTable: {
+      headers: ["G1", "G2A'", "G2B'", "C", "B", "A", "Active Output (LOW)"],
+      rows: [
+        [0, "X", "X", "X", "X", "X", "None (All HIGH)"],
+        [1, 1, "X", "X", "X", "X", "None (All HIGH)"],
+        [1, 0, 0, 0, 0, 0, "Y0' = 0"],
+        [1, 0, 0, 0, 0, 1, "Y1' = 0"],
+        [1, 0, 0, 0, 1, 0, "Y2' = 0"],
+        [1, 0, 0, 0, 1, 1, "Y3' = 0"],
+        [1, 0, 0, 1, 0, 0, "Y4' = 0"],
+        [1, 0, 0, 1, 0, 1, "Y5' = 0"],
+        [1, 0, 0, 1, 1, 0, "Y6' = 0"],
+        [1, 0, 0, 1, 1, 1, "Y7' = 0"]
+      ]
+    }
+  },
+
+  "7483": {
+    name: "7483",
+    title: "4-Bit Binary Full Adder",
+    package: "DIP-16",
+    pinCount: 16,
+    vccPin: 5,
+    gndPin: 12,
+    pins: [
+      { pin: 1, name: "A4", type: "in" },
+      { pin: 2, name: "S3", type: "out" },
+      { pin: 3, name: "A3", type: "in" },
+      { pin: 4, name: "B3", type: "in" },
+      { pin: 5, name: "VCC", type: "pwr" },
+      { pin: 6, name: "S2", type: "out" },
+      { pin: 7, name: "B2", type: "in" },
+      { pin: 8, name: "A2", type: "in" },
+      { pin: 9, name: "S1", type: "out" },
+      { pin: 10, name: "A1", type: "in" },
+      { pin: 11, name: "B1", type: "in" },
+      { pin: 12, name: "GND", type: "gnd" },
+      { pin: 13, name: "C0", type: "in" },
+      { pin: 14, name: "C4", type: "out" },
+      { pin: 15, name: "S4", type: "out" },
+      { pin: 16, name: "B4", type: "in" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      const a = (get(1) << 3) | (get(3) << 2) | (get(8) << 1) | get(10);
+      const b = (get(16) << 3) | (get(4) << 2) | (get(7) << 1) | get(11);
+      const c0 = get(13);
+      const sum = a + b + c0;
+      return {
+        outputs: {
+          9: sum & 1,
+          6: (sum >> 1) & 1,
+          2: (sum >> 2) & 1,
+          15: (sum >> 3) & 1,
+          14: (sum >> 4) & 1
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["A[4:1]", "B[4:1]", "Cin", "Sum S[4:1]", "Cout"],
+      rows: [
+        ["0011 (3)", "0101 (5)", 0, "1000 (8)", 0],
+        ["0111 (7)", "1001 (9)", 0, "0000 (0)", 1],
+        ["1111 (15)", "0001 (1)", 0, "0000 (0)", 1]
+      ]
+    }
+  },
+
+  "7485": {
+    name: "7485",
+    title: "4-Bit Magnitude Comparator",
+    package: "DIP-16",
+    pinCount: 16,
+    vccPin: 16,
+    gndPin: 8,
+    pins: [
+      { pin: 1, name: "B3", type: "in" },
+      { pin: 2, name: "IA<B", type: "in" },
+      { pin: 3, name: "IA=B", type: "in" },
+      { pin: 4, name: "IA>B", type: "in" },
+      { pin: 5, name: "OA>B", type: "out" },
+      { pin: 6, name: "OA=B", type: "out" },
+      { pin: 7, name: "OA<B", type: "out" },
+      { pin: 8, name: "GND", type: "gnd" },
+      { pin: 9, name: "B0", type: "in" },
+      { pin: 10, name: "A0", type: "in" },
+      { pin: 11, name: "B1", type: "in" },
+      { pin: 12, name: "A1", type: "in" },
+      { pin: 13, name: "A2", type: "in" },
+      { pin: 14, name: "B2", type: "in" },
+      { pin: 15, name: "A3", type: "in" },
+      { pin: 16, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      const a = (get(15) << 3) | (get(13) << 2) | (get(12) << 1) | get(10);
+      const b = (get(1) << 3) | (get(14) << 2) | (get(11) << 1) | get(9);
+      const iaGt = get(4);
+      const iaEq = get(3);
+      const iaLt = get(2);
+
+      let oGt = 0, oEq = 0, oLt = 0;
+      if (a > b) oGt = 1;
+      else if (a < b) oLt = 1;
+      else {
+        oGt = iaGt;
+        oEq = iaEq;
+        oLt = iaLt;
+      }
+
+      return {
+        outputs: { 5: oGt, 6: oEq, 7: oLt },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Condition", "OA>B", "OA=B", "OA<B"],
+      rows: [
+        ["A > B", 1, 0, 0],
+        ["A < B", 0, 0, 1],
+        ["A = B (IA=B=1)", 0, 1, 0]
+      ]
+    }
+  },
+
+  "7490": {
+    name: "7490",
+    title: "Decade Counter",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 5,
+    gndPin: 10,
+    pins: [
+      { pin: 1, name: "CKB", type: "in" },
+      { pin: 2, name: "R0(1)", type: "in" },
+      { pin: 3, name: "R0(2)", type: "in" },
+      { pin: 4, name: "NC", type: "nc" },
+      { pin: 5, name: "VCC", type: "pwr" },
+      { pin: 6, name: "R9(1)", type: "in" },
+      { pin: 7, name: "R9(2)", type: "in" },
+      { pin: 8, name: "QD", type: "out" },
+      { pin: 9, name: "QB", type: "out" },
+      { pin: 10, name: "GND", type: "gnd" },
+      { pin: 11, name: "QC", type: "out" },
+      { pin: 12, name: "QA", type: "out" },
+      { pin: 13, name: "NC", type: "nc" },
+      { pin: 14, name: "CKA", type: "in" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      const s = state || { qa: 0, bcd: 0, lastCkA: 1, lastCkB: 1 };
+      const curCkA = get(14);
+      const curCkB = get(1);
+
+      let qa = s.qa;
+      let bcd = s.bcd;
+
+      // Negative edge trigger on CKA
+      if (s.lastCkA === 1 && curCkA === 0) {
+        qa = qa === 0 ? 1 : 0;
+      }
+      // Negative edge trigger on CKB (counts 0 to 4)
+      if (s.lastCkB === 1 && curCkB === 0) {
+        bcd = (bcd + 1) % 5;
+      }
+
+      // Asynchronous resets
+      if (get(2) === 1 && get(3) === 1) {
+        qa = 0; bcd = 0;
+      } else if (get(6) === 1 && get(7) === 1) {
+        qa = 1; bcd = 4; // BCD 9 is QA=1, QD=1 (bcd=4)
+      }
+
+      const qb = bcd & 1;
+      const qc = (bcd >> 1) & 1;
+      const qd = (bcd >> 2) & 1;
+
+      return {
+        outputs: { 12: qa, 9: qb, 11: qc, 8: qd },
+        nextState: { qa, bcd, lastCkA: curCkA, lastCkB: curCkB }
+      };
+    },
+    truthTable: {
+      headers: ["Count", "QD", "QC", "QB", "QA"],
+      rows: [
+        [0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 1],
+        [2, 0, 0, 1, 0],
+        [3, 0, 0, 1, 1],
+        [4, 0, 1, 0, 0],
+        [5, 0, 1, 0, 1],
+        [6, 0, 1, 1, 0],
+        [7, 0, 1, 1, 1],
+        [8, 1, 0, 0, 0],
+        [9, 1, 0, 0, 1]
+      ]
+    }
+  },
+
+  "7493": {
+    name: "7493",
+    title: "4-Bit Binary Counter",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 5,
+    gndPin: 10,
+    pins: [
+      { pin: 1, name: "CKB", type: "in" },
+      { pin: 2, name: "R0(1)", type: "in" },
+      { pin: 3, name: "R0(2)", type: "in" },
+      { pin: 4, name: "NC", type: "nc" },
+      { pin: 5, name: "VCC", type: "pwr" },
+      { pin: 6, name: "NC", type: "nc" },
+      { pin: 7, name: "NC", type: "nc" },
+      { pin: 8, name: "QD", type: "out" },
+      { pin: 9, name: "QB", type: "out" },
+      { pin: 10, name: "GND", type: "gnd" },
+      { pin: 11, name: "QC", type: "out" },
+      { pin: 12, name: "QA", type: "out" },
+      { pin: 13, name: "NC", type: "nc" },
+      { pin: 14, name: "CKA", type: "in" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      const s = state || { qa: 0, qbcd: 0, lastCkA: 1, lastCkB: 1 };
+      const curCkA = get(14);
+      const curCkB = get(1);
+
+      let qa = s.qa;
+      let qbcd = s.qbcd;
+
+      // CKA negative edge
+      if (s.lastCkA === 1 && curCkA === 0) {
+        qa = qa === 0 ? 1 : 0;
+      }
+      // CKB negative edge (modulo 8)
+      if (s.lastCkB === 1 && curCkB === 0) {
+        qbcd = (qbcd + 1) & 7;
+      }
+
+      // Reset
+      if (get(2) === 1 && get(3) === 1) {
+        qa = 0; qbcd = 0;
+      }
+
+      const qb = qbcd & 1;
+      const qc = (qbcd >> 1) & 1;
+      const qd = (qbcd >> 2) & 1;
+
+      return {
+        outputs: { 12: qa, 9: qb, 11: qc, 8: qd },
+        nextState: { qa, qbcd, lastCkA: curCkA, lastCkB: curCkB }
+      };
+    },
+    truthTable: {
+      headers: ["Count (0..15)", "QD", "QC", "QB", "QA"],
+      rows: [
+        [0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 1],
+        [2, 0, 0, 1, 0],
+        [3, 0, 0, 1, 1],
+        [7, 0, 1, 1, 1],
+        [15, 1, 1, 1, 1]
+      ]
+    }
+  },
+
+  "74191": {
+    name: "74191",
+    title: "Synchronous 4-Bit Up/Down Binary Counter",
+    package: "DIP-16",
+    pinCount: 16,
+    vccPin: 16,
+    gndPin: 8,
+    pins: [
+      { pin: 1, name: "B", type: "in" },
+      { pin: 2, name: "QB", type: "out" },
+      { pin: 3, name: "QA", type: "out" },
+      { pin: 4, name: "ENABLE'", type: "in" },
+      { pin: 5, name: "D/U'", type: "in" },
+      { pin: 6, name: "QC", type: "out" },
+      { pin: 7, name: "QD", type: "out" },
+      { pin: 8, name: "GND", type: "gnd" },
+      { pin: 9, name: "D", type: "in" },
+      { pin: 10, name: "C", type: "in" },
+      { pin: 11, name: "LOAD'", type: "in" },
+      { pin: 12, name: "MAX/MIN", type: "out" },
+      { pin: 13, name: "RCO'", type: "out" },
+      { pin: 14, name: "CLOCK", type: "in" },
+      { pin: 15, name: "A", type: "in" },
+      { pin: 16, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      const s = state || { count: 0, lastClk: 0 };
+      const curClk = get(14);
+      let count = s.count;
+
+      const load = get(11);
+      const en = get(4);
+      const downUp = get(5); // 0 = UP, 1 = DOWN
+
+      if (load === 0) {
+        // Asynchronous parallel load
+        count = (get(9) << 3) | (get(10) << 2) | (get(1) << 1) | get(15);
+      } else if (s.lastClk === 0 && curClk === 1) {
+        // Rising edge clock
+        if (en === 0) {
+          if (downUp === 0) {
+            count = (count + 1) & 0x0F;
+          } else {
+            count = (count - 1 + 16) & 0x0F;
+          }
+        }
+      }
+
+      const qa = count & 1;
+      const qb = (count >> 1) & 1;
+      const qc = (count >> 2) & 1;
+      const qd = (count >> 3) & 1;
+
+      const maxMin = ((downUp === 0 && count === 15) || (downUp === 1 && count === 0)) ? 1 : 0;
+      const rco = (maxMin === 1 && curClk === 0 && en === 0) ? 0 : 1;
+
+      return {
+        outputs: { 3: qa, 2: qb, 6: qc, 7: qd, 12: maxMin, 13: rco },
+        nextState: { count, lastClk: curClk }
+      };
+    },
+    truthTable: {
+      headers: ["D/U'", "ENABLE'", "CLOCK", "Function"],
+      rows: [
+        ["X", "X", "Load'=0", "Parallel Load A,B,C,D"],
+        [0, 0, "Rise", "Count Up"],
+        [1, 0, "Rise", "Count Down"],
+        ["X", 1, "Rise", "Hold / Inhibit Count"]
+      ]
+    }
+  }
+};
+
+/* ===== DATA: EXPERIMENTS ===== */
+const EXPERIMENTS = [
+  {
+    id: "exp1",
+    number: 1,
+    title: "Study of Logic Gates",
+    aim: "To study basic logic gates (NOT, AND, OR, NAND, NOR, XOR) and verify their truth tables on the trainer kit.",
+    apparatus: "DIT 9005 Trainer Kit, IC 7408 (AND), IC 7432 (OR), IC 7404 (NOT), IC 7400 (NAND), IC 7402 (NOR), IC 7486 (XOR), Patch cords.",
+    theory: "Logic gates are the fundamental building blocks of digital electronic circuits. Logic levels correspond to binary 1 (+5V TTL HIGH) and binary 0 (0V/GND TTL LOW). In standard TTL, an unconnected (floating) input naturally floats to Logic 1.",
+    stepByStep: [
+      "1. Insert IC 7408 (AND) or IC 7400 (NAND) into ZIF socket U1. Lower and lock the ZIF lever.",
+      "2. Connect +5V power jack to U1 pin 20 (or socket jack 20 for 14-pin left-aligned VCC pin 14).",
+      "3. Connect GND jack to U1 pin 7 (socket jack 7).",
+      "4. Connect Data Input switch IN.A0 to U1 pin 1 (socket jack 1, Input 1A).",
+      "5. Connect Data Input switch IN.A1 to U1 pin 2 (socket jack 2, Input 1B).",
+      "6. Connect Output jack OUT.Y0 to U1 pin 3 (socket jack 3, Output 1Y).",
+      "7. Flip switches A0 and A1 through combinations 00, 01, 10, 11 and observe LED Y0."
+    ],
+    recommendedSocketICs: { U1: "7408" },
+    recommendedWires: [
+      { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+      { from: "PWR.GND_1", to: "U1.J7", color: "#1f2937" },
+      { from: "IN.A0", to: "U1.J1", color: "#facc15" },
+      { from: "IN.A1", to: "U1.J2", color: "#facc15" },
+      { from: "U1.J3", to: "OUT.Y0", color: "#38bdf8" }
+    ],
+    tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+    tableRows: [
+      { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+      { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+      { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+      { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } }
+    ]
+  },
+
+  {
+    id: "exp3",
+    number: 3,
+    title: "Multiplexer using IC 74153",
+    aim: "Study of IC 74LS153 as a 4:1 Multiplexer and implement logic functions.",
+    apparatus: "DIT 9005 Trainer Kit, IC 74153 (Dual 4:1 Mux), Patch cords.",
+    theory: "A Multiplexer (Data Selector) selects one of several input data lines and forwards it to a single output line based on select lines. For a 4:1 Mux, 2 select lines S1 (B) and S0 (A) select between data inputs C0, C1, C2, and C3 when active-low strobe 1G' is 0.",
+    stepByStep: [
+      "1. Insert IC 74153 into ZIF socket U1 and lock the lever.",
+      "2. Connect +5V to U1 pin 16 (socket jack 20 for 16-pin IC) and GND to pin 8 (socket jack 8).",
+      "3. Ground strobe 1G' (IC pin 1 -> socket jack 1) to enable Mux 1.",
+      "4. Connect select switches: IN.A0 to IC pin 14 (A / socket jack 18) and IN.A1 to IC pin 2 (B / socket jack 2).",
+      "5. Connect data inputs: IN.B0 to 1C0 (IC pin 6 / J6), IN.B1 to 1C1 (IC pin 5 / J5), IN.B2 to 1C2 (IC pin 4 / J4), IN.B3 to 1C3 (IC pin 3 / J3).",
+      "6. Connect Mux 1 output 1Y (IC pin 7 / J7) to OUT.Y0.",
+      "7. Change select lines A1,A0 and verify which data input is routed to Y0."
+    ],
+    recommendedSocketICs: { U1: "74153" },
+    recommendedWires: [
+      { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+      { from: "PWR.GND_1", to: "U1.J8", color: "#1f2937" },
+      { from: "PWR.GND_2", to: "U1.J1", color: "#1f2937" },
+      { from: "IN.A0", to: "U1.J18", color: "#facc15" },
+      { from: "IN.A1", to: "U1.J2", color: "#facc15" },
+      { from: "IN.B0", to: "U1.J6", color: "#22c55e" },
+      { from: "IN.B1", to: "U1.J5", color: "#22c55e" },
+      { from: "IN.B2", to: "U1.J4", color: "#22c55e" },
+      { from: "IN.B3", to: "U1.J3", color: "#22c55e" },
+      { from: "U1.J7", to: "OUT.Y0", color: "#38bdf8" }
+    ],
+    tableHeaders: ["Strobe 1G'", "Select B (A1)", "Select A (A0)", "Selected Input", "Output Y0"],
+    tableRows: [
+      { inputs: { "IN.A1": 0, "IN.A0": 0, "IN.B0": 1, "IN.B1": 0, "IN.B2": 0, "IN.B3": 0 }, expected: { "OUT.Y0": 1 } },
+      { inputs: { "IN.A1": 0, "IN.A0": 1, "IN.B0": 0, "IN.B1": 1, "IN.B2": 0, "IN.B3": 0 }, expected: { "OUT.Y0": 1 } },
+      { inputs: { "IN.A1": 1, "IN.A0": 0, "IN.B0": 0, "IN.B1": 0, "IN.B2": 1, "IN.B3": 0 }, expected: { "OUT.Y0": 1 } },
+      { inputs: { "IN.A1": 1, "IN.A0": 1, "IN.B0": 0, "IN.B1": 0, "IN.B2": 0, "IN.B3": 1 }, expected: { "OUT.Y0": 1 } }
+    ]
+  },
+
+  {
+    id: "exp4",
+    number: 4,
+    title: "Demultiplexer / Decoder using IC 74138",
+    aim: "Study of IC 74LS138 as a 3-to-8 Line Decoder and Demultiplexer.",
+    apparatus: "DIT 9005 Trainer Kit, IC 74138, Patch cords.",
+    theory: "IC 74138 decodes a 3-bit binary address into one of 8 active-low outputs Y0'..Y7'. Enable conditions: G1 = 1, G2A' = 0, G2B' = 0. When enabled, exactly one selected output goes LOW (0), while all others stay HIGH (1).",
+    stepByStep: [
+      "1. Insert IC 74138 into socket U1.",
+      "2. Connect +5V to U1 pin 16 (jack 20) and GND to pin 8 (jack 8).",
+      "3. Enable inputs: connect G1 (IC pin 6 / J6) to +5V, G2A' (IC pin 4 / J4) and G2B' (IC pin 5 / J5) to GND.",
+      "4. Connect select switches: IN.A0 to A (IC pin 1 / J1), IN.A1 to B (IC pin 2 / J2), IN.A2 to C (IC pin 3 / J3).",
+      "5. Connect outputs: Y0' (IC pin 15 / J19) to OUT.Y0, Y1' (IC pin 14 / J18) to OUT.Y1, etc.",
+      "6. Observe which output LED goes LOW (off) for each 3-bit input."
+    ],
+    recommendedSocketICs: { U1: "74138" },
+    recommendedWires: [
+      { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+      { from: "PWR.GND_1", to: "U1.J8", color: "#1f2937" },
+      { from: "PWR.5V_2", to: "U1.J6", color: "#ef4444" },
+      { from: "PWR.GND_2", to: "U1.J4", color: "#1f2937" },
+      { from: "PWR.GND_3", to: "U1.J5", color: "#1f2937" },
+      { from: "IN.A0", to: "U1.J1", color: "#facc15" },
+      { from: "IN.A1", to: "U1.J2", color: "#facc15" },
+      { from: "IN.A2", to: "U1.J3", color: "#facc15" },
+      { from: "U1.J19", to: "OUT.Y0", color: "#38bdf8" },
+      { from: "U1.J18", to: "OUT.Y1", color: "#38bdf8" }
+    ],
+    tableHeaders: ["C (A2)", "B (A1)", "A (A0)", "Active Output (LOW)", "Y0'", "Y1'"],
+    tableRows: [
+      { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+      { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } }
+    ]
+  },
+
+  {
+    id: "exp5",
+    number: 5,
+    title: "Binary Adder & Subtractor using IC 7483",
+    aim: "Study of IC 74LS83 4-bit binary adder to perform addition and 2's complement subtraction.",
+    apparatus: "DIT 9005 Trainer Kit, IC 7483, IC 7486 (XOR for 2's complement), Patch cords.",
+    theory: "IC 7483 adds two 4-bit binary words A[4:1] and B[4:1] plus carry-in C0, generating sum S[4:1] and carry-out C4. Note: On 7483, VCC is pin 5 and GND is pin 12.",
+    stepByStep: [
+      "1. Insert IC 7483 into socket U1.",
+      "2. Connect +5V to IC pin 5 (socket jack 5) and GND to pin 12 (socket jack 16).",
+      "3. Connect carry in C0 (IC pin 13 / J17) to GND for addition.",
+      "4. Connect A bits: IN.A0..A3 to IC pins A1..A4 (J10, J8, J3, J1).",
+      "5. Connect B bits: IN.B0..B3 to IC pins B1..B4 (J11, J7, J4, J20).",
+      "6. Connect sum bits S1..S4 to OUT.Y0..Y3, and C4 to OUT.Y4.",
+      "7. Observe the sum on LEDs and on the right 7-segment display."
+    ],
+    recommendedSocketICs: { U1: "7483" },
+    recommendedWires: [
+      { from: "PWR.5V_1", to: "U1.J5", color: "#ef4444" },
+      { from: "PWR.GND_1", to: "U1.J16", color: "#1f2937" },
+      { from: "PWR.GND_2", to: "U1.J17", color: "#1f2937" },
+      { from: "IN.A0", to: "U1.J10", color: "#facc15" },
+      { from: "IN.B0", to: "U1.J11", color: "#22c55e" },
+      { from: "U1.J9", to: "OUT.Y0", color: "#38bdf8" },
+      { from: "U1.J6", to: "OUT.Y1", color: "#38bdf8" }
+    ],
+    tableHeaders: ["A Word", "B Word", "Cin", "Expected Sum", "Cout"],
+    tableRows: [
+      { inputs: { "IN.A0": 1, "IN.B0": 0 }, expected: { "OUT.Y0": 1 } },
+      { inputs: { "IN.A0": 1, "IN.B0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } }
+    ]
+  },
+
+  {
+    id: "exp6",
+    number: 6,
+    title: "Magnitude Comparator using IC 7485",
+    aim: "Study of IC 74LS85 4-bit magnitude comparator.",
+    apparatus: "DIT 9005 Trainer Kit, IC 7485, Patch cords.",
+    theory: "IC 7485 compares two 4-bit numbers A and B and outputs active HIGH on one of three pins: OA>B (pin 5), OA=B (pin 6), or OA<B (pin 7). Cascading inputs are tied to IA=B = 1, IA>B = 0, IA<B = 0.",
+    stepByStep: [
+      "1. Insert IC 7485 into socket U1.",
+      "2. Connect +5V to IC pin 16 (J20) and GND to pin 8 (J8).",
+      "3. Tie IA=B (IC pin 3 / J3) to +5V, IA>B (pin 4 / J4) to GND, IA<B (pin 2 / J2) to GND.",
+      "4. Connect A words to switches IN.A0..A3, B words to IN.B0..B3.",
+      "5. Connect OA>B (J5) to OUT.Y0, OA=B (J6) to OUT.Y1, OA<B (J7) to OUT.Y2.",
+      "6. Test cases: A > B, A < B, and A == B."
+    ],
+    recommendedSocketICs: { U1: "7485" },
+    recommendedWires: [
+      { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+      { from: "PWR.GND_1", to: "U1.J8", color: "#1f2937" },
+      { from: "PWR.5V_2", to: "U1.J3", color: "#ef4444" },
+      { from: "PWR.GND_2", to: "U1.J4", color: "#1f2937" },
+      { from: "PWR.GND_3", to: "U1.J2", color: "#1f2937" },
+      { from: "U1.J5", to: "OUT.Y0", color: "#38bdf8" },
+      { from: "U1.J6", to: "OUT.Y1", color: "#38bdf8" },
+      { from: "U1.J7", to: "OUT.Y2", color: "#38bdf8" }
+    ],
+    tableHeaders: ["Condition", "A3..A0", "B3..B0", "A > B (Y0)", "A = B (Y1)", "A < B (Y2)"],
+    tableRows: [
+      { inputs: { "IN.A0": 1, "IN.B0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0, "OUT.Y2": 0 } },
+      { inputs: { "IN.A0": 0, "IN.B0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 0, "OUT.Y2": 1 } },
+      { inputs: { "IN.A0": 0, "IN.B0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1, "OUT.Y2": 0 } }
+    ]
+  },
+
+  {
+    id: "exp7",
+    number: 7,
+    title: "Asynchronous Counter using IC 7490",
+    aim: "Study of IC 7490 decade counter for MOD-6 and MOD-10 counting.",
+    apparatus: "DIT 9005 Trainer Kit, IC 7490, Clock generator, Patch cords.",
+    theory: "IC 7490 is a decade counter consisting of a divide-by-2 section (CKA -> QA) and a divide-by-5 section (CKB -> QB, QC, QD). Connecting QA to CKB creates a BCD counter (MOD-10) cycling 0 to 9.",
+    stepByStep: [
+      "1. Insert IC 7490 into socket U1.",
+      "2. Connect +5V to IC pin 5 (socket jack 5) and GND to pin 10 (socket jack 17).",
+      "3. Connect reset pins R0(1) (J2) and R0(2) (J3) to GND.",
+      "4. Connect QA (IC pin 12 / J19) to CKB (IC pin 1 / J1).",
+      "5. Connect Clock Out (CLK.OUT) to CKA (IC pin 14 / J20).",
+      "6. Connect QA, QB, QC, QD to OUT.Y0..Y3.",
+      "7. Turn Clock knob to 1Hz or 5Hz and watch the 7-segment display count 0 to 9!"
+    ],
+    recommendedSocketICs: { U1: "7490" },
+    recommendedWires: [
+      { from: "PWR.5V_1", to: "U1.J5", color: "#ef4444" },
+      { from: "PWR.GND_1", to: "U1.J17", color: "#1f2937" },
+      { from: "PWR.GND_2", to: "U1.J2", color: "#1f2937" },
+      { from: "PWR.GND_3", to: "U1.J3", color: "#1f2937" },
+      { from: "U1.J19", to: "U1.J1", color: "#22c55e" },
+      { from: "CLK.OUT", to: "U1.J20", color: "#facc15" },
+      { from: "U1.J19", to: "OUT.Y0", color: "#38bdf8" },
+      { from: "U1.J9", to: "OUT.Y1", color: "#38bdf8" },
+      { from: "U1.J18", to: "OUT.Y2", color: "#38bdf8" },
+      { from: "U1.J8", to: "OUT.Y3", color: "#38bdf8" }
+    ],
+    tableHeaders: ["Clock Pulse", "QD", "QC", "QB", "QA", "Decimal Digit"],
+    tableRows: [
+      { inputs: {}, expected: {} }
+    ]
+  },
+
+  {
+    id: "exp8",
+    number: 8,
+    title: "Synchronous Up/Down Counter using IC 74191",
+    aim: "Study of IC 74191 synchronous 4-bit up/down counter.",
+    apparatus: "DIT 9005 Trainer Kit, IC 74191, Clock / Pulser, Patch cords.",
+    theory: "IC 74191 is a synchronous 4-bit binary up/down counter. When ENABLE' = 0 and LOAD' = 1, a rising clock edge counts UP if D/U' = 0, or counts DOWN if D/U' = 1.",
+    stepByStep: [
+      "1. Insert IC 74191 into socket U1.",
+      "2. Connect +5V to IC pin 16 (J20) and GND to pin 8 (J8).",
+      "3. Connect LOAD' (IC pin 11 / J15) to +5V (disabled).",
+      "4. Connect ENABLE' (IC pin 4 / J4) to GND (active).",
+      "5. Connect D/U' (IC pin 5 / J5) to switch IN.A0 (0=UP, 1=DOWN).",
+      "6. Connect CLOCK (IC pin 14 / J18) to Manual Pulser 1 Q (PULSE1.Q) or CLK.OUT.",
+      "7. Connect outputs QA..QD to OUT.Y0..Y3 and observe count on 7-segment display."
+    ],
+    recommendedSocketICs: { U1: "74191" },
+    recommendedWires: [
+      { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+      { from: "PWR.GND_1", to: "U1.J8", color: "#1f2937" },
+      { from: "PWR.5V_2", to: "U1.J15", color: "#ef4444" },
+      { from: "PWR.GND_2", to: "U1.J4", color: "#1f2937" },
+      { from: "IN.A0", to: "U1.J5", color: "#facc15" },
+      { from: "PULSE1.Q", to: "U1.J18", color: "#facc15" },
+      { from: "U1.J3", to: "OUT.Y0", color: "#38bdf8" },
+      { from: "U1.J2", to: "OUT.Y1", color: "#38bdf8" },
+      { from: "U1.J6", to: "OUT.Y2", color: "#38bdf8" },
+      { from: "U1.J7", to: "OUT.Y3", color: "#38bdf8" }
+    ],
+    tableHeaders: ["Direction D/U'", "Clock Trigger", "Counting Mode", "7-Seg Display"],
+    tableRows: [
+      { inputs: { "IN.A0": 0 }, expected: {} },
+      { inputs: { "IN.A0": 1 }, expected: {} }
+    ]
+  }
+];
+
+/* ===== ENGINE ===== */
+class TTLEngine {
+  constructor() {
+    this.masterPower = true;
+    this.strictPowerMode = true; // Default strict mode from lab addendum
+    this.wires = []; // Array of { id, from, to, color }
+    this.nextWireId = 1;
+
+    // 12 data input switches: C3..C0, B3..B0, A3..A0 (0 or 1)
+    this.inputs = {
+      "IN.C3": 0, "IN.C2": 0, "IN.C1": 0, "IN.C0": 0,
+      "IN.B3": 0, "IN.B2": 0, "IN.B1": 0, "IN.B0": 0,
+      "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0
+    };
+
+    // Manual pulser buttons (pressed = true)
+    this.pulsers = {
+      1: { pressed: false },
+      2: { pressed: false }
+    };
+
+    // Clock generator
+    this.clock = {
+      freq: 1, // Hz (1, 5, 10, 50, 100, 500)
+      state: 0,
+      divState: 0,
+      divCounter: 0,
+      timer: null
+    };
+
+    // ZIF Sockets U1..U4 (20-pin) and U5 (40-pin)
+    this.sockets = {
+      U1: { chip: null, alignment: "left", leverLocked: true, state: {} },
+      U2: { chip: null, alignment: "left", leverLocked: true, state: {} },
+      U3: { chip: null, alignment: "left", leverLocked: true, state: {} },
+      U4: { chip: null, alignment: "left", leverLocked: true, state: {} },
+      U5: { chip: null, alignment: "left", leverLocked: true, state: {} }
+    };
+
+    // Outputs
+    this.outputs = {
+      "OUT.Y7": 0, "OUT.Y6": 0, "OUT.Y5": 0, "OUT.Y4": 0,
+      "OUT.Y3": 0, "OUT.Y2": 0, "OUT.Y1": 0, "OUT.Y0": 0
+    };
+
+    this.segDigits = [0, 0]; // High nibble (Y7..Y4), Low nibble (Y3..Y0)
+    this.shorts = []; // List of active short circuits
+    this.netMap = new Map(); // jackId -> Net info
+    this.nets = []; // Array of Net objects
+    this.changeCallbacks = [];
+
+    // Audio setup (synthesizer for realistic switch & buzzer sounds)
+    this.audioCtx = null;
+    this.initClock();
+  }
+
+  onChange(cb) {
+    this.changeCallbacks.push(cb);
+  }
+
+  notify() {
+    this.changeCallbacks.forEach(cb => cb());
+  }
+
+  // Audio effects
+  playClickSound(pitch = 800) {
+    try {
+      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(pitch, this.audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, this.audioCtx.currentTime + 0.04);
+      gain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.04);
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+      osc.start();
+      osc.stop(this.audioCtx.currentTime + 0.05);
+    } catch (e) {}
+  }
+
+  playShortBuzzer() {
+    try {
+      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(220, this.audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+      osc.start();
+      osc.stop(this.audioCtx.currentTime + 0.16);
+    } catch (e) {}
+  }
+
+  // Clock generator
+  initClock() {
+    if (this.clock.timer) clearInterval(this.clock.timer);
+    const intervalMs = Math.max(10, Math.floor(1000 / (this.clock.freq * 2)));
+    this.clock.timer = setInterval(() => {
+      if (!this.masterPower) return;
+      this.clock.state = this.clock.state === 0 ? 1 : 0;
+      if (this.clock.state === 1) {
+        this.clock.divCounter = (this.clock.divCounter + 1) % 2;
+        if (this.clock.divCounter === 0) {
+          this.clock.divState = this.clock.divState === 0 ? 1 : 0;
+        }
+      }
+      this.evaluate();
+      this.notify();
+    }, intervalMs);
+  }
+
+  setClockFreq(freq) {
+    this.clock.freq = freq;
+    this.initClock();
+  }
+
+  toggleMasterPower() {
+    this.masterPower = !this.masterPower;
+    this.playClickSound(this.masterPower ? 600 : 300);
+    this.evaluate();
+    this.notify();
+  }
+
+  setStrictPowerMode(strict) {
+    this.strictPowerMode = strict;
+    this.evaluate();
+    this.notify();
+  }
+
+  toggleInput(jackId) {
+    if (this.inputs.hasOwnProperty(jackId)) {
+      this.inputs[jackId] = this.inputs[jackId] === 1 ? 0 : 1;
+      this.playClickSound(this.inputs[jackId] === 1 ? 950 : 700);
+      this.evaluate();
+      this.notify();
+    }
+  }
+
+  setPulser(num, pressed) {
+    if (this.pulsers[num]) {
+      this.pulsers[num].pressed = pressed;
+      this.playClickSound(pressed ? 1100 : 600);
+      this.evaluate();
+      this.notify();
+    }
+  }
+
+  // IC Socket Management
+  insertChip(socketId, chipName, alignment = "left") {
+    if (this.sockets[socketId]) {
+      this.sockets[socketId].chip = chipName;
+      this.sockets[socketId].alignment = alignment;
+      this.sockets[socketId].state = {};
+      this.evaluate();
+      this.notify();
+    }
+  }
+
+  removeChip(socketId) {
+    if (this.sockets[socketId]) {
+      this.sockets[socketId].chip = null;
+      this.sockets[socketId].state = {};
+      this.evaluate();
+      this.notify();
+    }
+  }
+
+  setSocketLever(socketId, locked) {
+    if (this.sockets[socketId]) {
+      this.sockets[socketId].leverLocked = locked;
+      this.playClickSound(locked ? 500 : 750);
+      this.evaluate();
+      this.notify();
+    }
+  }
+
+  // Socket Jack <-> IC Pin Mapping
+  getJackForICPin(socketId, icPin, pinCount, alignment = "left") {
+    if (socketId === "U5") {
+      // 40-pin ZIF
+      return `U5.J${icPin}`;
+    }
+    // 20-pin ZIF (U1..U4)
+    // Left-aligned formula from addendum:
+    // IC pin n <= N/2 -> socket pin n
+    // IC pin n > N/2 -> socket pin n + (20 - N)
+    const half = pinCount / 2;
+    const diff = 20 - pinCount;
+
+    let socketJackNum;
+    if (alignment === "left") {
+      if (icPin <= half) {
+        socketJackNum = icPin;
+      } else {
+        socketJackNum = icPin + diff;
+      }
+    } else if (alignment === "right") {
+      const offset = diff / 2;
+      if (icPin <= half) {
+        socketJackNum = icPin + offset;
+      } else {
+        socketJackNum = icPin + offset;
+      }
+    } else { // center
+      const offset = Math.floor(diff / 4);
+      if (icPin <= half) {
+        socketJackNum = icPin + offset;
+      } else {
+        socketJackNum = icPin + diff - offset;
+      }
+    }
+    return `${socketId}.J${socketJackNum}`;
+  }
+
+  getICPinForJack(socketId, jackNum, pinCount, alignment = "left") {
+    for (let p = 1; p <= pinCount; p++) {
+      const jackStr = this.getJackForICPin(socketId, p, pinCount, alignment);
+      if (jackStr === `${socketId}.J${jackNum}`) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  // Wire Management
+  addWire(from, to, color = "#facc15") {
+    if (!from || !to || from === to) return false;
+    // Check if duplicate wire exists
+    const exists = this.wires.some(w =>
+      (w.from === from && w.to === to) || (w.from === to && w.to === from)
+    );
+    if (exists) return false;
+
+    const wire = {
+      id: `W_${this.nextWireId++}`,
+      from,
+      to,
+      color
+    };
+    this.wires.push(wire);
+    this.playClickSound(450);
+    this.evaluate();
+    this.notify();
+    return wire;
+  }
+
+  removeWire(wireId) {
+    const idx = this.wires.findIndex(w => w.id === wireId);
+    if (idx !== -1) {
+      this.wires.splice(idx, 1);
+      this.playClickSound(350);
+      this.evaluate();
+      this.notify();
+      return true;
+    }
+    return false;
+  }
+
+  undoWire() {
+    if (this.wires.length > 0) {
+      this.wires.pop();
+      this.playClickSound(350);
+      this.evaluate();
+      this.notify();
+      return true;
+    }
+    return false;
+  }
+
+  clearWires() {
+    if (this.wires.length > 0) {
+      this.wires = [];
+      this.playClickSound(300);
+      this.evaluate();
+      this.notify();
+    }
+  }
+
+  // Simulation Evaluation
+  evaluate() {
+    this.shorts = [];
+    this.netMap.clear();
+    this.nets = [];
+
+    if (!this.masterPower) {
+      // Everything unpowered
+      for (const k of Object.keys(this.outputs)) this.outputs[k] = 0;
+      this.segDigits = [0, 0];
+      return;
+    }
+
+    // 1. Build Disjoint Set Union (DSU) for all nets
+    const parent = new Map();
+    const find = (x) => {
+      if (!parent.has(x)) parent.set(x, x);
+      if (parent.get(x) !== x) parent.set(x, find(parent.get(x)));
+      return parent.get(x);
+    };
+    const union = (a, b) => {
+      const rootA = find(a);
+      const rootB = find(b);
+      if (rootA !== rootB) parent.set(rootA, rootB);
+    };
+
+    // Permanent internal ties on the trainer kit
+    union("PWR.5V_1", "PWR.5V_2");
+    union("PWR.12V_1", "PWR.12V_2");
+    union("PWR.GND_1", "PWR.GND_2");
+    union("PWR.GND_2", "PWR.GND_3");
+    union("PWR.GND_3", "PWR.GND_4");
+
+    // Connect user patch wires
+    for (const w of this.wires) {
+      union(w.from, w.to);
+    }
+
+    // Group jacks by net root
+    const netGroups = new Map();
+    const registerJack = (j) => {
+      const root = find(j);
+      if (!netGroups.has(root)) netGroups.set(root, new Set());
+      netGroups.get(root).add(j);
+    };
+
+    // Collect all jacks in use
+    const allJacks = new Set([
+      "PWR.5V_1", "PWR.5V_2", "PWR.12V_1", "PWR.12V_2",
+      "PWR.GND_1", "PWR.GND_2", "PWR.GND_3", "PWR.GND_4",
+      "CLK.OUT", "CLK.DIV",
+      "PULSE1.Q", "PULSE1.QN", "PULSE2.Q", "PULSE2.QN"
+    ]);
+    for (const k of Object.keys(this.inputs)) allJacks.add(k);
+    for (const k of Object.keys(this.outputs)) allJacks.add(k);
+    for (const w of this.wires) {
+      allJacks.add(w.from);
+      allJacks.add(w.to);
+    }
+    // Also include socket jacks
+    for (const sId of ["U1", "U2", "U3", "U4"]) {
+      for (let j = 1; j <= 20; j++) allJacks.add(`${sId}.J${j}`);
+    }
+    for (let j = 1; j <= 40; j++) allJacks.add(`U5.J${j}`);
+
+    for (const j of allJacks) registerJack(j);
+
+    // Initialise net state structures
+    const netData = new Map();
+    for (const [root, jackSet] of netGroups.entries()) {
+      netData.set(root, {
+        root,
+        jacks: jackSet,
+        drivers: [],
+        state: "FLOAT", // 0, 1, "FLOAT", "SHORT", "12V"
+        voltage: 1.4
+      });
+      for (const j of jackSet) {
+        this.netMap.set(j, netData.get(root));
+      }
+    }
+    this.nets = Array.from(netData.values());
+
+    // 2. Identify fixed hardware drivers
+    const addDriver = (jackId, level, source) => {
+      const net = this.netMap.get(jackId);
+      if (net) net.drivers.push({ level, source });
+    };
+
+    // Power terminals
+    addDriver("PWR.5V_1", 1, "+5V Rail");
+    addDriver("PWR.GND_1", 0, "GND Rail");
+    addDriver("PWR.12V_1", "12V", "+12V Rail");
+
+    // 12 Data Input switches
+    for (const [swId, val] of Object.entries(this.inputs)) {
+      addDriver(swId, val, `Switch ${swId}`);
+    }
+
+    // Manual Pulsers
+    addDriver("PULSE1.Q", this.pulsers[1].pressed ? 1 : 0, "Pulser 1 Q");
+    addDriver("PULSE1.QN", this.pulsers[1].pressed ? 0 : 1, "Pulser 1 Q'");
+    addDriver("PULSE2.Q", this.pulsers[2].pressed ? 1 : 0, "Pulser 2 Q");
+    addDriver("PULSE2.QN", this.pulsers[2].pressed ? 0 : 1, "Pulser 2 Q'");
+
+    // Clock generator
+    addDriver("CLK.OUT", this.clock.state, "Clock Out");
+    addDriver("CLK.DIV", this.clock.divState, "Clock Div");
+
+    // 3. Iterative IC evaluation loop (for combinational propagation)
+    const MAX_PASSES = 6;
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      // Resolve net logic levels from existing drivers
+      for (const net of this.nets) {
+        let has1 = false;
+        let has0 = false;
+        let has12 = false;
+
+        for (const d of net.drivers) {
+          if (d.level === 1) has1 = true;
+          else if (d.level === 0) has0 = true;
+          else if (d.level === "12V") has12 = true;
+        }
+
+        if (has1 && has0) {
+          net.state = "SHORT";
+          net.voltage = 0.5;
+        } else if (has12 && has0) {
+          net.state = "SHORT";
+          net.voltage = 0.5;
+        } else if (has12) {
+          net.state = "12V";
+          net.voltage = 12.0;
+        } else if (has1) {
+          net.state = 1;
+          net.voltage = 4.8;
+        } else if (has0) {
+          net.state = 0;
+          net.voltage = 0.2;
+        } else {
+          // Unconnected floating net: TTL inputs float to Logic 1!
+          net.state = 1; // Floating TTL reads as HIGH
+          net.voltage = 1.6; // Typical floating TTL input threshold
+        }
+      }
+
+      // Clear dynamic IC drivers before re-evaluating
+      for (const net of this.nets) {
+        net.drivers = net.drivers.filter(d => !d.source.startsWith("IC_"));
+      }
+
+      // Evaluate active ICs in sockets
+      for (const [sId, sData] of Object.entries(this.sockets)) {
+        if (!sData.chip || !sData.leverLocked) continue;
+        const icDef = IC_LIBRARY[sData.chip];
+        if (!icDef) continue;
+
+        // Check power
+        let isPowered = true;
+        if (this.strictPowerMode) {
+          const vccJack = this.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, sData.alignment);
+          const gndJack = this.getJackForICPin(sId, icDef.gndPin, icDef.pinCount, sData.alignment);
+          const vccNet = this.netMap.get(vccJack);
+          const gndNet = this.netMap.get(gndJack);
+
+          const hasVcc = vccNet && vccNet.drivers.some(d => d.source.includes("+5V"));
+          const hasGnd = gndNet && gndNet.drivers.some(d => d.source.includes("GND"));
+          isPowered = (hasVcc && hasGnd);
+        }
+
+        if (!isPowered) continue;
+
+        // Read inputs for IC
+        const inMap = {};
+        for (const pinInfo of icDef.pins) {
+          if (pinInfo.type === "in") {
+            const jack = this.getJackForICPin(sId, pinInfo.pin, icDef.pinCount, sData.alignment);
+            const net = this.netMap.get(jack);
+            // Floating TTL pin reads as 1
+            inMap[pinInfo.pin] = (net ? (net.state === "SHORT" ? 0 : (net.state === 1 ? 1 : 0)) : 1);
+          }
+        }
+
+        // Run IC logic
+        const evalResult = icDef.eval(inMap, sData.state);
+        sData.state = evalResult.nextState;
+
+        // Drive outputs onto corresponding nets
+        for (const [pinStr, outVal] of Object.entries(evalResult.outputs)) {
+          const pin = parseInt(pinStr, 10);
+          const outJack = this.getJackForICPin(sId, pin, icDef.pinCount, sData.alignment);
+          addDriver(outJack, outVal, `IC_${sId}_${sData.chip}_P${pin}`);
+        }
+      }
+    }
+
+    // 4. Final resolve and short circuit detection
+    let hadShort = false;
+    for (const net of this.nets) {
+      const has1 = net.drivers.some(d => d.level === 1);
+      const has0 = net.drivers.some(d => d.level === 0);
+      const has12 = net.drivers.some(d => d.level === "12V");
+
+      if ((has1 && has0) || (has12 && has0)) {
+        net.state = "SHORT";
+        net.voltage = 0.5;
+        hadShort = true;
+        const driverNames = net.drivers.map(d => `${d.source}=${d.level}`).join(", ");
+        this.shorts.push(`Short circuit on net with [${driverNames}]`);
+      } else if (has12) {
+        net.state = "12V";
+        net.voltage = 12.0;
+      } else if (has1) {
+        net.state = 1;
+        net.voltage = 4.8;
+      } else if (has0) {
+        net.state = 0;
+        net.voltage = 0.2;
+      } else {
+        net.state = "FLOAT";
+        net.voltage = 1.4;
+      }
+    }
+
+    if (hadShort) this.playShortBuzzer();
+
+    // 5. Update trainer outputs and 7-segment display
+    for (let i = 0; i < 8; i++) {
+      const jack = `OUT.Y${i}`;
+      const net = this.netMap.get(jack);
+      this.outputs[jack] = (net && net.state === 1) ? 1 : 0;
+    }
+
+    // High nibble Y7..Y4, Low nibble Y3..Y0
+    const highNibble = (this.outputs["OUT.Y7"] << 3) |
+                       (this.outputs["OUT.Y6"] << 2) |
+                       (this.outputs["OUT.Y5"] << 1) |
+                       this.outputs["OUT.Y4"];
+
+    const lowNibble = (this.outputs["OUT.Y3"] << 3) |
+                      (this.outputs["OUT.Y2"] << 2) |
+                      (this.outputs["OUT.Y1"] << 1) |
+                      this.outputs["OUT.Y0"];
+
+    this.segDigits = [highNibble, lowNibble];
+  }
+
+  // Probe helper
+  probeJack(jackId) {
+    if (!this.masterPower) {
+      return { id: jackId, state: "OFF", voltage: 0.0, net: null };
+    }
+    const net = this.netMap.get(jackId);
+    if (!net) {
+      return { id: jackId, state: "OPEN", voltage: 0.0, net: null };
+    }
+    return {
+      id: jackId,
+      state: net.state,
+      voltage: net.voltage,
+      drivers: net.drivers,
+      netSize: net.jacks.size
+    };
+  }
+}
+
+/* ===== COMPONENTS ===== */
+const SVG_COMPONENTS = {
+  // Generate SVG Definitions (Gradients, Filters, Shadows)
+  renderDefs() {
+    return `
+      <defs>
+        <!-- Wood frame gradients -->
+        <linearGradient id="woodBevelTop" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#5a3418" />
+          <stop offset="50%" stop-color="#3d210d" />
+          <stop offset="100%" stop-color="#221106" />
+        </linearGradient>
+        <linearGradient id="woodBevelLeft" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#523016" />
+          <stop offset="100%" stop-color="#2c1709" />
+        </linearGradient>
+
+        <!-- Brass jack gradients -->
+        <radialGradient id="brassJack" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#ffe699" />
+          <stop offset="45%" stop-color="#d4af37" />
+          <stop offset="85%" stop-color="#997a15" />
+          <stop offset="100%" stop-color="#594406" />
+        </radialGradient>
+        <radialGradient id="jackHole" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#0a0a0a" />
+          <stop offset="70%" stop-color="#141414" />
+          <stop offset="100%" stop-color="#2a2510" />
+        </radialGradient>
+
+        <!-- Screw head metallic gradient -->
+        <radialGradient id="screwHead" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#f0f0f0" />
+          <stop offset="50%" stop-color="#a0a0a0" />
+          <stop offset="90%" stop-color="#505050" />
+          <stop offset="100%" stop-color="#202020" />
+        </radialGradient>
+
+        <!-- Chrome bat handle gradient -->
+        <linearGradient id="chromeBat" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#b0b5be" />
+          <stop offset="30%" stop-color="#ffffff" />
+          <stop offset="60%" stop-color="#9aa0ac" />
+          <stop offset="100%" stop-color="#5d6370" />
+        </linearGradient>
+
+        <!-- Red push button gradient -->
+        <radialGradient id="redBtn" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#ff7b72" />
+          <stop offset="40%" stop-color="#ef4444" />
+          <stop offset="85%" stop-color="#991b1b" />
+          <stop offset="100%" stop-color="#450a0a" />
+        </radialGradient>
+        <radialGradient id="redBtnPressed" cx="50%" cy="50%" r="65%">
+          <stop offset="0%" stop-color="#b91c1c" />
+          <stop offset="70%" stop-color="#7f1d1d" />
+          <stop offset="100%" stop-color="#450a0a" />
+        </radialGradient>
+
+        <!-- Red LED glows -->
+        <radialGradient id="ledOff" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#7f1d1d" />
+          <stop offset="60%" stop-color="#450a0a" />
+          <stop offset="100%" stop-color="#1c0404" />
+        </radialGradient>
+        <radialGradient id="ledOn" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="25%" stop-color="#ff9999" />
+          <stop offset="60%" stop-color="#ff2222" />
+          <stop offset="100%" stop-color="#cc0000" />
+        </radialGradient>
+
+        <!-- Knob gradient -->
+        <radialGradient id="knobBody" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="#3a3f4a" />
+          <stop offset="60%" stop-color="#1f232b" />
+          <stop offset="100%" stop-color="#0d0f12" />
+        </radialGradient>
+
+        <!-- Blue ZIF socket body gradient -->
+        <linearGradient id="zifBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1e5ba0" />
+          <stop offset="10%" stop-color="#194c87" />
+          <stop offset="90%" stop-color="#103663" />
+          <stop offset="100%" stop-color="#092242" />
+        </linearGradient>
+
+        <!-- IC Chip body gradient -->
+        <linearGradient id="icBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2a2e36" />
+          <stop offset="50%" stop-color="#1a1c21" />
+          <stop offset="100%" stop-color="#101216" />
+        </linearGradient>
+
+        <!-- Drop shadow filters -->
+        <filter id="shadowBevel" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
+        </filter>
+        <filter id="shadowJack" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity="0.7"/>
+        </filter>
+        <filter id="shadowZif" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="2" dy="5" stdDeviation="4" flood-color="#000" flood-opacity="0.8"/>
+        </filter>
+        <filter id="ledGlowFilter" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="cordShadowFilter" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="5" />
+        </filter>
+      </defs>
+    `;
+  },
+
+  // Screw head
+  renderScrew(cx, cy, r = 7) {
+    return `
+      <g transform="translate(${cx}, ${cy})">
+        <circle r="${r}" fill="url(#screwHead)" filter="url(#shadowBevel)" />
+        <circle r="${r - 1}" fill="none" stroke="#222" stroke-width="0.5" />
+        <line x1="${-r + 2}" y1="0" x2="${r - 2}" y2="0" stroke="#111" stroke-width="1.2" stroke-linecap="round" />
+        <line x1="0" y1="${-r + 2}" x2="0" y2="${r - 2}" stroke="#111" stroke-width="1.2" stroke-linecap="round" />
+      </g>
+    `;
+  },
+
+  // Brass Jack (Banana socket)
+  renderBrassJack(id, label, cx, cy, labelSide = "top") {
+    let lx = cx, ly = cy - 14;
+    if (labelSide === "bottom") ly = cy + 18;
+    else if (labelSide === "left") { lx = cx - 18; ly = cy + 4; }
+    else if (labelSide === "right") { lx = cx + 18; ly = cy + 4; }
+
+    return `
+      <g class="jack-group" data-jack="${id}" transform="translate(${cx}, ${cy})">
+        <!-- Hit target circle for easier wire connecting -->
+        <circle r="18" fill="transparent" class="jack-hitbox" />
+        <!-- Outer brass bevel ring -->
+        <circle r="11" fill="url(#brassJack)" filter="url(#shadowJack)" />
+        <circle r="11" fill="none" stroke="#3d2c02" stroke-width="0.75" />
+        <!-- Inner rim highlight -->
+        <circle r="8.5" fill="none" stroke="#fff4a3" stroke-width="0.6" opacity="0.6" />
+        <!-- Dark socket hole -->
+        <circle r="6" fill="url(#jackHole)" />
+        <circle r="4.5" fill="#050505" />
+        <!-- Internal metallic spring contact ring -->
+        <circle r="4.2" fill="none" stroke="#c99700" stroke-width="0.8" opacity="0.75" />
+        <!-- Selection pulse ring -->
+        <circle r="13" fill="none" stroke="#38bdf8" stroke-width="2" class="jack-selection-ring" opacity="0" />
+      </g>
+      ${label ? `<text x="${lx}" y="${ly}" class="silkscreen-text" text-anchor="middle">${label}</text>` : ""}
+    `;
+  },
+
+  // 3D SPST Toggle Switch
+  renderToggleSwitch(id, label, cx, cy, isHigh) {
+    const batY = isHigh ? -14 : 14;
+    const batAngle = isHigh ? -18 : 18;
+    return `
+      <g class="switch-group" data-switch="${id}" transform="translate(${cx}, ${cy})">
+        <!-- Switch faceplate -->
+        <rect x="-14" y="-22" width="28" height="44" rx="4" fill="#2a2e36" stroke="#4a5260" stroke-width="1" filter="url(#shadowBevel)" />
+        <!-- Mounting screws -->
+        <circle cx="0" cy="-16" r="1.5" fill="#888" />
+        <circle cx="0" cy="16" r="1.5" fill="#888" />
+        <!-- Bushing ring -->
+        <circle cx="0" cy="0" r="9" fill="url(#screwHead)" stroke="#333" stroke-width="0.7" />
+        <circle cx="0" cy="0" r="6" fill="#111" />
+        <!-- Bat handle -->
+        <g transform="rotate(${batAngle}, 0, 0)">
+          <!-- Bat shadow -->
+          <ellipse cx="2" cy="${batY + 2}" rx="4.5" ry="7" fill="rgba(0,0,0,0.5)" />
+          <!-- Bat stalk -->
+          <path d="M -3 0 L -4 ${batY * 0.7} L -5 ${batY} C -5 ${batY + (isHigh ? -5 : 5)} 5 ${batY + (isHigh ? -5 : 5)} 5 ${batY} L 4 ${batY * 0.7} L 3 0 Z"
+                fill="url(#chromeBat)" stroke="#444" stroke-width="0.5" filter="url(#shadowBevel)" />
+          <!-- Bat tip specular highlight -->
+          <ellipse cx="0" cy="${batY}" rx="3.5" ry="2.5" fill="#ffffff" opacity="0.8" />
+        </g>
+        <!-- Click hitbox -->
+        <rect x="-16" y="-24" width="32" height="48" fill="transparent" class="switch-hitbox" />
+      </g>
+      <text x="${cx}" y="${cy - 28}" class="silkscreen-text bold" text-anchor="middle">${label}</text>
+    `;
+  },
+
+  // 3D Red Push Button (Manual Pulser)
+  renderPushButton(id, label, cx, cy, isPressed) {
+    const btnFill = isPressed ? "url(#redBtnPressed)" : "url(#redBtn)";
+    const rOffset = isPressed ? 1 : 0;
+    return `
+      <g class="pushbutton-group" data-pulser="${id}" transform="translate(${cx}, ${cy})">
+        <!-- Chrome retaining ring -->
+        <circle cx="0" cy="0" r="19" fill="url(#screwHead)" filter="url(#shadowBevel)" />
+        <circle cx="0" cy="0" r="15" fill="#181818" />
+        <!-- Red plunger button -->
+        <circle cx="0" cy="${rOffset}" r="14" fill="${btnFill}" filter="url(#shadowBevel)" />
+        <!-- Specular gloss highlight -->
+        <ellipse cx="-4" cy="${-5 + rOffset}" rx="6" ry="3.5" fill="#ffffff" opacity="${isPressed ? 0.3 : 0.65}" transform="rotate(-20, -4, ${-5 + rOffset})" />
+        <!-- Invisible hit target -->
+        <circle cx="0" cy="0" r="22" fill="transparent" class="btn-hitbox" />
+      </g>
+      <text x="${cx}" y="${cy + 34}" class="silkscreen-text" text-anchor="middle">${label}</text>
+    `;
+  },
+
+  // 5mm Diffused Red LED
+  renderLed(id, label, cx, cy, isOn, labelPos = "top") {
+    let lx = cx, ly = cy - 12;
+    if (labelPos === "bottom") ly = cy + 16;
+    const fill = isOn ? "url(#ledOn)" : "url(#ledOff)";
+    const glow = isOn ? `
+      <circle cx="${cx}" cy="${cy}" r="12" fill="#ff1a1a" opacity="0.45" filter="url(#ledGlowFilter)" />
+      <circle cx="${cx}" cy="${cy}" r="7" fill="#ff5555" opacity="0.7" />
+    ` : "";
+
+    return `
+      <g class="led-group" data-led="${id}">
+        <!-- Base washer -->
+        <circle cx="${cx}" cy="${cy}" r="7" fill="#1e2229" stroke="#333" stroke-width="0.5" />
+        ${glow}
+        <!-- LED epoxy dome -->
+        <circle cx="${cx}" cy="${cy}" r="5.5" fill="${fill}" />
+        <!-- Specular reflection dot -->
+        <circle cx="${cx - 1.8}" cy="${cy - 1.8}" r="1.5" fill="#ffffff" opacity="${isOn ? 0.9 : 0.35}" />
+      </g>
+      ${label ? `<text x="${lx}" y="${ly}" class="silkscreen-text" text-anchor="middle">${label}</text>` : ""}
+    `;
+  },
+
+  // Rotary Knob (Clock frequency)
+  renderKnob(id, label, cx, cy, freq) {
+    // Map frequency (1, 5, 10, 50, 100, 500) to rotation angle (-120 to +120 deg)
+    const freqMap = { 1: -120, 5: -72, 10: -24, 50: 24, 100: 72, 500: 120 };
+    const angle = freqMap[freq] || -120;
+
+    return `
+      <g class="knob-group" data-knob="${id}" transform="translate(${cx}, ${cy})">
+        <!-- Scale graduation ticks -->
+        <circle cx="0" cy="0" r="32" fill="none" stroke="#445064" stroke-width="1.5" stroke-dasharray="2, 6" />
+        <!-- Graduation text markings -->
+        <text x="-28" y="24" class="silkscreen-text mini" text-anchor="middle">1Hz</text>
+        <text x="-34" y="-8" class="silkscreen-text mini" text-anchor="middle">5Hz</text>
+        <text x="-16" y="-34" class="silkscreen-text mini" text-anchor="middle">10Hz</text>
+        <text x="16" y="-34" class="silkscreen-text mini" text-anchor="middle">50Hz</text>
+        <text x="34" y="-8" class="silkscreen-text mini" text-anchor="middle">100Hz</text>
+        <text x="28" y="24" class="silkscreen-text mini" text-anchor="middle">500Hz</text>
+
+        <!-- Knob base skirt -->
+        <circle cx="0" cy="0" r="26" fill="#111317" stroke="#222" stroke-width="1" filter="url(#shadowBevel)" />
+        <!-- Knurled body -->
+        <circle cx="0" cy="0" r="22" fill="url(#knobBody)" filter="url(#shadowBevel)" />
+        <!-- Grip notches -->
+        <circle cx="0" cy="0" r="18" fill="none" stroke="#15171c" stroke-width="3" stroke-dasharray="4, 4" />
+        <!-- Pointer line -->
+        <g transform="rotate(${angle}, 0, 0)">
+          <line x1="0" y1="-8" x2="0" y2="-21" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+        </g>
+        <!-- Center cap -->
+        <circle cx="0" cy="0" r="8" fill="#1b1e24" stroke="#333" stroke-width="0.5" />
+        <!-- Interactive hitbox -->
+        <circle cx="0" cy="0" r="30" fill="transparent" class="knob-hitbox" />
+      </g>
+      <text x="${cx}" y="${cy + 46}" class="silkscreen-text bold" text-anchor="middle">${label}</text>
+    `;
+  },
+
+  // Dual Seven-Segment Display
+  renderSevenSegmentDisplay(id, x, y, digits = [0, 0]) {
+    // Segments: a, b, c, d, e, f, g
+    const SEG_MAP = {
+      0: [1,1,1,1,1,1,0],
+      1: [0,1,1,0,0,0,0],
+      2: [1,1,0,1,1,0,1],
+      3: [1,1,1,1,0,0,1],
+      4: [0,1,1,0,0,1,1],
+      5: [1,0,1,1,0,1,1],
+      6: [1,0,1,1,1,1,1],
+      7: [1,1,1,0,0,0,0],
+      8: [1,1,1,1,1,1,1],
+      9: [1,1,1,1,0,1,1],
+      10: [1,1,1,0,1,1,1], // A
+      11: [0,0,1,1,1,1,1], // b
+      12: [1,0,0,1,1,1,0], // C
+      13: [0,1,1,1,1,0,1], // d
+      14: [1,0,0,1,1,1,1], // E
+      15: [1,0,0,0,1,1,1]  // F
+    };
+
+    const renderDigit = (dx, dy, val) => {
+      const segs = SEG_MAP[val] || SEG_MAP[0];
+      const sColor = (idx) => segs[idx] ? "#ff2a2a" : "#300808";
+      const sGlow = (idx) => segs[idx] ? "filter='url(#ledGlowFilter)'" : "";
+
+      return `
+        <g transform="translate(${dx}, ${dy})">
+          <!-- Dark background bezel -->
+          <rect x="-1" y="-1" width="38" height="58" rx="3" fill="#120202" stroke="#250505" stroke-width="1" />
+          <!-- Segment A -->
+          <polygon points="6,4 30,4 27,8 9,8" fill="${sColor(0)}" ${sGlow(0)} />
+          <!-- Segment B -->
+          <polygon points="31,5 35,9 33,26 29,24" fill="${sColor(1)}" ${sGlow(1)} />
+          <!-- Segment C -->
+          <polygon points="33,30 35,47 31,51 29,32" fill="${sColor(2)}" ${sGlow(2)} />
+          <!-- Segment D -->
+          <polygon points="9,48 27,48 30,52 6,52" fill="${sColor(3)}" ${sGlow(3)} />
+          <!-- Segment E -->
+          <polygon points="7,32 5,51 1,47 3,30" fill="${sColor(4)}" ${sGlow(4)} />
+          <!-- Segment F -->
+          <polygon points="7,24 3,26 1,9 5,5" fill="${sColor(5)}" ${sGlow(5)} />
+          <!-- Segment G -->
+          <polygon points="9,26 27,26 29,28 27,30 9,30 7,28" fill="${sColor(6)}" ${sGlow(6)} />
+          <!-- Decimal Point (DP) -->
+          <circle cx="34" cy="52" r="1.5" fill="#300808" />
+        </g>
+      `;
+    };
+
+    return `
+      <g id="${id}" transform="translate(${x}, ${y})">
+        <!-- Display module housing -->
+        <rect x="0" y="0" width="102" height="74" rx="4" fill="#0d0d12" stroke="#2a2e38" stroke-width="1.5" filter="url(#shadowBevel)" />
+        <!-- Red contrast glass window -->
+        <rect x="6" y="6" width="90" height="62" rx="2" fill="#1c0505" stroke="#3d0a0a" stroke-width="1" />
+        <!-- Left Digit (High Nibble) -->
+        ${renderDigit(11, 8, digits[0])}
+        <!-- Right Digit (Low Nibble) -->
+        ${renderDigit(53, 8, digits[1])}
+      </g>
+    `;
+  },
+
+  // 20-Pin or 40-Pin ZIF Socket
+  renderZIFSocket(socketId, x, y, width, height, pinCount = 20, leverLocked = true) {
+    const is40 = (pinCount === 40);
+    const pinsPerRow = pinCount / 2;
+    const pinPitch = (width - 40) / (pinsPerRow - 1);
+
+    // ZIF locking lever
+    // Unlocked: lever sticks straight up/out. Locked: lever pushed down flat.
+    const leverX = is40 ? x + width / 2 : x - 12;
+    const leverY = is40 ? y + height + 6 : y + height / 2;
+    const leverTransform = is40
+      ? (leverLocked ? "rotate(0)" : "rotate(-35)")
+      : (leverLocked ? "rotate(0)" : "rotate(-45)");
+
+    let pinHoles = "";
+    if (!is40) {
+      // 20-Pin ZIF (Horizontal orientation: top row 20..11, bottom row 1..10)
+      for (let i = 0; i < pinsPerRow; i++) {
+        const px = x + 20 + i * pinPitch;
+        // Top slot (jack 20-i)
+        pinHoles += `
+          <rect x="${px - 3.5}" y="${y + 12}" width="7" height="12" rx="1" fill="#0c1d33" stroke="#081424" stroke-width="0.5" />
+          <line x1="${px}" y1="${y + 14}" x2="${px}" y2="${y + 22}" stroke="#9bb7d4" stroke-width="1" opacity="0.4" />
+        `;
+        // Bottom slot (jack 1+i)
+        pinHoles += `
+          <rect x="${px - 3.5}" y="${y + height - 24}" width="7" height="12" rx="1" fill="#0c1d33" stroke="#081424" stroke-width="0.5" />
+          <line x1="${px}" y1="${y + height - 22}" x2="${px}" y2="${y + height - 14}" stroke="#9bb7d4" stroke-width="1" opacity="0.4" />
+        `;
+      }
+    } else {
+      // 40-Pin ZIF (Vertical orientation: left column 1..20, right column 21..40)
+      const vertPitch = (height - 50) / 19;
+      for (let i = 0; i < 20; i++) {
+        const py = y + 25 + i * vertPitch;
+        // Left slot
+        pinHoles += `
+          <rect x="${x + 12}" y="${py - 3}" width="12" height="6" rx="1" fill="#0c1d33" stroke="#081424" stroke-width="0.5" />
+          <line x1="${x + 14}" y1="${py}" x2="${x + 22}" y2="${py}" stroke="#9bb7d4" stroke-width="1" opacity="0.4" />
+        `;
+        // Right slot
+        pinHoles += `
+          <rect x="${x + width - 24}" y="${py - 3}" width="12" height="6" rx="1" fill="#0c1d33" stroke="#081424" stroke-width="0.5" />
+          <line x1="${x + width - 22}" y1="${py}" x2="${x + width - 14}" stroke="#9bb7d4" stroke-width="1" opacity="0.4" />
+        `;
+      }
+    }
+
+    return `
+      <g class="zif-socket-group" data-socket="${socketId}">
+        <!-- Main Blue Socket Body -->
+        <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="6" fill="url(#zifBody)" filter="url(#shadowZif)" stroke="#2563eb" stroke-width="1" />
+        <!-- Inner socket recess -->
+        <rect x="${x + 8}" y="${y + 8}" width="${width - 16}" height="${height - 16}" rx="3" fill="#123a66" stroke="#0d2948" stroke-width="1" />
+        <!-- Pin Slot Receptacles -->
+        ${pinHoles}
+        <!-- Pin 1 marking triangle -->
+        <polygon points="${x + 14},${is40 ? y + 16 : y + height - 12} ${x + 20},${is40 ? y + 22 : y + height - 6} ${x + 8},${is40 ? y + 22 : y + height - 6}" fill="#93c5fd" opacity="0.6" />
+
+        <!-- Metal ZIF Lever -->
+        <g class="zif-lever" transform="translate(${leverX}, ${leverY}) ${leverTransform}">
+          <!-- Lever arm -->
+          <rect x="${is40 ? -3 : -24}" y="${is40 ? 0 : -3}" width="${is40 ? 6 : 28}" height="${is40 ? 28 : 6}" rx="2" fill="url(#screwHead)" stroke="#333" stroke-width="0.5" />
+          <!-- Knob end -->
+          <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="7" fill="#1e40af" stroke="#60a5fa" stroke-width="1" />
+        </g>
+      </g>
+    `;
+  },
+
+  // Inserted IC Chip representation
+  renderInsertedIC(socketId, chipName, socketX, socketY, socketW, socketH, icPinCount = 14, alignment = "left") {
+    if (!chipName) return "";
+    const is40 = (socketId === "U5");
+    if (is40) {
+      // 40-pin chip in U5
+      return `
+        <g class="inserted-ic-group" transform="translate(${socketX + 16}, ${socketY + 12})">
+          <rect x="0" y="0" width="${socketW - 32}" height="${socketH - 24}" rx="3" fill="url(#icBody)" stroke="#333" stroke-width="1" filter="url(#shadowBevel)" />
+          <!-- Pin 1 notch -->
+          <path d="M ${(socketW - 32)/2 - 8} 0 A 8 8 0 0 0 ${(socketW - 32)/2 + 8} 0 Z" fill="#111" />
+          <circle cx="10" cy="14" r="2.5" fill="#000" />
+          <text x="${(socketW - 32)/2}" y="${(socketH - 24)/2}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="12" font-weight="700" letter-spacing="1" text-anchor="middle" transform="rotate(-90, ${(socketW - 32)/2}, ${(socketH - 24)/2})">${chipName}</text>
+        </g>
+      `;
+    }
+
+    // 14-pin or 16-pin chip in 20-pin horizontal socket
+    const totalSlots = 10;
+    const slotPitch = (socketW - 40) / (totalSlots - 1);
+    const chipSlots = icPinCount / 2; // 7 for 14-pin, 8 for 16-pin
+
+    let startSlot = 0;
+    if (alignment === "right") startSlot = totalSlots - chipSlots;
+    else if (alignment === "center") startSlot = Math.floor((totalSlots - chipSlots) / 2);
+
+    const icWidth = (chipSlots - 1) * slotPitch + 28;
+    const icX = socketX + 20 + startSlot * slotPitch - 14;
+    const icY = socketY + 18;
+    const icHeight = socketH - 36;
+
+    // Pin leads entering socket
+    let pinsSvg = "";
+    for (let i = 0; i < chipSlots; i++) {
+      const px = icX + 14 + i * slotPitch;
+      // Top pin
+      pinsSvg += `<rect x="${px - 2}" y="${icY - 6}" width="4" height="6" fill="url(#screwHead)" stroke="#222" stroke-width="0.3" />`;
+      // Bottom pin
+      pinsSvg += `<rect x="${px - 2}" y="${icY + icHeight}" width="4" height="6" fill="url(#screwHead)" stroke="#222" stroke-width="0.3" />`;
+    }
+
+    return `
+      <g class="inserted-ic-group">
+        <!-- Lead pins -->
+        ${pinsSvg}
+        <!-- Plastic DIP body -->
+        <rect x="${icX}" y="${icY}" width="${icWidth}" height="${icHeight}" rx="3" fill="url(#icBody)" stroke="#3f4553" stroke-width="1" filter="url(#shadowBevel)" />
+        <!-- Orientation notch (left end) -->
+        <path d="M ${icX} ${icY + icHeight/2 - 7} A 7 7 0 0 0 ${icX} ${icY + icHeight/2 + 7} Z" fill="#111317" />
+        <!-- Pin 1 indentation dot (bottom-left) -->
+        <circle cx="${icX + 10}" cy="${icY + icHeight - 10}" r="2.2" fill="#0a0c0e" stroke="#252930" stroke-width="0.5" />
+        <!-- Chip label -->
+        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 4}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="11" font-weight="700" letter-spacing="1" text-anchor="middle">${chipName}</text>
+        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 14}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle">SN${chipName}N</text>
+      </g>
+    `;
+  },
+
+  // Sagging Patch Cord with Banana Plugs and Shadow
+  renderPatchCord(wire, p1, p2) {
+    if (!p1 || !p2) return "";
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const dist = Math.hypot(dx, dy);
+
+    // Realistic catenary sagging droop
+    const droop = Math.max(30, 25 + dist * 0.16);
+    const midX = (p1.x + p2.x) / 2;
+    const midY = Math.max(p1.y, p2.y) + droop;
+
+    const pathData = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`;
+    const shadowPath = `M ${p1.x} ${p1.y + 6} Q ${midX} ${midY + 12} ${p2.x} ${p2.y + 6}`;
+
+    const color = wire.color || "#facc15";
+
+    const renderBananaPlug = (pt) => `
+      <g transform="translate(${pt.x}, ${pt.y})">
+        <!-- Plug base boot -->
+        <circle r="7.5" fill="${color}" stroke="#1e293b" stroke-width="1.2" filter="url(#shadowBevel)" />
+        <!-- Brass pin entering socket -->
+        <circle r="4.5" fill="url(#brassJack)" stroke="#3a2e0a" stroke-width="0.8" />
+        <!-- Specular highlight ring -->
+        <circle r="6" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.5" />
+      </g>
+    `;
+
+    return `
+      <g class="patch-cord-group" data-wire-id="${wire.id}">
+        <!-- Drooping ground shadow -->
+        <path d="${shadowPath}" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" />
+        <!-- Outer colored cable jacket -->
+        <path d="${pathData}" fill="none" stroke="#111827" stroke-width="7" stroke-linecap="round" />
+        <path d="${pathData}" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" />
+        <!-- Specular glossy top highlight -->
+        <path d="${pathData}" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.45" />
+        <!-- End Banana Plugs -->
+        ${renderBananaPlug(p1)}
+        ${renderBananaPlug(p2)}
+      </g>
+    `;
+  }
+};
+
+/* ===== BOARD ===== */
+class BoardRenderer {
+  constructor(engine, svgElement, onJackHover) {
+    this.engine = engine;
+    this.svg = svgElement;
+    this.onJackHover = onJackHover;
+
+    this.jackCoords = {}; // Map of jackId -> { x, y }
+    this.selectedJack = null; // Jack currently clicked for wiring
+    this.tempMousePos = null; // Current mouse coords during wire drag
+    this.activeView = "full"; // full, zif, inputs, outputs, u5
+    this.activeColor = "#facc15"; // Selected wire color
+    this.deleteMode = false;
+
+    this.setupViewPresets();
+    this.bindEvents();
+  }
+
+  setupViewPresets() {
+    this.viewPresets = {
+      full: { x: 0, y: 0, w: 1600, h: 1160 },
+      zif: { x: 360, y: 550, w: 1220, h: 540 },
+      inputs: { x: 360, y: 20, w: 1220, h: 550 },
+      outputs: { x: 1020, y: 20, w: 560, h: 330 },
+      u5: { x: 20, y: 20, w: 380, h: 1080 }
+    };
+  }
+
+  setView(viewName) {
+    const preset = this.viewPresets[viewName] || this.viewPresets.full;
+    this.activeView = viewName;
+    this.svg.setAttribute("viewBox", `${preset.x} ${preset.y} ${preset.w} ${preset.h}`);
+  }
+
+  setWireColor(color) {
+    this.activeColor = color;
+  }
+
+  setDeleteMode(val) {
+    this.deleteMode = val;
+    document.body.classList.toggle("delete-mode", val);
+  }
+
+  // Convert client (screen) mouse coordinates to SVG board space coordinates
+  getSVGCoords(e) {
+    const pt = this.svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = this.svg.getScreenCTM().inverse();
+    return pt.matrixTransform(ctm);
+  }
+
+  bindEvents() {
+    // Jack click / wire start & end
+    this.svg.addEventListener("click", (e) => {
+      // Wire deletion
+      const wireGroup = e.target.closest(".patch-cord-group");
+      if (wireGroup) {
+        const wireId = wireGroup.dataset.wireId;
+        if (this.deleteMode || e.altKey) {
+          this.engine.removeWire(wireId);
+          return;
+        }
+      }
+
+      // Switch click
+      const switchGroup = e.target.closest(".switch-group");
+      if (switchGroup) {
+        const swId = switchGroup.dataset.switch;
+        this.engine.toggleInput(swId);
+        return;
+      }
+
+      // Knob click (cycle frequency)
+      const knobGroup = e.target.closest(".knob-group");
+      if (knobGroup) {
+        const freqs = [1, 5, 10, 50, 100, 500];
+        const nextIdx = (freqs.indexOf(this.engine.clock.freq) + 1) % freqs.length;
+        this.engine.setClockFreq(freqs[nextIdx]);
+        return;
+      }
+
+      // Jack interaction
+      const jackGroup = e.target.closest(".jack-group");
+      if (jackGroup) {
+        const jackId = jackGroup.dataset.jack;
+        if (this.deleteMode) {
+          // Remove wires connected to this jack
+          const attached = this.engine.wires.filter(w => w.from === jackId || w.to === jackId);
+          attached.forEach(w => this.engine.removeWire(w.id));
+          return;
+        }
+
+        if (!this.selectedJack) {
+          // Start wire
+          this.selectedJack = jackId;
+          this.render();
+        } else {
+          // Complete wire
+          if (this.selectedJack !== jackId) {
+            this.engine.addWire(this.selectedJack, jackId, this.activeColor);
+          }
+          this.selectedJack = null;
+          this.tempMousePos = null;
+          this.render();
+        }
+        return;
+      }
+
+      // Clicked on blank PCB space -> cancel wire creation
+      if (this.selectedJack) {
+        this.selectedJack = null;
+        this.tempMousePos = null;
+        this.render();
+      }
+    });
+
+    // Right-click wire deletion
+    this.svg.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      const wireGroup = e.target.closest(".patch-cord-group");
+      if (wireGroup) {
+        const wireId = wireGroup.dataset.wireId;
+        this.engine.removeWire(wireId);
+        return;
+      }
+      const jackGroup = e.target.closest(".jack-group");
+      if (jackGroup) {
+        const jackId = jackGroup.dataset.jack;
+        const attached = this.engine.wires.filter(w => w.from === jackId || w.to === jackId);
+        if (attached.length > 0) {
+          this.engine.removeWire(attached[attached.length - 1].id);
+        }
+      }
+    });
+
+    // Mouse move for rubber-band wire and probe HUD
+    this.svg.addEventListener("mousemove", (e) => {
+      const coords = this.getSVGCoords(e);
+      if (this.selectedJack) {
+        this.tempMousePos = coords;
+        this.updateRubberBand();
+      }
+
+      const jackGroup = e.target.closest(".jack-group");
+      if (jackGroup) {
+        const jackId = jackGroup.dataset.jack;
+        if (this.onJackHover) this.onJackHover(jackId, e);
+      } else {
+        if (this.onJackHover) this.onJackHover(null, e);
+      }
+    });
+
+    // Manual pulser press and release
+    this.svg.addEventListener("mousedown", (e) => {
+      const btnGroup = e.target.closest(".pushbutton-group");
+      if (btnGroup) {
+        const pulserNum = parseInt(btnGroup.dataset.pulser, 10);
+        this.engine.setPulser(pulserNum, true);
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (this.engine.pulsers[1].pressed) this.engine.setPulser(1, false);
+      if (this.engine.pulsers[2].pressed) this.engine.setPulser(2, false);
+    });
+
+    // Keyboard shortcuts
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        this.selectedJack = null;
+        this.tempMousePos = null;
+        this.render();
+      } else if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+        this.engine.undoWire();
+      } else if (e.key === " " && !e.repeat && document.activeElement.tagName !== "INPUT") {
+        e.preventDefault();
+        this.engine.setPulser(1, true);
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.key === " ") {
+        this.engine.setPulser(1, false);
+      }
+    });
+  }
+
+  // Update only the interactive rubber-band wire during mousemove for max performance
+  updateRubberBand() {
+    let rubberBand = this.svg.querySelector("#rubber-band-wire");
+    if (!this.selectedJack || !this.tempMousePos) {
+      if (rubberBand) rubberBand.remove();
+      return;
+    }
+
+    const p1 = this.jackCoords[this.selectedJack];
+    const p2 = this.tempMousePos;
+    if (!p1) return;
+
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const dist = Math.hypot(dx, dy);
+    const droop = Math.max(25, 20 + dist * 0.15);
+    const midX = (p1.x + p2.x) / 2;
+    const midY = Math.max(p1.y, p2.y) + droop;
+
+    const pathData = `M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}`;
+
+    if (!rubberBand) {
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("id", "rubber-band-wire");
+      g.innerHTML = `
+        <path class="rb-outer" fill="none" stroke="${this.activeColor}" stroke-width="5" stroke-linecap="round" opacity="0.8" />
+        <path class="rb-inner" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+        <circle cx="${p2.x}" cy="${p2.y}" r="6" fill="${this.activeColor}" stroke="#fff" stroke-width="1.5" />
+      `;
+      this.svg.querySelector("#wires-layer").appendChild(g);
+      rubberBand = g;
+    }
+
+    rubberBand.querySelector(".rb-outer").setAttribute("d", pathData);
+    rubberBand.querySelector(".rb-inner").setAttribute("d", pathData);
+    const cursorDot = rubberBand.querySelector("circle");
+    cursorDot.setAttribute("cx", p2.x);
+    cursorDot.setAttribute("cy", p2.y);
+  }
+
+  // Full SVG Assembly & Render
+  render() {
+    this.jackCoords = {}; // Rebuild coordinates table
+    let svgContent = SVG_COMPONENTS.renderDefs();
+
+    // 1. Wooden Outer Frame (0 0 1600 1160)
+    svgContent += `
+      <!-- Wooden Frame -->
+      <rect x="0" y="0" width="1600" height="1160" rx="8" fill="url(#woodBevelTop)" stroke="#1a0b03" stroke-width="3" />
+      <rect x="12" y="12" width="1576" height="1136" rx="6" fill="url(#woodBevelLeft)" />
+      <rect x="24" y="24" width="1552" height="1112" rx="4" fill="#301908" />
+
+      <!-- Frame Corner Screws -->
+      ${SVG_COMPONENTS.renderScrew(16, 16)}
+      ${SVG_COMPONENTS.renderScrew(1584, 16)}
+      ${SVG_COMPONENTS.renderScrew(16, 1144)}
+      ${SVG_COMPONENTS.renderScrew(1584, 1144)}
+      ${SVG_COMPONENTS.renderScrew(800, 16)}
+      ${SVG_COMPONENTS.renderScrew(800, 1144)}
+      ${SVG_COMPONENTS.renderScrew(16, 580)}
+      ${SVG_COMPONENTS.renderScrew(1584, 580)}
+
+      <!-- Dark Green PCB Surface -->
+      <rect x="30" y="30" width="1540" height="1100" rx="4" fill="#0a351d" stroke="#04160c" stroke-width="2" />
+      <!-- Subtle PCB ground plane mesh/traces -->
+      <pattern id="pcbMesh" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 0 40 L 40 0 M 0 0 L 40 40" stroke="#0d3f23" stroke-width="0.5" />
+      </pattern>
+      <rect x="30" y="30" width="1540" height="1100" fill="url(#pcbMesh)" opacity="0.4" />
+    `;
+
+    // 2. ZONE 1: Left Strip - 40-Pin ZIF Expansion (U5) (x: 40, y: 40, w: 320, h: 1030)
+    svgContent += `
+      <g id="zone-left-strip">
+        <rect x="42" y="42" width="316" height="1030" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
+        <text x="200" y="70" class="silkscreen-title" text-anchor="middle">40 PIN ZIF EXPANSION</text>
+        <text x="200" y="90" class="silkscreen-text mini" text-anchor="middle">UNIVERSAL MICROCONTROLLER / LSI INTERFACE (U5)</text>
+
+        <!-- 40-Pin ZIF Socket Body -->
+        ${SVG_COMPONENTS.renderZIFSocket("U5", 130, 120, 140, 840, 40, this.engine.sockets.U5.leverLocked)}
+        ${SVG_COMPONENTS.renderInsertedIC("U5", this.engine.sockets.U5.chip, 130, 120, 140, 840, 40, "left")}
+      </g>
+    `;
+
+    // U5 Jacks: Left column 1..20 (top to bottom), Right column 21..40 (bottom to top)
+    const vertPitch = (840 - 50) / 19;
+    for (let i = 0; i < 20; i++) {
+      const pinLeft = i + 1;
+      const jLeftId = `U5.J${pinLeft}`;
+      const lx = 92;
+      const ly = 145 + i * vertPitch;
+      this.jackCoords[jLeftId] = { x: lx, y: ly };
+      svgContent += SVG_COMPONENTS.renderBrassJack(jLeftId, `${pinLeft}`, lx, ly, "left");
+
+      const pinRight = 21 + i;
+      const jRightId = `U5.J${pinRight}`;
+      const rx = 308;
+      const ry = 145 + (19 - i) * vertPitch; // 21 at bottom, 40 at top!
+      this.jackCoords[jRightId] = { x: rx, y: ry };
+      svgContent += SVG_COMPONENTS.renderBrassJack(jRightId, `${pinRight}`, rx, ry, "right");
+    }
+
+    // 3. ZONE 2: 12-Bit Data Input (x: 376, y: 42, w: 648, h: 290)
+    svgContent += `
+      <g id="zone-data-input">
+        <rect x="376" y="42" width="648" height="290" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
+        <text x="700" y="322" class="silkscreen-title" text-anchor="middle">12 BIT DATA INPUT</text>
+        <!-- Division markers between groups C, B, A -->
+        <line x1="592" y1="42" x2="592" y2="300" stroke="var(--silkscreen)" stroke-width="1" stroke-dasharray="4, 4" />
+        <line x1="808" y1="42" x2="808" y2="300" stroke="var(--silkscreen)" stroke-width="1" stroke-dasharray="4, 4" />
+        <text x="484" y="66" class="silkscreen-text bold" text-anchor="middle">GROUP C (C3 - C0)</text>
+        <text x="700" y="66" class="silkscreen-text bold" text-anchor="middle">GROUP B (B3 - B0)</text>
+        <text x="916" y="66" class="silkscreen-text bold" text-anchor="middle">GROUP A (A3 - A0)</text>
+      </g>
+    `;
+
+    // 12 Input switches, LEDs, and Jacks
+    const inputChannels = [
+      { name: "C3", id: "IN.C3", x: 418 },
+      { name: "C2", id: "IN.C2", x: 468 },
+      { name: "C1", id: "IN.C1", x: 518 },
+      { name: "C0", id: "IN.C0", x: 568 },
+      { name: "B3", id: "IN.B3", x: 634 },
+      { name: "B2", id: "IN.B2", x: 684 },
+      { name: "B1", id: "IN.B1", x: 734 },
+      { name: "B0", id: "IN.B0", x: 784 },
+      { name: "A3", id: "IN.A3", x: 850 },
+      { name: "A2", id: "IN.A2", x: 900 },
+      { name: "A1", id: "IN.A1", x: 950 },
+      { name: "A0", id: "IN.A0", x: 1000 }
+    ];
+
+    for (const ch of inputChannels) {
+      const swVal = this.engine.inputs[ch.id] === 1;
+      // Switch at top
+      svgContent += SVG_COMPONENTS.renderToggleSwitch(ch.id, ch.name, ch.x, 110, swVal);
+      // Red LED below switch (lit when switch is 1)
+      svgContent += SVG_COMPONENTS.renderLed(`LED_${ch.id}`, null, ch.x, 168, swVal && this.engine.masterPower);
+      // Resistor & trace graphics
+      svgContent += `
+        <line x1="${ch.x}" y1="178" x2="${ch.x}" y2="225" stroke="#a3e635" stroke-width="1" opacity="0.6" />
+        <rect x="${ch.x - 3}" y="194" width="6" height="14" rx="2" fill="#c29b38" stroke="#523d0c" stroke-width="0.5" />
+      `;
+      // Brass jack at bottom
+      this.jackCoords[ch.id] = { x: ch.x, y: 260 };
+      svgContent += SVG_COMPONENTS.renderBrassJack(ch.id, ch.name, ch.x, 260, "bottom");
+    }
+
+    // 4. ZONE 3: 8-Bit Data Output (x: 1040, y: 42, w: 520, h: 290)
+    svgContent += `
+      <g id="zone-data-output">
+        <rect x="1040" y="42" width="520" height="290" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
+        <text x="1300" y="322" class="silkscreen-title" text-anchor="middle">8 BIT DATA OUTPUT</text>
+        <text x="1170" y="66" class="silkscreen-text" text-anchor="middle">HIGH NIBBLE (Y7-Y4)</text>
+        <text x="1430" y="66" class="silkscreen-text" text-anchor="middle">LOW NIBBLE (Y3-Y0)</text>
+
+        <!-- Two Seven-Segment Displays -->
+        ${SVG_COMPONENTS.renderSevenSegmentDisplay("output-7seg", 1249, 78, this.engine.segDigits)}
+      </g>
+    `;
+
+    // 8 Output LEDs and Jacks
+    for (let i = 0; i < 8; i++) {
+      const bitNum = 7 - i;
+      const jId = `OUT.Y${bitNum}`;
+      const jx = 1075 + i * 64;
+      const isOutHigh = this.engine.outputs[jId] === 1;
+
+      // Red output LED
+      svgContent += SVG_COMPONENTS.renderLed(`LED_${jId}`, `Y${bitNum}`, jx, 185, isOutHigh && this.engine.masterPower, "top");
+      // Resistor
+      svgContent += `
+        <line x1="${jx}" y1="195" x2="${jx}" y2="230" stroke="#a3e635" stroke-width="1" opacity="0.6" />
+        <rect x="${jx - 3}" y="205" width="6" height="14" rx="2" fill="#c29b38" stroke="#523d0c" stroke-width="0.5" />
+      `;
+      // Brass jack
+      this.jackCoords[jId] = { x: jx, y: 260 };
+      svgContent += SVG_COMPONENTS.renderBrassJack(jId, `Y${bitNum}`, jx, 260, "bottom");
+    }
+
+    // 5. ZONE 4: Power Supply (x: 376, y: 348, w: 344, h: 204)
+    svgContent += `
+      <g id="zone-power">
+        <rect x="376" y="348" width="344" height="204" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
+        <text x="548" y="370" class="silkscreen-title" text-anchor="middle">POWER SUPPLY</text>
+
+        <!-- 12V Section -->
+        <rect x="394" y="386" width="144" height="68" rx="3" fill="none" stroke="var(--silkscreen)" stroke-width="1.2" />
+        <text x="466" y="404" class="silkscreen-text bold" text-anchor="middle">+12 V</text>
+
+        <!-- 5V Section -->
+        <rect x="554" y="386" width="148" height="68" rx="3" fill="none" stroke="var(--silkscreen)" stroke-width="1.2" />
+        <text x="628" y="404" class="silkscreen-text bold" text-anchor="middle">+5 V (VCC)</text>
+
+        <!-- GND Section -->
+        <rect x="394" y="466" width="308" height="74" rx="3" fill="none" stroke="var(--silkscreen)" stroke-width="1.2" />
+        <text x="548" y="484" class="silkscreen-text bold" text-anchor="middle">GROUND (GND)</text>
+      </g>
+    `;
+
+    // 12V Jacks (2 jacks)
+    this.jackCoords["PWR.12V_1"] = { x: 436, y: 432 };
+    this.jackCoords["PWR.12V_2"] = { x: 496, y: 432 };
+    svgContent += SVG_COMPONENTS.renderBrassJack("PWR.12V_1", null, 436, 432);
+    svgContent += SVG_COMPONENTS.renderBrassJack("PWR.12V_2", null, 496, 432);
+
+    // 5V Jacks (2 jacks)
+    this.jackCoords["PWR.5V_1"] = { x: 596, y: 432 };
+    this.jackCoords["PWR.5V_2"] = { x: 660, y: 432 };
+    svgContent += SVG_COMPONENTS.renderBrassJack("PWR.5V_1", null, 596, 432);
+    svgContent += SVG_COMPONENTS.renderBrassJack("PWR.5V_2", null, 660, 432);
+
+    // GND Jacks (4 jacks)
+    const gndX = [436, 510, 584, 660];
+    for (let i = 1; i <= 4; i++) {
+      const gId = `PWR.GND_${i}`;
+      this.jackCoords[gId] = { x: gndX[i - 1], y: 516 };
+      svgContent += SVG_COMPONENTS.renderBrassJack(gId, null, gndX[i - 1], 516);
+    }
+
+    // 6. ZONE 5: Manual Pulser (x: 736, y: 348, w: 376, h: 204)
+    svgContent += `
+      <g id="zone-pulser">
+        <rect x="736" y="348" width="376" height="204" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
+        <text x="924" y="370" class="silkscreen-title" text-anchor="middle">MANUAL PULSER</text>
+        <text x="924" y="388" class="silkscreen-text mini" text-anchor="middle">DEBOUNCED SCHMITT-TRIGGER (CD4093)</text>
+
+        <!-- Pulser 1 and Pulser 2 buttons -->
+        ${SVG_COMPONENTS.renderPushButton(1, "PULSER 1", 790, 440, this.engine.pulsers[1].pressed)}
+        ${SVG_COMPONENTS.renderPushButton(2, "PULSER 2", 1058, 440, this.engine.pulsers[2].pressed)}
+
+        <!-- Decorative Debounce IC in Center -->
+        <rect x="894" y="420" width="60" height="36" rx="2" fill="url(#icBody)" stroke="#333" stroke-width="0.8" />
+        <text x="924" y="442" fill="#cbd5e1" font-family="var(--font-mono)" font-size="9" text-anchor="middle">CD4093</text>
+
+        <!-- Pulse waveform silkscreen graphics -->
+        <path d="M 830 424 L 840 424 L 840 410 L 855 410 L 855 424 L 865 424" fill="none" stroke="var(--silkscreen)" stroke-width="1.5" />
+        <path d="M 983 424 L 993 424 L 993 410 L 1008 410 L 1008 424 L 1018 424" fill="none" stroke="var(--silkscreen)" stroke-width="1.5" />
+      </g>
+    `;
+
+    // Pulser 1 Jacks: Q and QN
+    this.jackCoords["PULSE1.Q"] = { x: 846, y: 494 };
+    this.jackCoords["PULSE1.QN"] = { x: 884, y: 494 };
+    svgContent += SVG_COMPONENTS.renderBrassJack("PULSE1.Q", "Q", 846, 494, "bottom");
+    svgContent += SVG_COMPONENTS.renderBrassJack("PULSE1.QN", "Q'", 884, 494, "bottom");
+
+    // Pulser 2 Jacks: Q and QN
+    this.jackCoords["PULSE2.Q"] = { x: 964, y: 494 };
+    this.jackCoords["PULSE2.QN"] = { x: 1002, y: 494 };
+    svgContent += SVG_COMPONENTS.renderBrassJack("PULSE2.Q", "Q", 964, 494, "bottom");
+    svgContent += SVG_COMPONENTS.renderBrassJack("PULSE2.QN", "Q'", 1002, 494, "bottom");
+
+    // 7. ZONE 6: Clock Generator (x: 1128, y: 348, w: 432, h: 204)
+    svgContent += `
+      <g id="zone-clock">
+        <rect x="1128" y="348" width="432" height="204" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
+        <text x="1344" y="370" class="silkscreen-title" text-anchor="middle">CLOCK GENERATOR</text>
+
+        <!-- Rotary frequency knob -->
+        ${SVG_COMPONENTS.renderKnob("clock-knob", "FREQUENCY", 1230, 446, this.engine.clock.freq)}
+
+        <!-- Clock Output LED indicator -->
+        ${SVG_COMPONENTS.renderLed("LED_CLK", "CLK", 1374, 430, this.engine.clock.state === 1 && this.engine.masterPower, "top")}
+      </g>
+    `;
+
+    // Clock Jacks: CLK.OUT and CLK.DIV
+    this.jackCoords["CLK.OUT"] = { x: 1440, y: 446 };
+    this.jackCoords["CLK.DIV"] = { x: 1506, y: 446 };
+    svgContent += SVG_COMPONENTS.renderBrassJack("CLK.OUT", "CLK OUT", 1440, 446, "bottom");
+    svgContent += SVG_COMPONENTS.renderBrassJack("CLK.DIV", "CLK / 2", 1506, 446, "bottom");
+
+    // 8. ZONE 7: 2×2 Socket Grid (U1, U2, U3, U4) (x: 376, y: 566, w: 1184, h: 504)
+    svgContent += `
+      <g id="zone-socket-grid">
+        <rect x="376" y="566" width="1184" height="504" rx="4" fill="none" stroke="var(--silkscreen)" stroke-width="1.8" />
+        <!-- Grid division lines -->
+        <line x1="968" y1="566" x2="968" y2="1070" stroke="var(--silkscreen)" stroke-width="1.5" />
+        <line x1="376" y1="818" x2="1560" y2="818" stroke="var(--silkscreen)" stroke-width="1.5" />
+      </g>
+    `;
+
+    // Four 20-Pin ZIF Sockets: U1, U2, U3, U4
+    const socketCells = [
+      { id: "U1", label: "U1", x: 420, y: 658 },
+      { id: "U2", label: "U2", x: 1012, y: 658 },
+      { id: "U3", label: "U3", x: 420, y: 910 },
+      { id: "U4", label: "U4", x: 1012, y: 910 }
+    ];
+
+    const zifW = 480;
+    const zifH = 76;
+    const zifPitch = (zifW - 40) / 9;
+
+    for (const cell of socketCells) {
+      const sData = this.engine.sockets[cell.id];
+      const icDef = sData.chip ? IC_LIBRARY[sData.chip] : null;
+
+      // Socket cell silkscreen label
+      svgContent += `
+        <text x="${cell.x + 10}" y="${cell.y - 48}" class="silkscreen-title bold">${cell.label}</text>
+        <text x="${cell.x + 60}" y="${cell.y - 48}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''})` : '[EMPTY SOCKET]'}</text>
+      `;
+
+      // 20-Pin ZIF Socket Body and Lever
+      svgContent += SVG_COMPONENTS.renderZIFSocket(cell.id, cell.x, cell.y - zifH / 2, zifW, zifH, 20, sData.leverLocked);
+
+      // Inserted IC
+      if (sData.chip && icDef) {
+        svgContent += SVG_COMPONENTS.renderInsertedIC(cell.id, sData.chip, cell.x, cell.y - zifH / 2, zifW, zifH, icDef.pinCount, sData.alignment);
+      }
+
+      // Top Jack Row: labelled 20 19 18 ... 11 (left to right)
+      for (let i = 0; i < 10; i++) {
+        const pinNum = 20 - i;
+        const jId = `${cell.id}.J${pinNum}`;
+        const jx = cell.x + 20 + i * zifPitch;
+        const jy = cell.y - 58;
+        this.jackCoords[jId] = { x: jx, y: jy };
+        svgContent += SVG_COMPONENTS.renderBrassJack(jId, `${pinNum}`, jx, jy, "top");
+      }
+
+      // Bottom Jack Row: labelled 1 2 3 ... 10 (left to right)
+      for (let i = 0; i < 10; i++) {
+        const pinNum = 1 + i;
+        const jId = `${cell.id}.J${pinNum}`;
+        const jx = cell.x + 20 + i * zifPitch;
+        const jy = cell.y + 58;
+        this.jackCoords[jId] = { x: jx, y: jy };
+        svgContent += SVG_COMPONENTS.renderBrassJack(jId, `${pinNum}`, jx, jy, "bottom");
+      }
+    }
+
+    // 9. ZONE 8: Bottom Silkscreen Strip (y93–100%)
+    svgContent += `
+      <g id="zone-label-strip">
+        <rect x="42" y="1084" width="1518" height="38" rx="3" fill="#082916" stroke="var(--silkscreen)" stroke-width="1.2" />
+        <!-- Hi-Tech Logo Badge -->
+        <rect x="52" y="1089" width="80" height="28" rx="3" fill="#111827" stroke="#f59e0b" stroke-width="1" />
+        <text x="92" y="1108" fill="#f59e0b" font-family="var(--font-mono)" font-size="13" font-weight="900" text-anchor="middle">Hi-Tech</text>
+        <!-- Trainer Model Name -->
+        <text x="230" y="1109" class="brand-silkscreen gold" text-anchor="middle">DIT 9005</text>
+        <text x="560" y="1109" class="brand-silkscreen" text-anchor="middle">DIGITAL IC TRAINER</text>
+        <text x="1220" y="1108" class="brand-silkscreen small" text-anchor="middle">HI-TECH ELECTRONICS, PUNE - 30</text>
+      </g>
+    `;
+
+    // 10. PATCH CORDS LAYER
+    let wiresSvg = "";
+    for (const w of this.engine.wires) {
+      const p1 = this.jackCoords[w.from];
+      const p2 = this.jackCoords[w.to];
+      if (p1 && p2) {
+        wiresSvg += SVG_COMPONENTS.renderPatchCord(w, p1, p2);
+      }
+    }
+
+    svgContent += `<g id="wires-layer">${wiresSvg}</g>`;
+
+    // Update SVG in DOM
+    this.svg.innerHTML = svgContent;
+
+    // Apply selection highlight on currently selected jack
+    if (this.selectedJack) {
+      const g = this.svg.querySelector(`[data-jack="${this.selectedJack}"]`);
+      if (g) {
+        const ring = g.querySelector(".jack-selection-ring");
+        if (ring) {
+          ring.setAttribute("opacity", "1");
+          ring.setAttribute("stroke", this.activeColor);
+        }
+      }
+    }
+  }
+}
+
+/* ===== CONSOLE ===== */
+class LabConsole {
+  constructor(engine, boardRenderer) {
+    this.engine = engine;
+    this.board = boardRenderer;
+    this.currentTab = "experiments";
+    this.currentExpId = "exp1";
+    this.currentRefChip = "7408";
+    this.verificationResults = null;
+
+    this.container = document.getElementById("laboratory-console");
+    this.init();
+  }
+
+  init() {
+    this.render();
+  }
+
+  setTab(tabName) {
+    this.currentTab = tabName;
+    this.verificationResults = null;
+    this.render();
+  }
+
+  setExperiment(expId) {
+    this.currentExpId = expId;
+    this.verificationResults = null;
+    this.render();
+  }
+
+  autoWireExperiment(exp) {
+    // 1. Insert required ICs
+    if (exp.recommendedSocketICs) {
+      for (const [sId, chip] of Object.entries(exp.recommendedSocketICs)) {
+        this.engine.insertChip(sId, chip, "left");
+        this.engine.setSocketLever(sId, true);
+      }
+    }
+    // 2. Clear existing wires and add experiment wires
+    this.engine.clearWires();
+    if (exp.recommendedWires) {
+      for (const w of exp.recommendedWires) {
+        this.engine.addWire(w.from, w.to, w.color || "#facc15");
+      }
+    }
+    this.board.render();
+    this.render();
+  }
+
+  verifyExperiment(exp) {
+    if (!exp.tableRows || exp.tableRows.length === 0) {
+      this.verificationResults = { passed: true, message: "No static truth table required for this interactive clock/counter experiment." };
+      this.render();
+      return;
+    }
+
+    // Save current switch state
+    const savedInputs = { ...this.engine.inputs };
+    let allPassed = true;
+    const rowResults = [];
+
+    for (const row of exp.tableRows) {
+      // Apply input vector
+      for (const [swId, val] of Object.entries(row.inputs)) {
+        this.engine.inputs[swId] = val;
+      }
+      this.engine.evaluate();
+
+      // Check expected outputs
+      let rowPassed = true;
+      for (const [outJack, expVal] of Object.entries(row.expected)) {
+        const actualVal = this.engine.outputs[outJack];
+        if (actualVal !== expVal) {
+          rowPassed = false;
+        }
+      }
+      if (!rowPassed) allPassed = false;
+      rowResults.push(rowPassed);
+    }
+
+    // Restore original inputs and evaluate
+    this.engine.inputs = savedInputs;
+    this.engine.evaluate();
+    this.board.render();
+
+    this.verificationResults = {
+      passed: allPassed,
+      rowResults,
+      message: allPassed
+        ? "✓ VERIFICATION PASSED: All truth table states matched correctly!"
+        : "✗ VERIFICATION FAILED: Output mismatch detected. Check your wiring and power connections."
+    };
+
+    if (allPassed) {
+      this.engine.playClickSound(1200);
+    } else {
+      this.engine.playShortBuzzer();
+    }
+
+    this.render();
+  }
+
+  render() {
+    if (!this.container) return;
+
+    let content = "";
+    if (this.currentTab === "experiments") {
+      content = this.renderExperimentsTab();
+    } else if (this.currentTab === "drawer") {
+      content = this.renderDrawerTab();
+    } else if (this.currentTab === "reference") {
+      content = this.renderReferenceTab();
+    } else if (this.currentTab === "diagnostics") {
+      content = this.renderDiagnosticsTab();
+    }
+
+    this.container.innerHTML = `
+      <div class="console-tabs">
+        <button class="console-tab ${this.currentTab === 'experiments' ? 'active' : ''}" data-tab="experiments">
+          <span>📋 AIM / LAB</span>
+        </button>
+        <button class="console-tab ${this.currentTab === 'drawer' ? 'active' : ''}" data-tab="drawer">
+          <span>📦 IC DRAWER</span>
+        </button>
+        <button class="console-tab ${this.currentTab === 'reference' ? 'active' : ''}" data-tab="reference">
+          <span>📖 REFERENCE</span>
+        </button>
+        <button class="console-tab ${this.currentTab === 'diagnostics' ? 'active' : ''}" data-tab="diagnostics">
+          <span>⚡ DIAGNOSTICS</span>
+        </button>
+      </div>
+      <div class="console-content">
+        ${content}
+      </div>
+    `;
+
+    this.bindConsoleEvents();
+  }
+
+  renderExperimentsTab() {
+    const exp = EXPERIMENTS.find(e => e.id === this.currentExpId) || EXPERIMENTS[0];
+
+    // Build truth table rows HTML
+    let tableRowsHtml = "";
+    if (exp.tableRows && exp.tableRows.length > 0) {
+      tableRowsHtml = exp.tableRows.map((r, idx) => {
+        let isCurrent = true;
+        for (const [swId, val] of Object.entries(r.inputs)) {
+          if (this.engine.inputs[swId] !== val) isCurrent = false;
+        }
+
+        let rowClass = isCurrent ? "active-row" : "";
+        if (this.verificationResults && this.verificationResults.rowResults) {
+          rowClass += this.verificationResults.rowResults[idx] ? " passed" : " failed";
+        }
+
+        const inputCells = Object.values(r.inputs).map(v => `<td>${v}</td>`).join("");
+        const expectedCells = Object.values(r.expected).map(v => `<td><b>${v}</b></td>`).join("");
+        const actualVal = this.engine.outputs["OUT.Y0"];
+        const actualCell = `<td>${actualVal !== undefined ? actualVal : "-"}</td>`;
+
+        return `
+          <tr class="${rowClass}">
+            ${inputCells}
+            ${expectedCells}
+            ${actualCell}
+          </tr>
+        `;
+      }).join("");
+    }
+
+    return `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Select Practical Experiment</span>
+        </div>
+        <div class="form-group">
+          <select id="exp-select">
+            ${EXPERIMENTS.map(e => `
+              <option value="${e.id}" ${e.id === exp.id ? "selected" : ""}>
+                Exp ${e.number}: ${e.title}
+              </option>
+            `).join("")}
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Aim & Apparatus</span>
+        </div>
+        <p style="font-size: 12px; margin-bottom: 8px;"><b>Aim:</b> ${exp.aim}</p>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;"><b>Apparatus:</b> ${exp.apparatus}</p>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary" id="btn-auto-wire" style="flex: 1;">
+            ⚡ Auto-Wire Circuit
+          </button>
+          <button class="btn" id="btn-verify-exp" style="flex: 1;">
+            ✓ Verify Truth Table
+          </button>
+        </div>
+
+        ${this.verificationResults ? `
+          <div class="verdict-banner ${this.verificationResults.passed ? 'success' : 'failure'}">
+            ${this.verificationResults.message}
+          </div>
+        ` : ""}
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Truth Table & Real-Time State</span>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted);">Highlighted row indicates active input switch settings.</p>
+        <table class="truth-table">
+          <thead>
+            <tr>
+              ${exp.tableHeaders.map(h => `<th>${h}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Step-by-Step Procedure</span>
+        </div>
+        <ul style="font-size: 11px; line-height: 1.6; padding-left: 14px; color: var(--text-muted);">
+          ${exp.stepByStep.map(s => `<li>${s}</li>`).join("")}
+        </ul>
+      </div>
+    `;
+  }
+
+  renderDrawerTab() {
+    const sockets = ["U1", "U2", "U3", "U4", "U5"];
+    const chips = Object.keys(IC_LIBRARY);
+
+    return `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">ZIF Socket Chip Inventory</span>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+          Insert ICs into sockets U1–U4 (20-pin) or U5 (40-pin). Lock the lever to make electrical contact.
+        </p>
+
+        ${sockets.map(sId => {
+          const s = this.engine.sockets[sId];
+          const is40 = (sId === "U5");
+          const icDef = s.chip ? IC_LIBRARY[s.chip] : null;
+
+          return `
+            <div class="socket-card">
+              <div class="socket-card-header">
+                <span class="socket-id">${sId} (${is40 ? "40-Pin ZIF" : "20-Pin ZIF"})</span>
+                <span class="socket-chip-badge">${s.chip ? s.chip : "Empty"}</span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <div>
+                  <label class="form-label">Chip Type</label>
+                  <select class="socket-chip-select" data-socket="${sId}">
+                    <option value="">-- Empty --</option>
+                    ${chips.map(c => `
+                      <option value="${c}" ${s.chip === c ? "selected" : ""}>${c} (${IC_LIBRARY[c].title})</option>
+                    `).join("")}
+                  </select>
+                </div>
+
+                ${!is40 ? `
+                  <div>
+                    <label class="form-label">Alignment</label>
+                    <select class="socket-align-select" data-socket="${sId}">
+                      <option value="left" ${s.alignment === "left" ? "selected" : ""}>Left (Pin 1 @ J1)</option>
+                      <option value="center" ${s.alignment === "center" ? "selected" : ""}>Center</option>
+                      <option value="right" ${s.alignment === "right" ? "selected" : ""}>Right</option>
+                    </select>
+                  </div>
+                ` : '<div></div>'}
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                <button class="btn socket-lever-btn" data-socket="${sId}" style="padding: 3px 8px; font-size: 11px;">
+                  Lever: ${s.leverLocked ? "🔒 Locked (Engaged)" : "🔓 Released"}
+                </button>
+                ${s.chip ? `
+                  <button class="btn btn-danger socket-remove-btn" data-socket="${sId}" style="padding: 3px 8px; font-size: 11px;">
+                    Remove
+                  </button>
+                ` : ""}
+              </div>
+
+              ${icDef ? `
+                <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); font-size: 10px; color: var(--text-dim); font-family: var(--font-mono);">
+                  VCC: Pin ${icDef.vccPin} (Jack ${this.engine.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, s.alignment)}) |
+                  GND: Pin ${icDef.gndPin} (Jack ${this.engine.getJackForICPin(sId, icDef.gndPin, icDef.pinCount, s.alignment)})
+                </div>
+              ` : ""}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  renderReferenceTab() {
+    const chipNames = Object.keys(IC_LIBRARY);
+    const ic = IC_LIBRARY[this.currentRefChip] || IC_LIBRARY["7408"];
+
+    return `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Datasheet Pinout Reference</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Select IC Datasheet</label>
+          <select id="ref-chip-select">
+            ${chipNames.map(c => `
+              <option value="${c}" ${c === this.currentRefChip ? "selected" : ""}>
+                ${c} - ${IC_LIBRARY[c].title} (${IC_LIBRARY[c].package})
+              </option>
+            `).join("")}
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">${ic.name}: ${ic.title}</span>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: #38bdf8;">${ic.package}</span>
+        </div>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+          TTL Logic Series. VCC = +5V (Pin ${ic.vccPin}), GND = 0V (Pin ${ic.gndPin}).
+        </p>
+
+        <div style="font-size: 11px; font-weight: 600; margin-bottom: 4px;">Pin Configuration</div>
+        <table class="truth-table" style="margin-bottom: 12px;">
+          <thead>
+            <tr><th>Pin #</th><th>Name</th><th>Function / Type</th></tr>
+          </thead>
+          <tbody>
+            ${ic.pins.map(p => `
+              <tr>
+                <td><b>${p.pin}</b></td>
+                <td style="color: ${p.type === 'pwr' ? '#ef4444' : (p.type === 'gnd' ? '#60a5fa' : '#facc15')}">${p.name}</td>
+                <td>${p.type.toUpperCase()}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+
+        ${ic.truthTable ? `
+          <div style="font-size: 11px; font-weight: 600; margin-bottom: 4px;">Function Truth Table</div>
+          <table class="truth-table">
+            <thead>
+              <tr>${ic.truthTable.headers.map(h => `<th>${h}</th>`).join("")}</tr>
+            </thead>
+            <tbody>
+              ${ic.truthTable.rows.map(row => `
+                <tr>${row.map(val => `<td>${val}</td>`).join("")}</tr>
+              `).join("")}
+            </tbody>
+          </table>
+        ` : ""}
+      </div>
+    `;
+  }
+
+  renderDiagnosticsTab() {
+    return `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Kit Power Settings</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <span style="font-size: 12px;">Master Mains Power</span>
+          <button class="master-power-btn ${this.engine.masterPower ? 'on' : ''}" id="diag-master-pwr">
+            <div class="power-indicator"></div>
+            <span class="power-text">${this.engine.masterPower ? "230V ON" : "OFF"}</span>
+          </button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 12px; font-weight: 500;">Strict Power Mode</div>
+            <div style="font-size: 10px; color: var(--text-muted);">Requires patch cords to VCC and GND</div>
+          </div>
+          <button class="btn ${this.engine.strictPowerMode ? 'btn-primary' : ''}" id="diag-strict-toggle" style="padding: 4px 10px; font-size: 11px;">
+            ${this.engine.strictPowerMode ? "Strict (Active)" : "Auto-Power"}
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Circuit Status & Shorts</span>
+        </div>
+        ${this.engine.shorts.length > 0 ? `
+          <div class="verdict-banner failure" style="margin-bottom: 8px;">
+            ⚠️ SHORT CIRCUIT DETECTED (${this.engine.shorts.length})
+          </div>
+          <ul style="font-size: 11px; color: #fca5a5; line-height: 1.5; padding-left: 16px;">
+            ${this.engine.shorts.map(s => `<li>${s}</li>`).join("")}
+          </ul>
+        ` : `
+          <div class="verdict-banner success">
+            ✓ Circuit Healthy: No short circuits detected.
+          </div>
+        `}
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Netlist & Patch Cords (${this.engine.wires.length})</span>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <button class="btn" id="btn-export-wires" style="flex: 1;">Export JSON</button>
+          <button class="btn" id="btn-import-wires" style="flex: 1;">Import JSON</button>
+        </div>
+
+        <div style="max-height: 160px; overflow-y: auto; font-family: var(--font-mono); font-size: 11px;">
+          ${this.engine.wires.length === 0 ? `<div style="color: var(--text-dim); text-align: center; padding: 12px;">No wires patched</div>` : `
+            <table class="truth-table">
+              <thead><tr><th>From</th><th>To</th><th>Color</th><th>Action</th></tr></thead>
+              <tbody>
+                ${this.engine.wires.map(w => `
+                  <tr>
+                    <td>${w.from}</td>
+                    <td>${w.to}</td>
+                    <td><span style="display:inline-block; width:10px; height:10px; background:${w.color}; border-radius:50%;"></span></td>
+                    <td><button class="btn btn-danger btn-del-wire" data-wire="${w.id}" style="padding:1px 6px; font-size:10px;">✕</button></td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          `}
+        </div>
+      </div>
+    `;
+  }
+
+  bindConsoleEvents() {
+    // Tab switching
+    this.container.querySelectorAll(".console-tab").forEach(btn => {
+      btn.addEventListener("click", () => this.setTab(btn.dataset.tab));
+    });
+
+    // Experiment selection
+    const expSelect = this.container.querySelector("#exp-select");
+    if (expSelect) {
+      expSelect.addEventListener("change", (e) => this.setExperiment(e.target.value));
+    }
+
+    // Auto-Wire button
+    const btnAutoWire = this.container.querySelector("#btn-auto-wire");
+    if (btnAutoWire) {
+      btnAutoWire.addEventListener("click", () => {
+        const exp = EXPERIMENTS.find(e => e.id === this.currentExpId);
+        if (exp) this.autoWireExperiment(exp);
+      });
+    }
+
+    // Verify Experiment button
+    const btnVerify = this.container.querySelector("#btn-verify-exp");
+    if (btnVerify) {
+      btnVerify.addEventListener("click", () => {
+        const exp = EXPERIMENTS.find(e => e.id === this.currentExpId);
+        if (exp) this.verifyExperiment(exp);
+      });
+    }
+
+    // IC Drawer selects
+    this.container.querySelectorAll(".socket-chip-select").forEach(sel => {
+      sel.addEventListener("change", (e) => {
+        const sId = e.target.dataset.socket;
+        const chip = e.target.value;
+        if (chip) this.engine.insertChip(sId, chip);
+        else this.engine.removeChip(sId);
+        this.board.render();
+        this.render();
+      });
+    });
+
+    this.container.querySelectorAll(".socket-align-select").forEach(sel => {
+      sel.addEventListener("change", (e) => {
+        const sId = e.target.dataset.socket;
+        if (this.engine.sockets[sId].chip) {
+          this.engine.sockets[sId].alignment = e.target.value;
+          this.engine.evaluate();
+          this.board.render();
+          this.render();
+        }
+      });
+    });
+
+    this.container.querySelectorAll(".socket-lever-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sId = btn.dataset.socket;
+        const cur = this.engine.sockets[sId].leverLocked;
+        this.engine.setSocketLever(sId, !cur);
+        this.board.render();
+        this.render();
+      });
+    });
+
+    this.container.querySelectorAll(".socket-remove-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sId = btn.dataset.socket;
+        this.engine.removeChip(sId);
+        this.board.render();
+        this.render();
+      });
+    });
+
+    // Reference chip select
+    const refChipSelect = this.container.querySelector("#ref-chip-select");
+    if (refChipSelect) {
+      refChipSelect.addEventListener("change", (e) => {
+        this.currentRefChip = e.target.value;
+        this.render();
+      });
+    }
+
+    // Diagnostics buttons
+    const diagPwr = this.container.querySelector("#diag-master-pwr");
+    if (diagPwr) {
+      diagPwr.addEventListener("click", () => {
+        this.engine.toggleMasterPower();
+        this.board.render();
+        this.render();
+      });
+    }
+
+    const diagStrict = this.container.querySelector("#diag-strict-toggle");
+    if (diagStrict) {
+      diagStrict.addEventListener("click", () => {
+        this.engine.setStrictPowerMode(!this.engine.strictPowerMode);
+        this.board.render();
+        this.render();
+      });
+    }
+
+    // Delete single wire in netlist
+    this.container.querySelectorAll(".btn-del-wire").forEach(btn => {
+      btn.addEventListener("click", () => {
+        this.engine.removeWire(btn.dataset.wire);
+        this.board.render();
+        this.render();
+      });
+    });
+
+    // Wire export/import
+    const btnExport = this.container.querySelector("#btn-export-wires");
+    if (btnExport) {
+      btnExport.addEventListener("click", () => {
+        const json = JSON.stringify(this.engine.wires, null, 2);
+        navigator.clipboard.writeText(json).then(() => {
+          alert("Wire configuration copied to clipboard!");
+        }).catch(() => {
+          prompt("Copy wire configuration JSON:", json);
+        });
+      });
+    }
+
+    const btnImport = this.container.querySelector("#btn-import-wires");
+    if (btnImport) {
+      btnImport.addEventListener("click", () => {
+        const json = prompt("Paste Wire configuration JSON:");
+        if (json) {
+          try {
+            const arr = JSON.parse(json);
+            if (Array.isArray(arr)) {
+              this.engine.wires = arr;
+              this.engine.evaluate();
+              this.board.render();
+              this.render();
+            }
+          } catch (err) {
+            alert("Invalid JSON format!");
+          }
+        }
+      });
+    }
+  }
+}
+
+/* ===== INIT ===== */
+document.addEventListener("DOMContentLoaded", () => {
+  const svgBoard = document.getElementById("board-svg");
+  const probeHud = document.getElementById("probe-hud");
+  const probeJackName = document.getElementById("probe-jack-name");
+  const probeState = document.getElementById("probe-state");
+  const probeVoltage = document.getElementById("probe-voltage");
+  const probeDot = document.getElementById("probe-dot");
+  const statusWireCount = document.getElementById("status-wire-count");
+  const statusAlarmPill = document.getElementById("status-alarm-pill");
+
+  // 1. Instantiate Core Engine
+  const engine = new TTLEngine();
+
+  // 2. Logic Probe HUD Handler
+  const handleJackHover = (jackId, mouseEvent) => {
+    if (!jackId) {
+      probeHud.style.opacity = "0";
+      return;
+    }
+    const info = engine.probeJack(jackId);
+    probeHud.style.opacity = "1";
+    probeJackName.textContent = jackId;
+
+    let vText = `${info.voltage.toFixed(2)} V`;
+    let sText = "FLOAT";
+    probeDot.className = "probe-dot";
+
+    if (info.state === "OFF") {
+      sText = "OFF (0V)";
+      vText = "0.00 V";
+    } else if (info.state === "SHORT") {
+      sText = "SHORT CIRCUIT";
+      probeDot.classList.add("short");
+    } else if (info.state === 1) {
+      sText = "HIGH (Logic 1)";
+      probeDot.classList.add("high");
+    } else if (info.state === 0) {
+      sText = "LOW (Logic 0)";
+      probeDot.classList.add("low");
+    } else if (info.state === "12V") {
+      sText = "+12V DC";
+      probeDot.classList.add("high");
+    } else {
+      sText = "TTL FLOAT (High)";
+    }
+
+    probeState.textContent = sText;
+    probeVoltage.textContent = vText;
+  };
+
+  // 3. Instantiate Board Renderer & Console
+  const board = new BoardRenderer(engine, svgBoard, handleJackHover);
+  const consolePanel = new LabConsole(engine, board);
+
+  // 4. Update UI Status on Engine State Changes
+  const updateStatusBar = () => {
+    if (statusWireCount) statusWireCount.textContent = `${engine.wires.length} Wires`;
+    if (statusAlarmPill) {
+      if (engine.shorts.length > 0) {
+        statusAlarmPill.className = "status-pill alarm";
+        statusAlarmPill.innerHTML = `⚠️ SHORT CIRCUIT (${engine.shorts.length})`;
+      } else {
+        statusAlarmPill.className = "status-pill";
+        statusAlarmPill.innerHTML = `✓ Healthy`;
+      }
+    }
+    const masterPwrBtn = document.getElementById("master-pwr-header");
+    if (masterPwrBtn) {
+      masterPwrBtn.classList.toggle("on", engine.masterPower);
+      masterPwrBtn.querySelector(".power-text").textContent = engine.masterPower ? "230V ON" : "OFF";
+    }
+  };
+
+  engine.onChange(() => {
+    board.render();
+    updateStatusBar();
+  });
+
+  // 5. Header Control Bindings
+  // Wire Color Palette
+  const colorSwatches = document.querySelectorAll(".color-swatch");
+  colorSwatches.forEach(swatch => {
+    swatch.addEventListener("click", () => {
+      colorSwatches.forEach(s => s.classList.remove("active"));
+      swatch.classList.add("active");
+      board.setWireColor(swatch.dataset.color);
+    });
+  });
+
+  // Undo Wire
+  const btnUndo = document.getElementById("btn-undo-wire");
+  if (btnUndo) {
+    btnUndo.addEventListener("click", () => engine.undoWire());
+  }
+
+  // Clear All Wires
+  const btnClear = document.getElementById("btn-clear-wires");
+  if (btnClear) {
+    btnClear.addEventListener("click", () => {
+      if (confirm("Clear all connected patch cords?")) {
+        engine.clearWires();
+      }
+    });
+  }
+
+  // Delete Wire Mode Toggle
+  const btnDeleteMode = document.getElementById("btn-delete-mode");
+  if (btnDeleteMode) {
+    btnDeleteMode.addEventListener("click", () => {
+      const active = !board.deleteMode;
+      board.setDeleteMode(active);
+      btnDeleteMode.classList.toggle("btn-active", active);
+      btnDeleteMode.textContent = active ? "✕ Delete Mode (ON)" : "✕ Delete Wire";
+    });
+  }
+
+  // Master Power in Header
+  const headerPwrBtn = document.getElementById("master-pwr-header");
+  if (headerPwrBtn) {
+    headerPwrBtn.addEventListener("click", () => {
+      engine.toggleMasterPower();
+    });
+  }
+
+  // 6. Sub-bar View Navigation Tabs
+  const viewTabs = document.querySelectorAll(".view-tab-btn");
+  viewTabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      viewTabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      board.setView(tab.dataset.view);
+    });
+  });
+
+  // 7. Load Default Initial Circuit (Exp 1: AND gate ready to test)
+  consolePanel.autoWireExperiment(EXPERIMENTS[0]);
+  board.render();
+  updateStatusBar();
+});
+
+  </script>
+</body>
+</html>
