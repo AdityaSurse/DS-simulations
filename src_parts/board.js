@@ -605,6 +605,7 @@ class BoardRenderer {
         ${SVG_COMPONENTS.drawICChip({
           socketId: "U5",
           chipName: this.engine.sockets.U5.chip,
+          marking: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.marking || ("SN" + this.engine.sockets.U5.chip + "N")) : "",
           socketX: 130, socketY: 120, socketW: 140, socketH: 840,
           icPinCount: 40, alignment: "left"
         })}
@@ -900,6 +901,7 @@ class BoardRenderer {
         svgContent += SVG_COMPONENTS.drawICChip({
           socketId: cell.id,
           chipName: sData.chip,
+          marking: icDef.marking || ("SN" + sData.chip + "N"),
           socketX: cell.x, socketY: cell.y - zifH / 2, socketW: zifW, socketH: zifH,
           icPinCount: icDef.pinCount,
           alignment: sData.alignment

@@ -965,13 +965,143 @@ select:focus, input[type="text"]:focus {
   <script>
 /* ===== DATA: ICs ===== */
 const IC_LIBRARY = {
-  "7404": {
-    name: "7404",
-    title: "Hex Inverter",
+  "7400": {
+    name: "7400",
+    marking: "SN7400N",
+    title: "Quad 2-Input NAND Gate",
+    description: "Quadruple 2-input positive-NAND gates. Four independent gates performing logical NAND function with standard TTL push-pull outputs.",
     package: "DIP-14",
     pinCount: 14,
     vccPin: 14,
     gndPin: 7,
+    pinNames: {
+      1: "1A", 2: "1B", 3: "1Y",
+      4: "2A", 5: "2B", 6: "2Y",
+      7: "GND",
+      8: "3Y", 9: "3A", 10: "3B",
+      11: "4Y", 12: "4A", 13: "4B",
+      14: "VCC"
+    },
+    inputs: [1, 2, 4, 5, 9, 10, 12, 13],
+    outputs: [3, 6, 8, 11],
+    pins: [
+      { pin: 1, name: "1A", type: "in" },
+      { pin: 2, name: "1B", type: "in" },
+      { pin: 3, name: "1Y", type: "out" },
+      { pin: 4, name: "2A", type: "in" },
+      { pin: 5, name: "2B", type: "in" },
+      { pin: 6, name: "2Y", type: "out" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "3Y", type: "out" },
+      { pin: 9, name: "3A", type: "in" },
+      { pin: 10, name: "3B", type: "in" },
+      { pin: 11, name: "4Y", type: "out" },
+      { pin: 12, name: "4A", type: "in" },
+      { pin: 13, name: "4B", type: "in" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      return {
+        outputs: {
+          3: (get(1) === 1 && get(2) === 1) ? 0 : 1,
+          6: (get(4) === 1 && get(5) === 1) ? 0 : 1,
+          8: (get(9) === 1 && get(10) === 1) ? 0 : 1,
+          11: (get(12) === 1 && get(13) === 1) ? 0 : 1
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Input A", "Input B", "Output Y"],
+      rows: [
+        [0, 0, 1],
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 0]
+      ]
+    }
+  },
+
+  "7402": {
+    name: "7402",
+    marking: "SN7402N",
+    title: "Quad 2-Input NOR Gate",
+    description: "Quadruple 2-input positive-NOR gates. Note reversed pinout: output on pin 1 with inputs on pins 2 & 3.",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pinNames: {
+      1: "1Y", 2: "1A", 3: "1B",
+      4: "2Y", 5: "2A", 6: "2B",
+      7: "GND",
+      8: "3A", 9: "3B", 10: "3Y",
+      11: "4A", 12: "4B", 13: "4Y",
+      14: "VCC"
+    },
+    inputs: [2, 3, 5, 6, 8, 9, 11, 12],
+    outputs: [1, 4, 10, 13],
+    pins: [
+      { pin: 1, name: "1Y", type: "out" },
+      { pin: 2, name: "1A", type: "in" },
+      { pin: 3, name: "1B", type: "in" },
+      { pin: 4, name: "2Y", type: "out" },
+      { pin: 5, name: "2A", type: "in" },
+      { pin: 6, name: "2B", type: "in" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "3A", type: "in" },
+      { pin: 9, name: "3B", type: "in" },
+      { pin: 10, name: "3Y", type: "out" },
+      { pin: 11, name: "4A", type: "in" },
+      { pin: 12, name: "4B", type: "in" },
+      { pin: 13, name: "4Y", type: "out" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      return {
+        outputs: {
+          1: (get(2) === 0 && get(3) === 0) ? 1 : 0,
+          4: (get(5) === 0 && get(6) === 0) ? 1 : 0,
+          10: (get(8) === 0 && get(9) === 0) ? 1 : 0,
+          13: (get(11) === 0 && get(12) === 0) ? 1 : 0
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Input A", "Input B", "Output Y"],
+      rows: [
+        [0, 0, 1],
+        [0, 1, 0],
+        [1, 0, 0],
+        [1, 1, 0]
+      ]
+    }
+  },
+
+  "7404": {
+    name: "7404",
+    marking: "SN7404N",
+    title: "Hex Inverter",
+    description: "Hex inverters with 6 independent NOT logic gates with standard TTL push-pull outputs.",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pinNames: {
+      1: "1A", 2: "1Y",
+      3: "2A", 4: "2Y",
+      5: "3A", 6: "3Y",
+      7: "GND",
+      8: "4Y", 9: "4A",
+      10: "5Y", 11: "5A",
+      12: "6Y", 13: "6A",
+      14: "VCC"
+    },
+    inputs: [1, 3, 5, 9, 11, 13],
+    outputs: [2, 4, 6, 8, 10, 12],
     pins: [
       { pin: 1, name: "1A", type: "in" },
       { pin: 2, name: "1Y", type: "out" },
@@ -1013,7 +1143,9 @@ const IC_LIBRARY = {
 
   "TEST_GATE": {
     name: "TEST_GATE",
+    marking: "SN7404N",
     title: "Test Inverter Gate",
+    description: "Single inverter test gate for simulator engine verification.",
     package: "DIP-14",
     pinCount: 14,
     vccPin: 14,
@@ -1056,11 +1188,23 @@ const IC_LIBRARY = {
 
   "7408": {
     name: "7408",
+    marking: "SN7408N",
     title: "Quad 2-Input AND Gate",
+    description: "Quadruple 2-input positive-AND gates. Four independent gates performing logical AND function with standard TTL push-pull outputs.",
     package: "DIP-14",
     pinCount: 14,
     vccPin: 14,
     gndPin: 7,
+    pinNames: {
+      1: "1A", 2: "1B", 3: "1Y",
+      4: "2A", 5: "2B", 6: "2Y",
+      7: "GND",
+      8: "3Y", 9: "3A", 10: "3B",
+      11: "4Y", 12: "4A", 13: "4B",
+      14: "VCC"
+    },
+    inputs: [1, 2, 4, 5, 9, 10, 12, 13],
+    outputs: [3, 6, 8, 11],
     pins: [
       { pin: 1, name: "1A", type: "in" },
       { pin: 2, name: "1B", type: "in" },
@@ -1100,13 +1244,81 @@ const IC_LIBRARY = {
     }
   },
 
-  "7432": {
-    name: "7432",
-    title: "Quad 2-Input OR Gate",
+  "7420": {
+    name: "7420",
+    marking: "SN7420N",
+    title: "Dual 4-Input NAND Gate",
+    description: "Dual 4-input positive-NAND gates. Two independent 4-input NAND gates with standard TTL push-pull outputs. Pins 3 and 11 are No-Connect (NC).",
     package: "DIP-14",
     pinCount: 14,
     vccPin: 14,
     gndPin: 7,
+    pinNames: {
+      1: "1A", 2: "1B", 3: "NC", 4: "1C", 5: "1D", 6: "1Y",
+      7: "GND",
+      8: "2Y", 9: "2A", 10: "2B", 11: "NC", 12: "2C", 13: "2D",
+      14: "VCC"
+    },
+    inputs: [1, 2, 4, 5, 9, 10, 12, 13],
+    outputs: [6, 8],
+    pins: [
+      { pin: 1, name: "1A", type: "in" },
+      { pin: 2, name: "1B", type: "in" },
+      { pin: 3, name: "NC", type: "nc" },
+      { pin: 4, name: "1C", type: "in" },
+      { pin: 5, name: "1D", type: "in" },
+      { pin: 6, name: "1Y", type: "out" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "2Y", type: "out" },
+      { pin: 9, name: "2A", type: "in" },
+      { pin: 10, name: "2B", type: "in" },
+      { pin: 11, name: "NC", type: "nc" },
+      { pin: 12, name: "2C", type: "in" },
+      { pin: 13, name: "2D", type: "in" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (inMap, state) => {
+      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
+      return {
+        outputs: {
+          6: (get(1) === 1 && get(2) === 1 && get(4) === 1 && get(5) === 1) ? 0 : 1,
+          8: (get(9) === 1 && get(10) === 1 && get(12) === 1 && get(13) === 1) ? 0 : 1
+        },
+        nextState: state
+      };
+    },
+    truthTable: {
+      headers: ["Input 1A", "Input 1B", "Input 1C", "Input 1D", "Output 1Y"],
+      rows: [
+        [0, 0, 0, 0, 1],
+        [0, 1, 1, 1, 1],
+        [1, 0, 1, 1, 1],
+        [1, 1, 0, 1, 1],
+        [1, 1, 1, 0, 1],
+        [1, 1, 1, 1, 0]
+      ]
+    }
+  },
+
+  "7432": {
+    name: "7432",
+    marking: "SN7432N",
+    title: "Quad 2-Input OR Gate",
+    description: "Quadruple 2-input positive-OR gates. Four independent gates performing logical OR function with standard TTL push-pull outputs.",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pinNames: {
+      1: "1A", 2: "1B", 3: "1Y",
+      4: "2A", 5: "2B", 6: "2Y",
+      7: "GND",
+      8: "3Y", 9: "3A", 10: "3B",
+      11: "4Y", 12: "4A", 13: "4B",
+      14: "VCC"
+    },
+    inputs: [1, 2, 4, 5, 9, 10, 12, 13],
+    outputs: [3, 6, 8, 11],
     pins: [
       { pin: 1, name: "1A", type: "in" },
       { pin: 2, name: "1B", type: "in" },
@@ -1146,105 +1358,25 @@ const IC_LIBRARY = {
     }
   },
 
-  "7400": {
-    name: "7400",
-    title: "Quad 2-Input NAND Gate",
-    package: "DIP-14",
-    pinCount: 14,
-    vccPin: 14,
-    gndPin: 7,
-    pins: [
-      { pin: 1, name: "1A", type: "in" },
-      { pin: 2, name: "1B", type: "in" },
-      { pin: 3, name: "1Y", type: "out" },
-      { pin: 4, name: "2A", type: "in" },
-      { pin: 5, name: "2B", type: "in" },
-      { pin: 6, name: "2Y", type: "out" },
-      { pin: 7, name: "GND", type: "gnd" },
-      { pin: 8, name: "3Y", type: "out" },
-      { pin: 9, name: "3A", type: "in" },
-      { pin: 10, name: "3B", type: "in" },
-      { pin: 11, name: "4Y", type: "out" },
-      { pin: 12, name: "4A", type: "in" },
-      { pin: 13, name: "4B", type: "in" },
-      { pin: 14, name: "VCC", type: "pwr" }
-    ],
-    eval: (inMap, state) => {
-      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
-      return {
-        outputs: {
-          3: (get(1) === 1 && get(2) === 1) ? 0 : 1,
-          6: (get(4) === 1 && get(5) === 1) ? 0 : 1,
-          8: (get(9) === 1 && get(10) === 1) ? 0 : 1,
-          11: (get(12) === 1 && get(13) === 1) ? 0 : 1
-        },
-        nextState: state
-      };
-    },
-    truthTable: {
-      headers: ["Input A", "Input B", "Output Y"],
-      rows: [
-        [0, 0, 1],
-        [0, 1, 1],
-        [1, 0, 1],
-        [1, 1, 0]
-      ]
-    }
-  },
-
-  "7402": {
-    name: "7402",
-    title: "Quad 2-Input NOR Gate",
-    package: "DIP-14",
-    pinCount: 14,
-    vccPin: 14,
-    gndPin: 7,
-    pins: [
-      { pin: 1, name: "1Y", type: "out" },
-      { pin: 2, name: "1A", type: "in" },
-      { pin: 3, name: "1B", type: "in" },
-      { pin: 4, name: "2Y", type: "out" },
-      { pin: 5, name: "2A", type: "in" },
-      { pin: 6, name: "2B", type: "in" },
-      { pin: 7, name: "GND", type: "gnd" },
-      { pin: 8, name: "3A", type: "in" },
-      { pin: 9, name: "3B", type: "in" },
-      { pin: 10, name: "3Y", type: "out" },
-      { pin: 11, name: "4A", type: "in" },
-      { pin: 12, name: "4B", type: "in" },
-      { pin: 13, name: "4Y", type: "out" },
-      { pin: 14, name: "VCC", type: "pwr" }
-    ],
-    eval: (inMap, state) => {
-      const get = (pin) => (inMap[pin] === undefined ? 1 : inMap[pin]);
-      return {
-        outputs: {
-          1: (get(2) === 0 && get(3) === 0) ? 1 : 0,
-          4: (get(5) === 0 && get(6) === 0) ? 1 : 0,
-          10: (get(8) === 0 && get(9) === 0) ? 1 : 0,
-          13: (get(11) === 0 && get(12) === 0) ? 1 : 0
-        },
-        nextState: state
-      };
-    },
-    truthTable: {
-      headers: ["Input A", "Input B", "Output Y"],
-      rows: [
-        [0, 0, 1],
-        [0, 1, 0],
-        [1, 0, 0],
-        [1, 1, 0]
-      ]
-    }
-  },
-
   "7486": {
     name: "7486",
+    marking: "SN7486N",
     title: "Quad 2-Input Exclusive-OR (XOR) Gate",
+    description: "Quadruple 2-input exclusive-OR (XOR) gates with standard TTL totem-pole outputs.",
     package: "DIP-14",
     pinCount: 14,
     vccPin: 14,
     gndPin: 7,
+    pinNames: {
+      1: "1A", 2: "1B", 3: "1Y",
+      4: "2A", 5: "2B", 6: "2Y",
+      7: "GND",
+      8: "3Y", 9: "3A", 10: "3B",
+      11: "4Y", 12: "4A", 13: "4B",
+      14: "VCC"
+    },
+    inputs: [1, 2, 4, 5, 9, 10, 12, 13],
+    outputs: [3, 6, 8, 11],
     pins: [
       { pin: 1, name: "1A", type: "in" },
       { pin: 2, name: "1B", type: "in" },
@@ -1286,11 +1418,19 @@ const IC_LIBRARY = {
 
   "74153": {
     name: "74153",
+    marking: "SN74153N",
     title: "Dual 4-to-1 Multiplexer",
+    description: "Dual 4-line to 1-line data selectors/multiplexers with individual strobes and common binary address inputs.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 16,
     gndPin: 8,
+    pinNames: {
+      1: "1G'", 2: "B", 3: "1C3", 4: "1C2", 5: "1C1", 6: "1C0", 7: "1Y", 8: "GND",
+      9: "2Y", 10: "2C0", 11: "2C1", 12: "2C2", 13: "2C3", 14: "A", 15: "2G'", 16: "VCC"
+    },
+    inputs: [1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15],
+    outputs: [7, 9],
     pins: [
       { pin: 1, name: "1G'", type: "in" },
       { pin: 2, name: "B", type: "in" },
@@ -1350,11 +1490,19 @@ const IC_LIBRARY = {
 
   "74138": {
     name: "74138",
+    marking: "SN74138N",
     title: "3-to-8 Line Decoder / Demultiplexer",
+    description: "3-line to 8-line decoder/demultiplexer featuring three enable inputs (one active-high, two active-low) and 8 active-low outputs.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 16,
     gndPin: 8,
+    pinNames: {
+      1: "A", 2: "B", 3: "C", 4: "G2A'", 5: "G2B'", 6: "G1", 7: "Y7'", 8: "GND",
+      9: "Y6'", 10: "Y5'", 11: "Y4'", 12: "Y3'", 13: "Y2'", 14: "Y1'", 15: "Y0'", 16: "VCC"
+    },
+    inputs: [1, 2, 3, 4, 5, 6],
+    outputs: [7, 9, 10, 11, 12, 13, 14, 15],
     pins: [
       { pin: 1, name: "A", type: "in" },
       { pin: 2, name: "B", type: "in" },
@@ -1410,11 +1558,19 @@ const IC_LIBRARY = {
 
   "7483": {
     name: "7483",
+    marking: "SN7483N",
     title: "4-Bit Binary Full Adder",
+    description: "4-bit binary full adder with fast internal lookahead carry. Adds two 4-bit words A and B with carry-in C0, outputting 4-bit sum S and carry-out C4.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 5,
     gndPin: 12,
+    pinNames: {
+      1: "A4", 2: "S3", 3: "A3", 4: "B3", 5: "VCC", 6: "S2", 7: "B2", 8: "A2",
+      9: "S1", 10: "A1", 11: "B1", 12: "GND", 13: "C0", 14: "C4", 15: "S4", 16: "B4"
+    },
+    inputs: [1, 3, 4, 7, 8, 10, 11, 13, 16],
+    outputs: [2, 6, 9, 14, 15],
     pins: [
       { pin: 1, name: "A4", type: "in" },
       { pin: 2, name: "S3", type: "out" },
@@ -1462,11 +1618,19 @@ const IC_LIBRARY = {
 
   "7485": {
     name: "7485",
+    marking: "SN7485N",
     title: "4-Bit Magnitude Comparator",
+    description: "4-bit magnitude comparator comparing two 4-bit binary words A and B. Includes expansion inputs for cascading multiple stages.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 16,
     gndPin: 8,
+    pinNames: {
+      1: "B3", 2: "IA<B", 3: "IA=B", 4: "IA>B", 5: "OA>B", 6: "OA=B", 7: "OA<B", 8: "GND",
+      9: "B0", 10: "A0", 11: "B1", 12: "A1", 13: "A2", 14: "B2", 15: "A3", 16: "VCC"
+    },
+    inputs: [1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15],
+    outputs: [5, 6, 7],
     pins: [
       { pin: 1, name: "B3", type: "in" },
       { pin: 2, name: "IA<B", type: "in" },
@@ -1519,11 +1683,19 @@ const IC_LIBRARY = {
 
   "7490": {
     name: "7490",
+    marking: "SN7490N",
     title: "Decade Counter",
+    description: "Decade (BCD) counter containing four master-slave flip-flops configured as a divide-by-2 section (CKA) and a divide-by-5 section (CKB).",
     package: "DIP-14",
     pinCount: 14,
     vccPin: 5,
     gndPin: 10,
+    pinNames: {
+      1: "CKB", 2: "R0(1)", 3: "R0(2)", 4: "NC", 5: "VCC", 6: "R9(1)", 7: "R9(2)",
+      8: "QD", 9: "QB", 10: "GND", 11: "QC", 12: "QA", 13: "NC", 14: "CKA"
+    },
+    inputs: [1, 2, 3, 6, 7, 14],
+    outputs: [8, 9, 11, 12],
     pins: [
       { pin: 1, name: "CKB", type: "in" },
       { pin: 2, name: "R0(1)", type: "in" },
@@ -1593,11 +1765,19 @@ const IC_LIBRARY = {
 
   "7493": {
     name: "7493",
+    marking: "SN7493N",
     title: "4-Bit Binary Counter",
+    description: "4-bit binary counter containing four master-slave flip-flops configured as a divide-by-2 section (CKA) and a divide-by-8 section (CKB).",
     package: "DIP-14",
     pinCount: 14,
     vccPin: 5,
     gndPin: 10,
+    pinNames: {
+      1: "CKB", 2: "R0(1)", 3: "R0(2)", 4: "NC", 5: "VCC", 6: "NC", 7: "NC",
+      8: "QD", 9: "QB", 10: "GND", 11: "QC", 12: "QA", 13: "NC", 14: "CKA"
+    },
+    inputs: [1, 2, 3, 14],
+    outputs: [8, 9, 11, 12],
     pins: [
       { pin: 1, name: "CKB", type: "in" },
       { pin: 2, name: "R0(1)", type: "in" },
@@ -1661,11 +1841,19 @@ const IC_LIBRARY = {
 
   "74191": {
     name: "74191",
+    marking: "SN74191N",
     title: "Synchronous 4-Bit Up/Down Binary Counter",
+    description: "Synchronous reversible up/down 4-bit binary counter with preset capability and cascading ripple clock outputs.",
     package: "DIP-16",
     pinCount: 16,
     vccPin: 16,
     gndPin: 8,
+    pinNames: {
+      1: "B", 2: "QB", 3: "QA", 4: "ENABLE'", 5: "D/U'", 6: "QC", 7: "QD", 8: "GND",
+      9: "D", 10: "C", 11: "LOAD'", 12: "MAX/MIN", 13: "RCO'", 14: "CLOCK", 15: "A", 16: "VCC"
+    },
+    inputs: [1, 4, 5, 9, 10, 11, 14, 15],
+    outputs: [2, 3, 6, 7, 12, 13],
     pins: [
       { pin: 1, name: "B", type: "in" },
       { pin: 2, name: "QB", type: "out" },
@@ -1733,6 +1921,12 @@ const IC_LIBRARY = {
   }
 };
 
+if (typeof window !== "undefined") {
+  window.IC_LIBRARY = IC_LIBRARY;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { IC_LIBRARY };
+}
 
 /* ===== DATA: EXPERIMENTS ===== */
 const EXPERIMENTS = [
@@ -1740,25 +1934,228 @@ const EXPERIMENTS = [
     id: "exp1",
     number: 1,
     title: "Study of Logic Gates",
-    aim: "To study basic logic gates (NOT, AND, OR, NAND, NOR, XOR) and verify their truth tables on the trainer kit.",
-    apparatus: "DIT 9005 Trainer Kit, IC 7408 (AND), IC 7432 (OR), IC 7404 (NOT), IC 7400 (NAND), IC 7402 (NOR), IC 7486 (XOR), Patch cords.",
+    aim: "To study basic logic gates (NOT, AND, OR, NAND, NOR, XOR, 4-in NAND) and verify their truth tables on the trainer kit.",
+    apparatus: "DIT 9005 Trainer Kit, IC 7408 (AND), IC 7432 (OR), IC 7404 (NOT), IC 7400 (NAND), IC 7402 (NOR), IC 7486 (XOR), IC 7420 (Dual 4-in NAND), Patch cords.",
     theory: "Logic gates are the fundamental building blocks of digital electronic circuits. Logic levels correspond to binary 1 (+5V TTL HIGH) and binary 0 (0V/GND TTL LOW). In standard TTL, an unconnected (floating) input naturally floats to Logic 1.",
-    stepByStep: [
-      "1. Insert IC 7408 (AND) or IC 7400 (NAND) into ZIF socket U1. Lower and lock the ZIF lever.",
-      "2. Connect +5V power jack to U1 pin 20 (or socket jack 20 for 14-pin left-aligned VCC pin 14).",
-      "3. Connect GND jack to U1 pin 7 (socket jack 7).",
-      "4. Connect Data Input switch IN.A0 to U1 pin 1 (socket jack 1, Input 1A).",
-      "5. Connect Data Input switch IN.A1 to U1 pin 2 (socket jack 2, Input 1B).",
-      "6. Connect Output jack OUT.Y0 to U1 pin 3 (socket jack 3, Output 1Y).",
-      "7. Flip switches A0 and A1 through combinations 00, 01, 10, 11 and observe LED Y0."
-    ],
+    subGates: {
+      "7408": {
+        id: "7408",
+        name: "7408",
+        label: "7408 (AND)",
+        title: "Quad 2-Input AND Gate",
+        chip: "7408",
+        stepByStep: [
+          "1. Insert IC 7408 (AND) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Gate 1 input 1A (pin 1 / J1).",
+          "4. Connect Switch IN.A1 to Gate 1 input 1B (pin 2 / J2).",
+          "5. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 3 / J3).",
+          "6. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7408" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } }
+        ]
+      },
+      "7432": {
+        id: "7432",
+        name: "7432",
+        label: "7432 (OR)",
+        title: "Quad 2-Input OR Gate",
+        chip: "7432",
+        stepByStep: [
+          "1. Insert IC 7432 (OR) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Gate 1 input 1A (pin 1 / J1).",
+          "4. Connect Switch IN.A1 to Gate 1 input 1B (pin 2 / J2).",
+          "5. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 3 / J3).",
+          "6. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7432" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } }
+        ]
+      },
+      "7404": {
+        id: "7404",
+        name: "7404",
+        label: "7404 (NOT)",
+        title: "Hex Inverter",
+        chip: "7404",
+        stepByStep: [
+          "1. Insert IC 7404 (NOT) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Inverter 1 input 1A (pin 1 / J1).",
+          "4. Connect Output OUT.Y0 to Inverter 1 output 1Y (pin 2 / J2).",
+          "5. Toggle switch A0 (0, 1) and verify LED Y0 inverted output."
+        ],
+        recommendedSocketICs: { U1: "7404" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "U1.J2", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      },
+      "7400": {
+        id: "7400",
+        name: "7400",
+        label: "7400 (NAND)",
+        title: "Quad 2-Input NAND Gate",
+        chip: "7400",
+        stepByStep: [
+          "1. Insert IC 7400 (NAND) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Gate 1 input 1A (pin 1 / J1).",
+          "4. Connect Switch IN.A1 to Gate 1 input 1B (pin 2 / J2).",
+          "5. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 3 / J3).",
+          "6. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7400" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      },
+      "7402": {
+        id: "7402",
+        name: "7402",
+        label: "7402 (NOR)",
+        title: "Quad 2-Input NOR Gate",
+        chip: "7402",
+        stepByStep: [
+          "1. Insert IC 7402 (NOR) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Note NOR pinout reversal: Output 1Y is pin 1 (J1), Inputs 1A and 1B are pins 2 (J2) and 3 (J3).",
+          "4. Connect Switch IN.A0 to input 1A (pin 2 / J2).",
+          "5. Connect Switch IN.A1 to input 1B (pin 3 / J3).",
+          "6. Connect Output OUT.Y0 to output 1Y (pin 1 / J1).",
+          "7. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7402" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J2", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J3", color: "#3b82f6" },
+          { from: "U1.J1", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      },
+      "7486": {
+        id: "7486",
+        name: "7486",
+        label: "7486 (XOR)",
+        title: "Quad 2-Input Exclusive-OR (XOR) Gate",
+        chip: "7486",
+        stepByStep: [
+          "1. Insert IC 7486 (XOR) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Gate 1 input 1A (pin 1 / J1).",
+          "4. Connect Switch IN.A1 to Gate 1 input 1B (pin 2 / J2).",
+          "5. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 3 / J3).",
+          "6. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7486" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      },
+      "7420": {
+        id: "7420",
+        name: "7420",
+        label: "7420 (4-NAND)",
+        title: "Dual 4-Input NAND Gate",
+        chip: "7420",
+        stepByStep: [
+          "1. Insert IC 7420 (Dual 4-in NAND) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect switches to Gate 1 inputs: IN.A0 to 1A (pin 1 / J1), IN.A1 to 1B (pin 2 / J2), IN.A2 to 1C (pin 4 / J4), IN.A3 to 1D (pin 5 / J5). (Pin 3 is NC).",
+          "4. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 6 / J6).",
+          "5. Verify that output Y0 is LOW (0) only when all 4 inputs A0..A3 are HIGH (1)."
+        ],
+        recommendedSocketICs: { U1: "7420" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "IN.A2", to: "U1.J4", color: "#10b981" },
+          { from: "IN.A3", to: "U1.J5", color: "#f8fafc" },
+          { from: "U1.J6", to: "OUT.Y0", color: "#f59e0b" }
+        ],
+        tableHeaders: ["A3 (1D)", "A2 (1C)", "A1 (1B)", "A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      }
+    },
     recommendedSocketICs: { U1: "7408" },
     recommendedWires: [
       { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
-      { from: "PWR.GND_1", to: "U1.J7", color: "#1f2937" },
-      { from: "IN.A0", to: "U1.J1", color: "#facc15" },
-      { from: "IN.A1", to: "U1.J2", color: "#facc15" },
-      { from: "U1.J3", to: "OUT.Y0", color: "#38bdf8" }
+      { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+      { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+      { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+      { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
     ],
     tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
     tableRows: [
@@ -1769,7 +2166,7 @@ const EXPERIMENTS = [
     ]
   },
 
-  {
+{
     id: "exp3",
     number: 3,
     title: "Multiplexer using IC 74153",
@@ -1980,7 +2377,12 @@ const EXPERIMENTS = [
     ]
   }
 ];
-
+if (typeof window !== "undefined") {
+  window.EXPERIMENTS = EXPERIMENTS;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { EXPERIMENTS };
+}
 
 /* ===== ENGINE ===== */
 class TTLEngine {
@@ -3136,6 +3538,119 @@ class TTLEngine {
     assert("Oscillation Detection: diagnostic logged for unstable feedback", this.diagnostics.oscillations.length > 0,
            this.diagnostics.oscillations[0] || "");
 
+    // Test 9: 7400 NAND Gate Truth Table Verification
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7400", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("U1.J3", "OUT.Y0", "#10b981", false);
+    const nandExpected = [[0,0,1], [0,1,1], [1,0,1], [1,1,0]];
+    let nandAllOk = true;
+    for (const [a1, a0, expY] of nandExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) nandAllOk = false;
+    }
+    assert("7400 NAND Truth Table: all 4 states verified (00,01,10,11)", nandAllOk);
+
+    // Test 10: 7402 NOR Gate Truth Table Verification (Reversed Pinout: 2,3 -> 1)
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7402", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J2", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J3", "#3b82f6", false);
+    this.addWire("U1.J1", "OUT.Y0", "#10b981", false);
+    const norExpected = [[0,0,1], [0,1,0], [1,0,0], [1,1,0]];
+    let norAllOk = true;
+    for (const [a1, a0, expY] of norExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) norAllOk = false;
+    }
+    assert("7402 NOR Truth Table: reversed pinout (2,3->1) all 4 states verified", norAllOk);
+
+    // Test 11: 7408 AND Gate Truth Table Verification
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7408", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("U1.J3", "OUT.Y0", "#10b981", false);
+    const andExpected = [[0,0,0], [0,1,0], [1,0,0], [1,1,1]];
+    let andAllOk = true;
+    for (const [a1, a0, expY] of andExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) andAllOk = false;
+    }
+    assert("7408 AND Truth Table: all 4 states verified (00,01,10,11)", andAllOk);
+
+    // Test 12: 7420 Dual 4-Input NAND Gate Truth Table Verification (1,2,4,5 -> 6 with NC on 3,11)
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7420", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("IN.A2", "U1.J4", "#10b981", false);
+    this.addWire("IN.A3", "U1.J5", "#f8fafc", false);
+    this.addWire("U1.J6", "OUT.Y0", "#f59e0b", false);
+    const nand4Expected = [
+      [0,0,0,0, 1],
+      [0,1,1,1, 1],
+      [1,0,1,1, 1],
+      [1,1,0,1, 1],
+      [1,1,1,0, 1],
+      [1,1,1,1, 0]
+    ];
+    let nand4AllOk = true;
+    for (const [a3, a2, a1, a0, expY] of nand4Expected) {
+      this.inputs["IN.A3"] = a3;
+      this.inputs["IN.A2"] = a2;
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) nand4AllOk = false;
+    }
+    assert("7420 4-Input NAND: verifies LOW only when all 4 inputs HIGH (pins 1,2,4,5->6)", nand4AllOk);
+
+    // Test 13: 7432 OR Gate Truth Table Verification
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7432", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("U1.J3", "OUT.Y0", "#10b981", false);
+    const orExpected = [[0,0,0], [0,1,1], [1,0,1], [1,1,1]];
+    let orAllOk = true;
+    for (const [a1, a0, expY] of orExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) orAllOk = false;
+    }
+    assert("7432 OR Truth Table: all 4 states verified (00,01,10,11)", orAllOk);
+
+    // Test 14: 7486 XOR Gate Truth Table Verification
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7486", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("U1.J3", "OUT.Y0", "#10b981", false);
+    const xorExpected = [[0,0,0], [0,1,1], [1,0,1], [1,1,0]];
+    let xorAllOk = true;
+    for (const [a1, a0, expY] of xorExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) xorAllOk = false;
+    }
+    assert("7486 XOR Truth Table: all 4 states verified (00,01,10,11)", xorAllOk);
+
     // Restore state
     this.clearWires(false);
     for (const w of origWires) this.addWire(w.from, w.to, w.color, false);
@@ -3149,6 +3664,12 @@ class TTLEngine {
 
     return results;
   }
+}
+if (typeof window !== "undefined") {
+  window.TTLEngine = TTLEngine;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { TTLEngine };
 }
 
 /* ===== COMPONENTS ===== */
@@ -3629,8 +4150,9 @@ const SVG_COMPONENTS = {
 
   // 9. drawICChip: black epoxy body with highlights, silver gold-ish pins, notch + pin-1 dot, printed part # & date code
   drawICChip(opts) {
-    const { socketId, chipName, socketX, socketY, socketW, socketH, icPinCount = 14, alignment = "left" } = opts;
+    const { socketId, chipName, marking, socketX, socketY, socketW, socketH, icPinCount = 14, alignment = "left" } = opts;
     if (!chipName) return "";
+    const chipText = marking || `SN${chipName}N`;
     const is40 = (socketId === "U5");
 
     if (is40) {
@@ -3639,7 +4161,7 @@ const SVG_COMPONENTS = {
           <rect x="${socketX + 16}" y="${socketY + 12}" width="${socketW - 32}" height="${socketH - 24}" rx="3" fill="url(#icBody)" stroke="#333" stroke-width="1" filter="url(#shadowBevel)" />
           <path d="M ${socketX + 16 + (socketW - 32)/2 - 8} ${socketY + 12} A 8 8 0 0 0 ${socketX + 16 + (socketW - 32)/2 + 8} ${socketY + 12} Z" fill="#111" />
           <circle cx="${socketX + 26}" cy="${socketY + 26}" r="2.5" fill="#000" />
-          <text x="${socketX + 16 + (socketW - 32)/2}" y="${socketY + 12 + (socketH - 24)/2}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="12" font-weight="700" letter-spacing="1" text-anchor="middle" transform="rotate(-90, ${socketX + 16 + (socketW - 32)/2}, ${socketY + 12 + (socketH - 24)/2})">${chipName}</text>
+          <text x="${socketX + 16 + (socketW - 32)/2}" y="${socketY + 12 + (socketH - 24)/2}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="12" font-weight="700" letter-spacing="1" text-anchor="middle" transform="rotate(-90, ${socketX + 16 + (socketW - 32)/2}, ${socketY + 12 + (socketH - 24)/2})">${chipText}</text>
           <text x="${socketX + 16 + (socketW - 32)/2 + 12}" y="${socketY + 12 + (socketH - 24)/2}" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle" transform="rotate(-90, ${socketX + 16 + (socketW - 32)/2 + 12}, ${socketY + 12 + (socketH - 24)/2})">2418</text>
         </g>
       `;
@@ -3671,7 +4193,7 @@ const SVG_COMPONENTS = {
         <rect x="${icX}" y="${icY}" width="${icWidth}" height="${icHeight}" rx="3" fill="url(#icBody)" stroke="#3f4553" stroke-width="1" filter="url(#shadowBevel)" />
         <path d="M ${icX} ${icY + icHeight/2 - 7} A 7 7 0 0 0 ${icX} ${icY + icHeight/2 + 7} Z" fill="#111317" />
         <circle cx="${icX + 10}" cy="${icY + icHeight - 10}" r="2.2" fill="#0a0c0e" stroke="#252930" stroke-width="0.5" />
-        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 3}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="11" font-weight="700" letter-spacing="1" text-anchor="middle">SN${chipName}N</text>
+        <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 3}" fill="#e2e8f0" font-family="var(--font-mono)" font-size="11" font-weight="700" letter-spacing="1" text-anchor="middle">${chipText}</text>
         <text x="${icX + icWidth / 2}" y="${icY + icHeight / 2 + 13}" fill="#94a3b8" font-family="var(--font-mono)" font-size="7.5" text-anchor="middle">MALAYSIA 2418</text>
       </g>
     `;
@@ -4355,6 +4877,7 @@ class BoardRenderer {
         ${SVG_COMPONENTS.drawICChip({
           socketId: "U5",
           chipName: this.engine.sockets.U5.chip,
+          marking: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.marking || ("SN" + this.engine.sockets.U5.chip + "N")) : "",
           socketX: 130, socketY: 120, socketW: 140, socketH: 840,
           icPinCount: 40, alignment: "left"
         })}
@@ -4650,6 +5173,7 @@ class BoardRenderer {
         svgContent += SVG_COMPONENTS.drawICChip({
           socketId: cell.id,
           chipName: sData.chip,
+          marking: icDef.marking || ("SN" + sData.chip + "N"),
           socketX: cell.x, socketY: cell.y - zifH / 2, socketW: zifW, socketH: zifH,
           icPinCount: icDef.pinCount,
           alignment: sData.alignment
@@ -4729,6 +5253,7 @@ class LabConsole {
     this.board = boardRenderer;
     this.currentTab = "experiments";
     this.currentExpId = "exp1";
+    this.selectedSubGate = "7408";
     this.currentRefChip = "7408";
     this.verificationResults = null;
     this.selfTestResults = null;
@@ -4750,13 +5275,42 @@ class LabConsole {
   setExperiment(expId) {
     this.currentExpId = expId;
     this.verificationResults = null;
+    if (expId === "exp1") {
+      this.selectedSubGate = "7408";
+    }
     this.render();
   }
 
+  getActiveExpConfig() {
+    const exp = EXPERIMENTS.find(e => e.id === this.currentExpId) || EXPERIMENTS[0];
+    if (exp.id === "exp1" && exp.subGates) {
+      const subGateId = this.selectedSubGate || "7408";
+      const subGate = exp.subGates[subGateId] || exp.subGates["7408"];
+      return {
+        ...exp,
+        ...subGate,
+        title: subGate.title ? `${exp.title}: ${subGate.title}` : exp.title,
+        aim: subGate.aim || exp.aim,
+        apparatus: subGate.apparatus || exp.apparatus,
+        stepByStep: subGate.stepByStep || exp.stepByStep,
+        recommendedSocketICs: subGate.recommendedSocketICs || exp.recommendedSocketICs,
+        recommendedWires: subGate.recommendedWires || exp.recommendedWires,
+        tableHeaders: subGate.tableHeaders || exp.tableHeaders,
+        tableRows: subGate.tableRows || exp.tableRows
+      };
+    }
+    return exp;
+  }
+
   autoWireExperiment(exp) {
+    const target = exp || this.getActiveExpConfig();
+    const activeConfig = (target.id === "exp1" && target.subGates && this.selectedSubGate)
+      ? { ...target, ...target.subGates[this.selectedSubGate] }
+      : target;
+
     // 1. Insert required ICs
-    if (exp.recommendedSocketICs) {
-      for (const [sId, chip] of Object.entries(exp.recommendedSocketICs)) {
+    if (activeConfig.recommendedSocketICs) {
+      for (const [sId, chip] of Object.entries(activeConfig.recommendedSocketICs)) {
         this.engine.setSocketLever(sId, false);
         this.engine.insertChip(sId, chip, "left");
         this.engine.setSocketLever(sId, true);
@@ -4764,8 +5318,8 @@ class LabConsole {
     }
     // 2. Clear existing wires and add experiment wires
     this.engine.clearWires();
-    if (exp.recommendedWires) {
-      for (const w of exp.recommendedWires) {
+    if (activeConfig.recommendedWires) {
+      for (const w of activeConfig.recommendedWires) {
         this.engine.addWire(w.from, w.to, w.color || "#f5c518");
       }
     }
@@ -4774,8 +5328,13 @@ class LabConsole {
   }
 
   verifyExperiment(exp) {
-    if (!exp.tableRows || exp.tableRows.length === 0) {
-      this.verificationResults = { passed: true, message: "Interactive clock/counter experiment verified." };
+    const target = exp || this.getActiveExpConfig();
+    const activeConfig = (target.id === "exp1" && target.subGates && this.selectedSubGate)
+      ? { ...target, ...target.subGates[this.selectedSubGate] }
+      : target;
+
+    if (!activeConfig.tableRows || activeConfig.tableRows.length === 0) {
+      this.verificationResults = { passed: true, message: "Interactive experiment verified." };
       this.render();
       return;
     }
@@ -4784,7 +5343,7 @@ class LabConsole {
     let allPassed = true;
     const rowResults = [];
 
-    for (const row of exp.tableRows) {
+    for (const row of activeConfig.tableRows) {
       for (const [swId, val] of Object.entries(row.inputs)) {
         this.engine.inputs[swId] = val;
       }
@@ -4809,7 +5368,7 @@ class LabConsole {
       passed: allPassed,
       rowResults,
       message: allPassed
-        ? "✓ VERIFICATION PASSED: All truth table states matched correctly!"
+        ? `✓ VERIFICATION PASSED: All ${activeConfig.tableRows.length} truth table states matched correctly for ${activeConfig.title}!`
         : "✗ VERIFICATION FAILED: Output mismatch detected. Check your wiring and power connections."
     };
 
@@ -4861,10 +5420,11 @@ class LabConsole {
 
   renderExperimentsTab() {
     const exp = EXPERIMENTS.find(e => e.id === this.currentExpId) || EXPERIMENTS[0];
+    const activeExp = this.getActiveExpConfig();
 
     let tableRowsHtml = "";
-    if (exp.tableRows && exp.tableRows.length > 0) {
-      tableRowsHtml = exp.tableRows.map((r, idx) => {
+    if (activeExp.tableRows && activeExp.tableRows.length > 0) {
+      tableRowsHtml = activeExp.tableRows.map((r, idx) => {
         let isCurrent = true;
         for (const [swId, val] of Object.entries(r.inputs)) {
           if (this.engine.inputs[swId] !== val) isCurrent = false;
@@ -4876,19 +5436,45 @@ class LabConsole {
         }
 
         const inputCells = Object.values(r.inputs).map(v => `<td>${v}</td>`).join("");
-        const expectedCells = Object.values(r.expected).map(v => `<td><b>${v}</b></td>`).join("");
-        const actualVal = this.engine.outputs["OUT.Y0"];
-        const actualCell = `<td>${actualVal !== undefined ? actualVal : "-"}</td>`;
+        const expectedEntries = Object.entries(r.expected);
+        const expectedCells = expectedEntries.map(([k, v]) => `<td><b>${v}</b></td>`).join("");
+        const actualCells = expectedEntries.map(([k, v]) => {
+          const actualVal = this.engine.outputs[k];
+          return `<td>${actualVal !== undefined ? actualVal : "-"}</td>`;
+        }).join("");
 
         return `
           <tr class="${rowClass}">
             ${inputCells}
             ${expectedCells}
-            ${actualCell}
+            ${actualCells}
           </tr>
         `;
       }).join("");
     }
+
+    const subgateSelectorHtml = (exp.id === "exp1" && exp.subGates) ? `
+      <div class="card" style="margin-top: 10px;">
+        <div class="card-header">
+          <span class="card-title">Study Sub-Gate (${activeExp.name || activeExp.chip})</span>
+          <span style="font-size: 11px; color: var(--accent-amber); font-weight: 700;">DIP-14</span>
+        </div>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+          Select any of the 7 basic TTL logic gates to wire and verify:
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          ${Object.keys(exp.subGates).map(gId => {
+            const g = exp.subGates[gId];
+            const isAct = (this.selectedSubGate === gId);
+            return `
+              <button class="btn subgate-btn ${isAct ? 'btn-active btn-teal' : ''}" data-gate="${gId}" style="padding: 4px 8px; font-size: 11px; font-family: var(--font-mono);">
+                ${g.label || g.name}
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    ` : "";
 
     return `
       <div class="card">
@@ -4906,12 +5492,14 @@ class LabConsole {
         </div>
       </div>
 
+      ${subgateSelectorHtml}
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">Aim & Apparatus</span>
         </div>
-        <p style="font-size: 12px; margin-bottom: 8px;"><b>Aim:</b> ${exp.aim}</p>
-        <p style="font-size: 11px; color: #8b949e; margin-bottom: 12px;"><b>Apparatus:</b> ${exp.apparatus}</p>
+        <p style="font-size: 12px; margin-bottom: 8px;"><b>Aim:</b> ${activeExp.aim}</p>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 12px;"><b>Apparatus:</b> ${activeExp.apparatus}</p>
 
         <div style="display: flex; gap: 8px;">
           <button class="btn btn-teal" id="btn-auto-wire" style="flex: 1;">
@@ -4952,7 +5540,7 @@ class LabConsole {
         <table class="truth-table">
           <thead>
             <tr>
-              ${exp.tableHeaders.map(h => `<th>${h}</th>`).join("")}
+              ${activeExp.tableHeaders.map(h => `<th>${h}</th>`).join("")}
             </tr>
           </thead>
           <tbody>
@@ -4966,7 +5554,7 @@ class LabConsole {
           <span class="card-title">Step-by-Step Procedure</span>
         </div>
         <ul style="font-size: 11px; line-height: 1.6; padding-left: 14px; color: #8b949e;">
-          ${exp.stepByStep.map(s => `<li>${s}</li>`).join("")}
+          ${activeExp.stepByStep.map(s => `<li>${s}</li>`).join("")}
         </ul>
       </div>
     `;
@@ -4974,7 +5562,8 @@ class LabConsole {
 
   renderDrawerTab() {
     const sockets = ["U1", "U2", "U3", "U4", "U5"];
-    const chips = Object.keys(IC_LIBRARY);
+    const basicChips = ["7400", "7402", "7404", "7408", "7420", "7432", "7486"];
+    const otherChips = Object.keys(IC_LIBRARY).filter(c => !basicChips.includes(c) && c !== "TEST_GATE");
 
     return `
       <div class="card">
@@ -4994,17 +5583,24 @@ class LabConsole {
             <div class="socket-card">
               <div class="socket-card-header">
                 <span class="socket-id">${sId} (${is40 ? "40-Pin ZIF" : "20-Pin ZIF"})</span>
-                <span class="socket-chip-badge">${s.chip ? s.chip : "Empty"}</span>
+                <span class="socket-chip-badge">${s.chip ? (icDef ? (icDef.marking || ('SN' + s.chip + 'N')) : s.chip) : "Empty"}</span>
               </div>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                 <div>
                   <label class="form-label">Chip Type</label>
                   <select class="socket-chip-select" data-socket="${sId}">
-                    <option value="">-- Empty --</option>
-                    ${chips.map(c => `
-                      <option value="${c}" ${s.chip === c ? "selected" : ""}>${c} (${IC_LIBRARY[c].title})</option>
-                    `).join("")}
+                    <option value="">-- Empty (No IC) --</option>
+                    <optgroup label="Basic TTL Gates (Always in Drawer)">
+                      ${basicChips.filter(c => IC_LIBRARY[c]).map(c => `
+                        <option value="${c}" ${s.chip === c ? "selected" : ""}>${c} (${IC_LIBRARY[c].title})</option>
+                      `).join("")}
+                    </optgroup>
+                    <optgroup label="MSI Logic & Counter ICs">
+                      ${otherChips.filter(c => IC_LIBRARY[c]).map(c => `
+                        <option value="${c}" ${s.chip === c ? "selected" : ""}>${c} (${IC_LIBRARY[c].title})</option>
+                      `).join("")}
+                    </optgroup>
                   </select>
                 </div>
 
@@ -5032,9 +5628,16 @@ class LabConsole {
               </div>
 
               ${icDef ? `
-                <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); font-size: 10px; color: #8b949e; font-family: var(--font-mono);">
-                  VCC: Pin ${icDef.vccPin} (Jack ${this.engine.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, s.alignment)}) |
-                  GND: Pin ${icDef.gndPin} (Jack ${this.engine.getJackForICPin(sId, icDef.gndPin, icDef.pinCount, s.alignment)})
+                <div style="margin-top: 8px; padding: 6px 8px; background: rgba(15, 23, 42, 0.7); border-radius: 4px; border-left: 3px solid var(--accent-teal); font-size: 10px; color: #cbd5e1; line-height: 1.5; font-family: var(--font-mono);">
+                  <div><b>Marking:</b> ${icDef.marking || ('SN' + s.chip + 'N')} &middot; ${icDef.package}</div>
+                  <div><b>Pin Count Enforcement:</b> ${icDef.pinCount}-Pin IC seated in ${is40 ? '40' : '20'}-Pin ZIF (${s.alignment === 'left' ? 'Left-Aligned: Pin 1 @ Socket J1' : s.alignment}).</div>
+                  <div style="color: #94a3b8;">
+                    Pins 1&ndash;${icDef.pinCount/2} map to J1&ndash;J${icDef.pinCount/2}; Pins ${icDef.pinCount/2 + 1}&ndash;${icDef.pinCount} map to J${20 - icDef.pinCount/2 + 1}&ndash;J20.
+                  </div>
+                  <div style="color: var(--accent-amber); margin-top: 2px;">
+                    VCC: Pin ${icDef.vccPin} (Jack ${this.engine.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, s.alignment)}) &middot;
+                    GND: Pin ${icDef.gndPin} (Jack ${this.engine.getJackForICPin(sId, icDef.gndPin, icDef.pinCount, s.alignment)})
+                  </div>
                 </div>
               ` : ""}
             </div>
@@ -5045,7 +5648,7 @@ class LabConsole {
   }
 
   renderReferenceTab() {
-    const chipNames = Object.keys(IC_LIBRARY);
+    const chipNames = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE");
     const ic = IC_LIBRARY[this.currentRefChip] || IC_LIBRARY["7408"];
 
     return `
@@ -5068,9 +5671,12 @@ class LabConsole {
       <div class="card">
         <div class="card-header">
           <span class="card-title">${ic.name}: ${ic.title}</span>
-          <span style="font-size: 11px; font-family: var(--font-mono); color: var(--accent-teal);">${ic.package}</span>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: var(--accent-teal);">${ic.marking || ('SN' + ic.name + 'N')} &middot; ${ic.package}</span>
         </div>
-        <p style="font-size: 11px; color: #8b949e; margin-bottom: 10px;">
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+          ${ic.description || ''}
+        </p>
+        <p style="font-size: 11px; color: var(--accent-amber); margin-bottom: 10px; font-family: var(--font-mono);">
           TTL Logic Series. VCC = +5V (Pin ${ic.vccPin}), GND = 0V (Pin ${ic.gndPin}).
         </p>
 
@@ -5083,7 +5689,7 @@ class LabConsole {
             ${ic.pins.map(p => `
               <tr>
                 <td><b>${p.pin}</b></td>
-                <td style="color: ${p.type === 'pwr' ? '#ef4444' : (p.type === 'gnd' ? '#60a5fa' : '#facc15')}">${p.name}</td>
+                <td style="color: ${p.type === 'pwr' ? '#ef4444' : (p.type === 'gnd' ? '#60a5fa' : (p.type === 'nc' ? '#6b7280' : '#facc15'))}">${p.name}</td>
                 <td>${p.type.toUpperCase()}</td>
               </tr>
             `).join("")}
@@ -5276,19 +5882,26 @@ class LabConsole {
       expSelect.addEventListener("change", (e) => this.setExperiment(e.target.value));
     }
 
+    // Subgate selection buttons
+    this.container.querySelectorAll(".subgate-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        this.selectedSubGate = btn.dataset.gate;
+        this.verificationResults = null;
+        this.autoWireExperiment();
+      });
+    });
+
     const btnAutoWire = this.container.querySelector("#btn-auto-wire");
     if (btnAutoWire) {
       btnAutoWire.addEventListener("click", () => {
-        const exp = EXPERIMENTS.find(e => e.id === this.currentExpId);
-        if (exp) this.autoWireExperiment(exp);
+        this.autoWireExperiment();
       });
     }
 
     const btnVerify = this.container.querySelector("#btn-verify-exp");
     if (btnVerify) {
       btnVerify.addEventListener("click", () => {
-        const exp = EXPERIMENTS.find(e => e.id === this.currentExpId);
-        if (exp) this.verifyExperiment(exp);
+        this.verifyExperiment();
       });
     }
 
@@ -5446,6 +6059,12 @@ class LabConsole {
       });
     }
   }
+}
+if (typeof window !== "undefined") {
+  window.LabConsole = LabConsole;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { LabConsole };
 }
 
 /* ===== INIT ===== */

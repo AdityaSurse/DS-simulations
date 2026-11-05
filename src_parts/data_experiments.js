@@ -4,25 +4,228 @@ const EXPERIMENTS = [
     id: "exp1",
     number: 1,
     title: "Study of Logic Gates",
-    aim: "To study basic logic gates (NOT, AND, OR, NAND, NOR, XOR) and verify their truth tables on the trainer kit.",
-    apparatus: "DIT 9005 Trainer Kit, IC 7408 (AND), IC 7432 (OR), IC 7404 (NOT), IC 7400 (NAND), IC 7402 (NOR), IC 7486 (XOR), Patch cords.",
+    aim: "To study basic logic gates (NOT, AND, OR, NAND, NOR, XOR, 4-in NAND) and verify their truth tables on the trainer kit.",
+    apparatus: "DIT 9005 Trainer Kit, IC 7408 (AND), IC 7432 (OR), IC 7404 (NOT), IC 7400 (NAND), IC 7402 (NOR), IC 7486 (XOR), IC 7420 (Dual 4-in NAND), Patch cords.",
     theory: "Logic gates are the fundamental building blocks of digital electronic circuits. Logic levels correspond to binary 1 (+5V TTL HIGH) and binary 0 (0V/GND TTL LOW). In standard TTL, an unconnected (floating) input naturally floats to Logic 1.",
-    stepByStep: [
-      "1. Insert IC 7408 (AND) or IC 7400 (NAND) into ZIF socket U1. Lower and lock the ZIF lever.",
-      "2. Connect +5V power jack to U1 pin 20 (or socket jack 20 for 14-pin left-aligned VCC pin 14).",
-      "3. Connect GND jack to U1 pin 7 (socket jack 7).",
-      "4. Connect Data Input switch IN.A0 to U1 pin 1 (socket jack 1, Input 1A).",
-      "5. Connect Data Input switch IN.A1 to U1 pin 2 (socket jack 2, Input 1B).",
-      "6. Connect Output jack OUT.Y0 to U1 pin 3 (socket jack 3, Output 1Y).",
-      "7. Flip switches A0 and A1 through combinations 00, 01, 10, 11 and observe LED Y0."
-    ],
+    subGates: {
+      "7408": {
+        id: "7408",
+        name: "7408",
+        label: "7408 (AND)",
+        title: "Quad 2-Input AND Gate",
+        chip: "7408",
+        stepByStep: [
+          "1. Insert IC 7408 (AND) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Gate 1 input 1A (pin 1 / J1).",
+          "4. Connect Switch IN.A1 to Gate 1 input 1B (pin 2 / J2).",
+          "5. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 3 / J3).",
+          "6. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7408" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } }
+        ]
+      },
+      "7432": {
+        id: "7432",
+        name: "7432",
+        label: "7432 (OR)",
+        title: "Quad 2-Input OR Gate",
+        chip: "7432",
+        stepByStep: [
+          "1. Insert IC 7432 (OR) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Gate 1 input 1A (pin 1 / J1).",
+          "4. Connect Switch IN.A1 to Gate 1 input 1B (pin 2 / J2).",
+          "5. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 3 / J3).",
+          "6. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7432" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } }
+        ]
+      },
+      "7404": {
+        id: "7404",
+        name: "7404",
+        label: "7404 (NOT)",
+        title: "Hex Inverter",
+        chip: "7404",
+        stepByStep: [
+          "1. Insert IC 7404 (NOT) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Inverter 1 input 1A (pin 1 / J1).",
+          "4. Connect Output OUT.Y0 to Inverter 1 output 1Y (pin 2 / J2).",
+          "5. Toggle switch A0 (0, 1) and verify LED Y0 inverted output."
+        ],
+        recommendedSocketICs: { U1: "7404" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "U1.J2", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      },
+      "7400": {
+        id: "7400",
+        name: "7400",
+        label: "7400 (NAND)",
+        title: "Quad 2-Input NAND Gate",
+        chip: "7400",
+        stepByStep: [
+          "1. Insert IC 7400 (NAND) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Gate 1 input 1A (pin 1 / J1).",
+          "4. Connect Switch IN.A1 to Gate 1 input 1B (pin 2 / J2).",
+          "5. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 3 / J3).",
+          "6. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7400" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      },
+      "7402": {
+        id: "7402",
+        name: "7402",
+        label: "7402 (NOR)",
+        title: "Quad 2-Input NOR Gate",
+        chip: "7402",
+        stepByStep: [
+          "1. Insert IC 7402 (NOR) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Note NOR pinout reversal: Output 1Y is pin 1 (J1), Inputs 1A and 1B are pins 2 (J2) and 3 (J3).",
+          "4. Connect Switch IN.A0 to input 1A (pin 2 / J2).",
+          "5. Connect Switch IN.A1 to input 1B (pin 3 / J3).",
+          "6. Connect Output OUT.Y0 to output 1Y (pin 1 / J1).",
+          "7. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7402" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J2", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J3", color: "#3b82f6" },
+          { from: "U1.J1", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      },
+      "7486": {
+        id: "7486",
+        name: "7486",
+        label: "7486 (XOR)",
+        title: "Quad 2-Input Exclusive-OR (XOR) Gate",
+        chip: "7486",
+        stepByStep: [
+          "1. Insert IC 7486 (XOR) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect Switch IN.A0 to Gate 1 input 1A (pin 1 / J1).",
+          "4. Connect Switch IN.A1 to Gate 1 input 1B (pin 2 / J2).",
+          "5. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 3 / J3).",
+          "6. Sweep switches A0 and A1 (00, 01, 10, 11) and verify LED Y0."
+        ],
+        recommendedSocketICs: { U1: "7486" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
+        ],
+        tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      },
+      "7420": {
+        id: "7420",
+        name: "7420",
+        label: "7420 (4-NAND)",
+        title: "Dual 4-Input NAND Gate",
+        chip: "7420",
+        stepByStep: [
+          "1. Insert IC 7420 (Dual 4-in NAND) into socket U1 and lock the lever.",
+          "2. Connect +5V to U1 pin 14 (socket jack J20) and GND to pin 7 (socket jack J7).",
+          "3. Connect switches to Gate 1 inputs: IN.A0 to 1A (pin 1 / J1), IN.A1 to 1B (pin 2 / J2), IN.A2 to 1C (pin 4 / J4), IN.A3 to 1D (pin 5 / J5). (Pin 3 is NC).",
+          "4. Connect Output OUT.Y0 to Gate 1 output 1Y (pin 6 / J6).",
+          "5. Verify that output Y0 is LOW (0) only when all 4 inputs A0..A3 are HIGH (1)."
+        ],
+        recommendedSocketICs: { U1: "7420" },
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+          { from: "IN.A2", to: "U1.J4", color: "#10b981" },
+          { from: "IN.A3", to: "U1.J5", color: "#f8fafc" },
+          { from: "U1.J6", to: "OUT.Y0", color: "#f59e0b" }
+        ],
+        tableHeaders: ["A3 (1D)", "A2 (1C)", "A1 (1B)", "A0 (1A)", "Expected Output (Y0)", "Observed Output"],
+        tableRows: [
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ]
+      }
+    },
     recommendedSocketICs: { U1: "7408" },
     recommendedWires: [
       { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
-      { from: "PWR.GND_1", to: "U1.J7", color: "#1f2937" },
-      { from: "IN.A0", to: "U1.J1", color: "#facc15" },
-      { from: "IN.A1", to: "U1.J2", color: "#facc15" },
-      { from: "U1.J3", to: "OUT.Y0", color: "#38bdf8" }
+      { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+      { from: "IN.A0", to: "U1.J1", color: "#f5c518" },
+      { from: "IN.A1", to: "U1.J2", color: "#3b82f6" },
+      { from: "U1.J3", to: "OUT.Y0", color: "#10b981" }
     ],
     tableHeaders: ["Switch A1 (1B)", "Switch A0 (1A)", "Expected Output (Y0)", "Observed Output"],
     tableRows: [
@@ -33,7 +236,7 @@ const EXPERIMENTS = [
     ]
   },
 
-  {
+{
     id: "exp3",
     number: 3,
     title: "Multiplexer using IC 74153",
@@ -244,4 +447,9 @@ const EXPERIMENTS = [
     ]
   }
 ];
-
+if (typeof window !== "undefined") {
+  window.EXPERIMENTS = EXPERIMENTS;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { EXPERIMENTS };
+}

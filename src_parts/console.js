@@ -5,6 +5,7 @@ class LabConsole {
     this.board = boardRenderer;
     this.currentTab = "experiments";
     this.currentExpId = "exp1";
+    this.selectedSubGate = "7408";
     this.currentRefChip = "7408";
     this.verificationResults = null;
     this.selfTestResults = null;
@@ -26,13 +27,42 @@ class LabConsole {
   setExperiment(expId) {
     this.currentExpId = expId;
     this.verificationResults = null;
+    if (expId === "exp1") {
+      this.selectedSubGate = "7408";
+    }
     this.render();
   }
 
+  getActiveExpConfig() {
+    const exp = EXPERIMENTS.find(e => e.id === this.currentExpId) || EXPERIMENTS[0];
+    if (exp.id === "exp1" && exp.subGates) {
+      const subGateId = this.selectedSubGate || "7408";
+      const subGate = exp.subGates[subGateId] || exp.subGates["7408"];
+      return {
+        ...exp,
+        ...subGate,
+        title: subGate.title ? `${exp.title}: ${subGate.title}` : exp.title,
+        aim: subGate.aim || exp.aim,
+        apparatus: subGate.apparatus || exp.apparatus,
+        stepByStep: subGate.stepByStep || exp.stepByStep,
+        recommendedSocketICs: subGate.recommendedSocketICs || exp.recommendedSocketICs,
+        recommendedWires: subGate.recommendedWires || exp.recommendedWires,
+        tableHeaders: subGate.tableHeaders || exp.tableHeaders,
+        tableRows: subGate.tableRows || exp.tableRows
+      };
+    }
+    return exp;
+  }
+
   autoWireExperiment(exp) {
+    const target = exp || this.getActiveExpConfig();
+    const activeConfig = (target.id === "exp1" && target.subGates && this.selectedSubGate)
+      ? { ...target, ...target.subGates[this.selectedSubGate] }
+      : target;
+
     // 1. Insert required ICs
-    if (exp.recommendedSocketICs) {
-      for (const [sId, chip] of Object.entries(exp.recommendedSocketICs)) {
+    if (activeConfig.recommendedSocketICs) {
+      for (const [sId, chip] of Object.entries(activeConfig.recommendedSocketICs)) {
         this.engine.setSocketLever(sId, false);
         this.engine.insertChip(sId, chip, "left");
         this.engine.setSocketLever(sId, true);
@@ -40,8 +70,8 @@ class LabConsole {
     }
     // 2. Clear existing wires and add experiment wires
     this.engine.clearWires();
-    if (exp.recommendedWires) {
-      for (const w of exp.recommendedWires) {
+    if (activeConfig.recommendedWires) {
+      for (const w of activeConfig.recommendedWires) {
         this.engine.addWire(w.from, w.to, w.color || "#f5c518");
       }
     }
@@ -50,8 +80,13 @@ class LabConsole {
   }
 
   verifyExperiment(exp) {
-    if (!exp.tableRows || exp.tableRows.length === 0) {
-      this.verificationResults = { passed: true, message: "Interactive clock/counter experiment verified." };
+    const target = exp || this.getActiveExpConfig();
+    const activeConfig = (target.id === "exp1" && target.subGates && this.selectedSubGate)
+      ? { ...target, ...target.subGates[this.selectedSubGate] }
+      : target;
+
+    if (!activeConfig.tableRows || activeConfig.tableRows.length === 0) {
+      this.verificationResults = { passed: true, message: "Interactive experiment verified." };
       this.render();
       return;
     }
@@ -60,7 +95,7 @@ class LabConsole {
     let allPassed = true;
     const rowResults = [];
 
-    for (const row of exp.tableRows) {
+    for (const row of activeConfig.tableRows) {
       for (const [swId, val] of Object.entries(row.inputs)) {
         this.engine.inputs[swId] = val;
       }
@@ -85,7 +120,7 @@ class LabConsole {
       passed: allPassed,
       rowResults,
       message: allPassed
-        ? "✓ VERIFICATION PASSED: All truth table states matched correctly!"
+        ? `✓ VERIFICATION PASSED: All ${activeConfig.tableRows.length} truth table states matched correctly for ${activeConfig.title}!`
         : "✗ VERIFICATION FAILED: Output mismatch detected. Check your wiring and power connections."
     };
 
@@ -137,10 +172,11 @@ class LabConsole {
 
   renderExperimentsTab() {
     const exp = EXPERIMENTS.find(e => e.id === this.currentExpId) || EXPERIMENTS[0];
+    const activeExp = this.getActiveExpConfig();
 
     let tableRowsHtml = "";
-    if (exp.tableRows && exp.tableRows.length > 0) {
-      tableRowsHtml = exp.tableRows.map((r, idx) => {
+    if (activeExp.tableRows && activeExp.tableRows.length > 0) {
+      tableRowsHtml = activeExp.tableRows.map((r, idx) => {
         let isCurrent = true;
         for (const [swId, val] of Object.entries(r.inputs)) {
           if (this.engine.inputs[swId] !== val) isCurrent = false;
@@ -152,19 +188,45 @@ class LabConsole {
         }
 
         const inputCells = Object.values(r.inputs).map(v => `<td>${v}</td>`).join("");
-        const expectedCells = Object.values(r.expected).map(v => `<td><b>${v}</b></td>`).join("");
-        const actualVal = this.engine.outputs["OUT.Y0"];
-        const actualCell = `<td>${actualVal !== undefined ? actualVal : "-"}</td>`;
+        const expectedEntries = Object.entries(r.expected);
+        const expectedCells = expectedEntries.map(([k, v]) => `<td><b>${v}</b></td>`).join("");
+        const actualCells = expectedEntries.map(([k, v]) => {
+          const actualVal = this.engine.outputs[k];
+          return `<td>${actualVal !== undefined ? actualVal : "-"}</td>`;
+        }).join("");
 
         return `
           <tr class="${rowClass}">
             ${inputCells}
             ${expectedCells}
-            ${actualCell}
+            ${actualCells}
           </tr>
         `;
       }).join("");
     }
+
+    const subgateSelectorHtml = (exp.id === "exp1" && exp.subGates) ? `
+      <div class="card" style="margin-top: 10px;">
+        <div class="card-header">
+          <span class="card-title">Study Sub-Gate (${activeExp.name || activeExp.chip})</span>
+          <span style="font-size: 11px; color: var(--accent-amber); font-weight: 700;">DIP-14</span>
+        </div>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+          Select any of the 7 basic TTL logic gates to wire and verify:
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          ${Object.keys(exp.subGates).map(gId => {
+            const g = exp.subGates[gId];
+            const isAct = (this.selectedSubGate === gId);
+            return `
+              <button class="btn subgate-btn ${isAct ? 'btn-active btn-teal' : ''}" data-gate="${gId}" style="padding: 4px 8px; font-size: 11px; font-family: var(--font-mono);">
+                ${g.label || g.name}
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    ` : "";
 
     return `
       <div class="card">
@@ -182,12 +244,14 @@ class LabConsole {
         </div>
       </div>
 
+      ${subgateSelectorHtml}
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">Aim & Apparatus</span>
         </div>
-        <p style="font-size: 12px; margin-bottom: 8px;"><b>Aim:</b> ${exp.aim}</p>
-        <p style="font-size: 11px; color: #8b949e; margin-bottom: 12px;"><b>Apparatus:</b> ${exp.apparatus}</p>
+        <p style="font-size: 12px; margin-bottom: 8px;"><b>Aim:</b> ${activeExp.aim}</p>
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 12px;"><b>Apparatus:</b> ${activeExp.apparatus}</p>
 
         <div style="display: flex; gap: 8px;">
           <button class="btn btn-teal" id="btn-auto-wire" style="flex: 1;">
@@ -228,7 +292,7 @@ class LabConsole {
         <table class="truth-table">
           <thead>
             <tr>
-              ${exp.tableHeaders.map(h => `<th>${h}</th>`).join("")}
+              ${activeExp.tableHeaders.map(h => `<th>${h}</th>`).join("")}
             </tr>
           </thead>
           <tbody>
@@ -242,7 +306,7 @@ class LabConsole {
           <span class="card-title">Step-by-Step Procedure</span>
         </div>
         <ul style="font-size: 11px; line-height: 1.6; padding-left: 14px; color: #8b949e;">
-          ${exp.stepByStep.map(s => `<li>${s}</li>`).join("")}
+          ${activeExp.stepByStep.map(s => `<li>${s}</li>`).join("")}
         </ul>
       </div>
     `;
@@ -250,7 +314,8 @@ class LabConsole {
 
   renderDrawerTab() {
     const sockets = ["U1", "U2", "U3", "U4", "U5"];
-    const chips = Object.keys(IC_LIBRARY);
+    const basicChips = ["7400", "7402", "7404", "7408", "7420", "7432", "7486"];
+    const otherChips = Object.keys(IC_LIBRARY).filter(c => !basicChips.includes(c) && c !== "TEST_GATE");
 
     return `
       <div class="card">
@@ -270,17 +335,24 @@ class LabConsole {
             <div class="socket-card">
               <div class="socket-card-header">
                 <span class="socket-id">${sId} (${is40 ? "40-Pin ZIF" : "20-Pin ZIF"})</span>
-                <span class="socket-chip-badge">${s.chip ? s.chip : "Empty"}</span>
+                <span class="socket-chip-badge">${s.chip ? (icDef ? (icDef.marking || ('SN' + s.chip + 'N')) : s.chip) : "Empty"}</span>
               </div>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                 <div>
                   <label class="form-label">Chip Type</label>
                   <select class="socket-chip-select" data-socket="${sId}">
-                    <option value="">-- Empty --</option>
-                    ${chips.map(c => `
-                      <option value="${c}" ${s.chip === c ? "selected" : ""}>${c} (${IC_LIBRARY[c].title})</option>
-                    `).join("")}
+                    <option value="">-- Empty (No IC) --</option>
+                    <optgroup label="Basic TTL Gates (Always in Drawer)">
+                      ${basicChips.filter(c => IC_LIBRARY[c]).map(c => `
+                        <option value="${c}" ${s.chip === c ? "selected" : ""}>${c} (${IC_LIBRARY[c].title})</option>
+                      `).join("")}
+                    </optgroup>
+                    <optgroup label="MSI Logic & Counter ICs">
+                      ${otherChips.filter(c => IC_LIBRARY[c]).map(c => `
+                        <option value="${c}" ${s.chip === c ? "selected" : ""}>${c} (${IC_LIBRARY[c].title})</option>
+                      `).join("")}
+                    </optgroup>
                   </select>
                 </div>
 
@@ -308,9 +380,16 @@ class LabConsole {
               </div>
 
               ${icDef ? `
-                <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); font-size: 10px; color: #8b949e; font-family: var(--font-mono);">
-                  VCC: Pin ${icDef.vccPin} (Jack ${this.engine.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, s.alignment)}) |
-                  GND: Pin ${icDef.gndPin} (Jack ${this.engine.getJackForICPin(sId, icDef.gndPin, icDef.pinCount, s.alignment)})
+                <div style="margin-top: 8px; padding: 6px 8px; background: rgba(15, 23, 42, 0.7); border-radius: 4px; border-left: 3px solid var(--accent-teal); font-size: 10px; color: #cbd5e1; line-height: 1.5; font-family: var(--font-mono);">
+                  <div><b>Marking:</b> ${icDef.marking || ('SN' + s.chip + 'N')} &middot; ${icDef.package}</div>
+                  <div><b>Pin Count Enforcement:</b> ${icDef.pinCount}-Pin IC seated in ${is40 ? '40' : '20'}-Pin ZIF (${s.alignment === 'left' ? 'Left-Aligned: Pin 1 @ Socket J1' : s.alignment}).</div>
+                  <div style="color: #94a3b8;">
+                    Pins 1&ndash;${icDef.pinCount/2} map to J1&ndash;J${icDef.pinCount/2}; Pins ${icDef.pinCount/2 + 1}&ndash;${icDef.pinCount} map to J${20 - icDef.pinCount/2 + 1}&ndash;J20.
+                  </div>
+                  <div style="color: var(--accent-amber); margin-top: 2px;">
+                    VCC: Pin ${icDef.vccPin} (Jack ${this.engine.getJackForICPin(sId, icDef.vccPin, icDef.pinCount, s.alignment)}) &middot;
+                    GND: Pin ${icDef.gndPin} (Jack ${this.engine.getJackForICPin(sId, icDef.gndPin, icDef.pinCount, s.alignment)})
+                  </div>
                 </div>
               ` : ""}
             </div>
@@ -321,7 +400,7 @@ class LabConsole {
   }
 
   renderReferenceTab() {
-    const chipNames = Object.keys(IC_LIBRARY);
+    const chipNames = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE");
     const ic = IC_LIBRARY[this.currentRefChip] || IC_LIBRARY["7408"];
 
     return `
@@ -344,9 +423,12 @@ class LabConsole {
       <div class="card">
         <div class="card-header">
           <span class="card-title">${ic.name}: ${ic.title}</span>
-          <span style="font-size: 11px; font-family: var(--font-mono); color: var(--accent-teal);">${ic.package}</span>
+          <span style="font-size: 11px; font-family: var(--font-mono); color: var(--accent-teal);">${ic.marking || ('SN' + ic.name + 'N')} &middot; ${ic.package}</span>
         </div>
-        <p style="font-size: 11px; color: #8b949e; margin-bottom: 10px;">
+        <p style="font-size: 11px; color: #8b949e; margin-bottom: 8px;">
+          ${ic.description || ''}
+        </p>
+        <p style="font-size: 11px; color: var(--accent-amber); margin-bottom: 10px; font-family: var(--font-mono);">
           TTL Logic Series. VCC = +5V (Pin ${ic.vccPin}), GND = 0V (Pin ${ic.gndPin}).
         </p>
 
@@ -359,7 +441,7 @@ class LabConsole {
             ${ic.pins.map(p => `
               <tr>
                 <td><b>${p.pin}</b></td>
-                <td style="color: ${p.type === 'pwr' ? '#ef4444' : (p.type === 'gnd' ? '#60a5fa' : '#facc15')}">${p.name}</td>
+                <td style="color: ${p.type === 'pwr' ? '#ef4444' : (p.type === 'gnd' ? '#60a5fa' : (p.type === 'nc' ? '#6b7280' : '#facc15'))}">${p.name}</td>
                 <td>${p.type.toUpperCase()}</td>
               </tr>
             `).join("")}
@@ -552,19 +634,26 @@ class LabConsole {
       expSelect.addEventListener("change", (e) => this.setExperiment(e.target.value));
     }
 
+    // Subgate selection buttons
+    this.container.querySelectorAll(".subgate-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        this.selectedSubGate = btn.dataset.gate;
+        this.verificationResults = null;
+        this.autoWireExperiment();
+      });
+    });
+
     const btnAutoWire = this.container.querySelector("#btn-auto-wire");
     if (btnAutoWire) {
       btnAutoWire.addEventListener("click", () => {
-        const exp = EXPERIMENTS.find(e => e.id === this.currentExpId);
-        if (exp) this.autoWireExperiment(exp);
+        this.autoWireExperiment();
       });
     }
 
     const btnVerify = this.container.querySelector("#btn-verify-exp");
     if (btnVerify) {
       btnVerify.addEventListener("click", () => {
-        const exp = EXPERIMENTS.find(e => e.id === this.currentExpId);
-        if (exp) this.verifyExperiment(exp);
+        this.verifyExperiment();
       });
     }
 
@@ -722,4 +811,10 @@ class LabConsole {
       });
     }
   }
+}
+if (typeof window !== "undefined") {
+  window.LabConsole = LabConsole;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { LabConsole };
 }

@@ -1152,6 +1152,119 @@ class TTLEngine {
     assert("Oscillation Detection: diagnostic logged for unstable feedback", this.diagnostics.oscillations.length > 0,
            this.diagnostics.oscillations[0] || "");
 
+    // Test 9: 7400 NAND Gate Truth Table Verification
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7400", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("U1.J3", "OUT.Y0", "#10b981", false);
+    const nandExpected = [[0,0,1], [0,1,1], [1,0,1], [1,1,0]];
+    let nandAllOk = true;
+    for (const [a1, a0, expY] of nandExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) nandAllOk = false;
+    }
+    assert("7400 NAND Truth Table: all 4 states verified (00,01,10,11)", nandAllOk);
+
+    // Test 10: 7402 NOR Gate Truth Table Verification (Reversed Pinout: 2,3 -> 1)
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7402", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J2", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J3", "#3b82f6", false);
+    this.addWire("U1.J1", "OUT.Y0", "#10b981", false);
+    const norExpected = [[0,0,1], [0,1,0], [1,0,0], [1,1,0]];
+    let norAllOk = true;
+    for (const [a1, a0, expY] of norExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) norAllOk = false;
+    }
+    assert("7402 NOR Truth Table: reversed pinout (2,3->1) all 4 states verified", norAllOk);
+
+    // Test 11: 7408 AND Gate Truth Table Verification
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7408", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("U1.J3", "OUT.Y0", "#10b981", false);
+    const andExpected = [[0,0,0], [0,1,0], [1,0,0], [1,1,1]];
+    let andAllOk = true;
+    for (const [a1, a0, expY] of andExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) andAllOk = false;
+    }
+    assert("7408 AND Truth Table: all 4 states verified (00,01,10,11)", andAllOk);
+
+    // Test 12: 7420 Dual 4-Input NAND Gate Truth Table Verification (1,2,4,5 -> 6 with NC on 3,11)
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7420", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("IN.A2", "U1.J4", "#10b981", false);
+    this.addWire("IN.A3", "U1.J5", "#f8fafc", false);
+    this.addWire("U1.J6", "OUT.Y0", "#f59e0b", false);
+    const nand4Expected = [
+      [0,0,0,0, 1],
+      [0,1,1,1, 1],
+      [1,0,1,1, 1],
+      [1,1,0,1, 1],
+      [1,1,1,0, 1],
+      [1,1,1,1, 0]
+    ];
+    let nand4AllOk = true;
+    for (const [a3, a2, a1, a0, expY] of nand4Expected) {
+      this.inputs["IN.A3"] = a3;
+      this.inputs["IN.A2"] = a2;
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) nand4AllOk = false;
+    }
+    assert("7420 4-Input NAND: verifies LOW only when all 4 inputs HIGH (pins 1,2,4,5->6)", nand4AllOk);
+
+    // Test 13: 7432 OR Gate Truth Table Verification
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7432", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("U1.J3", "OUT.Y0", "#10b981", false);
+    const orExpected = [[0,0,0], [0,1,1], [1,0,1], [1,1,1]];
+    let orAllOk = true;
+    for (const [a1, a0, expY] of orExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) orAllOk = false;
+    }
+    assert("7432 OR Truth Table: all 4 states verified (00,01,10,11)", orAllOk);
+
+    // Test 14: 7486 XOR Gate Truth Table Verification
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7486", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.addWire("IN.A0", "U1.J1", "#f5c518", false);
+    this.addWire("IN.A1", "U1.J2", "#3b82f6", false);
+    this.addWire("U1.J3", "OUT.Y0", "#10b981", false);
+    const xorExpected = [[0,0,0], [0,1,1], [1,0,1], [1,1,0]];
+    let xorAllOk = true;
+    for (const [a1, a0, expY] of xorExpected) {
+      this.inputs["IN.A1"] = a1;
+      this.inputs["IN.A0"] = a0;
+      this.evaluate();
+      if (this.outputs["OUT.Y0"] !== expY) xorAllOk = false;
+    }
+    assert("7486 XOR Truth Table: all 4 states verified (00,01,10,11)", xorAllOk);
+
     // Restore state
     this.clearWires(false);
     for (const w of origWires) this.addWire(w.from, w.to, w.color, false);
@@ -1165,4 +1278,10 @@ class TTLEngine {
 
     return results;
   }
+}
+if (typeof window !== "undefined") {
+  window.TTLEngine = TTLEngine;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { TTLEngine };
 }
