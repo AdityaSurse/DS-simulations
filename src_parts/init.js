@@ -240,6 +240,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Clickable Netlist Status Chip -> opens Diagnostics tab & highlights shorts
+  if (statusNetlistChip) {
+    statusNetlistChip.style.cursor = "pointer";
+    statusNetlistChip.title = "Click to inspect circuit diagnostics & locate shorts";
+    statusNetlistChip.addEventListener("click", () => {
+      if (typeof consolePanel !== "undefined") {
+        consolePanel.setTab("diagnostics");
+      }
+      if (engine.shorts.length > 0 && typeof board !== "undefined") {
+        const shortJacks = [];
+        for (const net of engine.nets) {
+          if (net.val === "X") {
+            for (const j of net.jacks) shortJacks.push(j);
+          }
+        }
+        board.setHighlightedJacks(shortJacks);
+      }
+    });
+  }
+
   // 7. Phase 10 Toggles: Sound, Theme, Contrast
   const btnToggleSound = document.getElementById("btn-toggle-sound");
   const updateSoundBtn = () => {

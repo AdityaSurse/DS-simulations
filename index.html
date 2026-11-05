@@ -7718,27 +7718,59 @@ const SVG_COMPONENTS = {
     `;
   },
 
-  renderPatchCord(wire, p1, p2, isSelected = false) {
-    if (!p1 || !p2) return "";
+  // Physically natural patch cord catenary bezier calculation
+  calcCordBezier(p1, p2) {
+    if (!p1 || !p2) return { cx1: 0, cy1: 0, cx2: 0, cy2: 0, mx: 0, my: 0 };
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     const dist = Math.hypot(dx, dy);
+    const hSpan = Math.abs(dx);
+    const vSpan = Math.abs(dy);
 
-    // Natural gravity sag proportional to cord length
-    const droop = Math.max(35, 25 + dist * 0.22);
-    const cx1 = p1.x + dx * 0.25;
-    const cy1 = p1.y + droop + Math.max(0, dy * 0.25);
-    const cx2 = p2.x - dx * 0.25;
-    const cy2 = p2.y + droop - Math.max(0, -dy * 0.25);
+    let cx1, cy1, cx2, cy2;
+
+    if (hSpan >= vSpan) {
+      // Predominantly horizontal run: natural gravitational sag
+      const sag = Math.min(85, Math.max(22, 16 + hSpan * 0.2 + dist * 0.04));
+      cx1 = p1.x + dx * 0.3;
+      cy1 = p1.y + dy * 0.2 + sag * 0.85;
+      cx2 = p2.x - dx * 0.3;
+      cy2 = p2.y - dy * 0.2 + sag * 0.85;
+    } else {
+      // Predominantly vertical run: bow naturally to the side in X,
+      // and keep Y progression between p1.y and p2.y so cords do not loop below bottom jacks
+      const sideFactor = 1.0 - Math.min(1.0, hSpan / Math.max(1.0, vSpan));
+      let bowX = -14 * sideFactor;
+      if (dx < -4) bowX = -Math.abs(bowX);
+      else if (dx > 4) bowX = Math.abs(bowX);
+
+      const vertSag = hSpan * 0.15;
+      if (dy >= 0) {
+        cx1 = p1.x + dx * 0.2 + bowX;
+        cy1 = p1.y + dy * 0.45 + vertSag;
+        cx2 = p2.x - dx * 0.2 + bowX;
+        cy2 = p2.y - dy * 0.25 + vertSag;
+      } else {
+        cx1 = p1.x + dx * 0.2 + bowX;
+        cy1 = p1.y + dy * 0.25 - vertSag;
+        cx2 = p2.x - dx * 0.2 + bowX;
+        cy2 = p2.y - dy * 0.45 - vertSag;
+      }
+    }
+
+    const mx = 0.125 * p1.x + 0.375 * cx1 + 0.375 * cx2 + 0.125 * p2.x;
+    const my = 0.125 * p1.y + 0.375 * cy1 + 0.375 * cy2 + 0.125 * p2.y;
+    return { cx1, cy1, cx2, cy2, mx, my };
+  },
+
+  renderPatchCord(wire, p1, p2, isSelected = false) {
+    if (!p1 || !p2) return "";
+    const { cx1, cy1, cx2, cy2, mx, my } = this.calcCordBezier(p1, p2);
 
     // Cubic Bezier curve paths
     const pathData = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
     const shadowPath = `M ${p1.x} ${p1.y + 8} C ${cx1} ${cy1 + 16}, ${cx2} ${cy2 + 16}, ${p2.x} ${p2.y + 8}`;
     const color = wire.color || "#f5c518";
-
-    // Midpoint on Cubic Bezier at t = 0.5
-    const mx = 0.125 * p1.x + 0.375 * cx1 + 0.375 * cx2 + 0.125 * p2.x;
-    const my = 0.125 * p1.y + 0.375 * cy1 + 0.375 * cy2 + 0.125 * p2.y;
 
     const renderBananaPlug = (pt) => `
       <g transform="translate(${pt.x}, ${pt.y})" pointer-events="none">
@@ -8454,16 +8486,8 @@ class BoardRenderer {
 
     if (!p1) return;
 
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const dist = Math.hypot(dx, dy);
-
-    // Natural gravity sag using Cubic Bezier
-    const droop = Math.max(35, 25 + dist * 0.22);
-    const cx1 = p1.x + dx * 0.25;
-    const cy1 = p1.y + droop + Math.max(0, dy * 0.25);
-    const cx2 = p2.x - dx * 0.25;
-    const cy2 = p2.y + droop - Math.max(0, -dy * 0.25);
+    // Use shared physically natural catenary bezier calculation
+    const { cx1, cy1, cx2, cy2 } = SVG_COMPONENTS.calcCordBezier(p1, p2);
 
     const pathData = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
     const shadowPath = `M ${p1.x} ${p1.y + 8} C ${cx1} ${cy1 + 16}, ${cx2} ${cy2 + 16}, ${p2.x} ${p2.y + 8}`;
@@ -11128,6 +11152,26 @@ document.addEventListener("DOMContentLoaded", () => {
   if (headerPwrBtn) {
     headerPwrBtn.addEventListener("click", () => {
       engine.toggleMasterPower();
+    });
+  }
+
+  // Clickable Netlist Status Chip -> opens Diagnostics tab & highlights shorts
+  if (statusNetlistChip) {
+    statusNetlistChip.style.cursor = "pointer";
+    statusNetlistChip.title = "Click to inspect circuit diagnostics & locate shorts";
+    statusNetlistChip.addEventListener("click", () => {
+      if (typeof consolePanel !== "undefined") {
+        consolePanel.setTab("diagnostics");
+      }
+      if (engine.shorts.length > 0 && typeof board !== "undefined") {
+        const shortJacks = [];
+        for (const net of engine.nets) {
+          if (net.val === "X") {
+            for (const j of net.jacks) shortJacks.push(j);
+          }
+        }
+        board.setHighlightedJacks(shortJacks);
+      }
     });
   }
 

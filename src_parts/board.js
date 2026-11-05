@@ -566,16 +566,8 @@ class BoardRenderer {
 
     if (!p1) return;
 
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const dist = Math.hypot(dx, dy);
-
-    // Natural gravity sag using Cubic Bezier
-    const droop = Math.max(35, 25 + dist * 0.22);
-    const cx1 = p1.x + dx * 0.25;
-    const cy1 = p1.y + droop + Math.max(0, dy * 0.25);
-    const cx2 = p2.x - dx * 0.25;
-    const cy2 = p2.y + droop - Math.max(0, -dy * 0.25);
+    // Use shared physically natural catenary bezier calculation
+    const { cx1, cy1, cx2, cy2 } = SVG_COMPONENTS.calcCordBezier(p1, p2);
 
     const pathData = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
     const shadowPath = `M ${p1.x} ${p1.y + 8} C ${cx1} ${cy1 + 16}, ${cx2} ${cy2 + 16}, ${p2.x} ${p2.y + 8}`;
