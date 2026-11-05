@@ -135,6 +135,26 @@ def build():
   </style>
 </head>
 <body>
+  <!-- Boot Splash Screen (Hardware POST) -->
+  <div id="boot-splash">
+    <div class="splash-terminal">
+      <div style="font-size: 15px; font-weight: 800; color: #ffffff; margin-bottom: 8px; letter-spacing: 1px;">
+        HI-TECH DIT 9005 DIGITAL IC TRAINER SIMULATOR
+      </div>
+      <div style="font-size: 11px; color: #86efac; line-height: 1.6;">
+        ROM BIOS v2.4 (c) 1988-2026 HI-TECH SYSTEMS PUNE-30<br>
+        INITIALIZING TTL LOGIC CORES & UNION-FIND MATRIX...<br>
+        TESTING 74-SERIES IC LIBRARY (15 MODELS)... OK<br>
+        VERIFYING VOLTAGE REGULATORS (+5V, +12V, GND)... NORMAL<br>
+        CALIBRATING TIMEBASE GENERATOR (0.5Hz – 10kHz)... STABLE<br>
+        SYSTEM READY.
+      </div>
+      <div class="splash-progress-bar">
+        <div class="splash-progress-fill" id="splash-fill"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Header Bar -->
   <header class="app-header">
     <div class="brand-section">
@@ -165,6 +185,10 @@ def build():
       <button class="btn" id="btn-exam-mode" title="Toggle Exam Mode (hides Auto-wire, Hint, and Auto-check for realistic exam practice)">🎓 Exam Mode</button>
       <button class="btn" id="btn-open-guide" title="Open Lab Guide & Controls">📖 Guide</button>
       <button class="btn" id="btn-open-manual" title="View Datasheet Reference">📋 Manual</button>
+      <button class="btn" id="btn-toggle-sound" title="Toggle Mechanical Audio Effects (Default: OFF)">🔇 Sound: OFF</button>
+      <button class="btn" id="btn-toggle-theme" title="Toggle Light / Dark Shell Theme">🌓 Theme</button>
+      <button class="btn" id="btn-toggle-contrast" title="Toggle High Contrast Mode">👁️ Contrast</button>
+      <button class="btn" id="btn-open-qa" title="Run Comprehensive QA & Benchmarks (Ctrl+Shift+Q)">🛠️ QA</button>
       <button class="btn" id="btn-reset-trainer" title="Reset all patch cords and switches">↺ Reset</button>
       <button class="btn" id="btn-clear-cords" title="Clear All Patch Cords">⊘ Clear Cords</button>
 
@@ -274,6 +298,25 @@ def build():
           <li><b>Exam Mode:</b> Toggle <b>"🎓 Exam Mode"</b> to hide auto-wire, hints, and solutions for realistic practical exam practice.</li>
           <li><b>Observation Sheet:</b> Click <b>"🖨️ Observation Sheet"</b> to export and print a completed lab observation sheet with roll number and conclusion.</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- QA Diagnostics Modal (Ctrl+Shift+Q) -->
+  <div class="modal-overlay" id="qa-modal">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+        <h2 style="font-size: 15px; color: #fff; display: flex; align-items: center; gap: 8px;">
+          🛠️ DIT 9005 Automated QA & Verification Suite
+        </h2>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-teal" id="btn-rerun-qa" style="padding: 3px 10px; font-size: 11px;">↺ Re-run QA</button>
+          <button class="btn btn-danger" id="btn-close-qa" style="padding: 2px 8px;">✕ Close</button>
+        </div>
+      </div>
+      <div id="qa-summary-banner" style="margin-bottom: 10px; padding: 10px; border-radius: 6px; font-size: 12px;"></div>
+      <div class="qa-results-box" id="qa-log-container">
+        Running tests...
       </div>
     </div>
   </div>

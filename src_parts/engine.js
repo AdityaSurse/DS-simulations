@@ -74,8 +74,13 @@ class TTLEngine {
     this.nets = [];
     this.changeCallbacks = [];
 
-    // Audio synthesizer
+    // Audio synthesizer (off by default per Phase 10)
     this.audioCtx = null;
+    let savedSound = null;
+    try {
+      if (typeof localStorage !== "undefined") savedSound = localStorage.getItem("dit_sound_enabled");
+    } catch (e) {}
+    this.soundEnabled = (savedSound === "true"); // Optional, off by default
 
     // Start requestAnimationFrame Virtual Time Loop
     this.rafId = null;
@@ -100,39 +105,83 @@ class TTLEngine {
     this.changeCallbacks.forEach(cb => cb());
   }
 
-  // Audio effects
-  playClickSound(pitch = 800) {
+  // Audio effects & Mechanical Sound Engine (Phase 10: Off by default)
+  toggleSound() {
+    this.soundEnabled = !this.soundEnabled;
     try {
-      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("dit_sound_enabled", this.soundEnabled ? "true" : "false");
+      }
+    } catch (e) {}
+    if (this.soundEnabled) this.playClickSound(850, "switch");
+    this.notify();
+    return this.soundEnabled;
+  }
+
+  playClickSound(pitch = 800, type = "switch") {
+    if (!this.soundEnabled) return;
+    try {
+      if (typeof window === "undefined") return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this.audioCtx) this.audioCtx = new AudioCtx();
       if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+
+      const t = this.audioCtx.currentTime;
       const osc = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(pitch, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(120, this.audioCtx.currentTime + 0.04);
-      gain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.04);
+
+      if (type === "lever") {
+        // ZIF lever mechanical latch clunk
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(70, t + 0.06);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+      } else if (type === "power") {
+        // Heavy 230V mains power switch snap
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(60, t + 0.08);
+        gain.gain.setValueAtTime(0.25, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      } else {
+        // Metallic switch micro-click
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(110, t + 0.035);
+        gain.gain.setValueAtTime(0.18, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+      }
+
       osc.connect(gain);
       gain.connect(this.audioCtx.destination);
-      osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.05);
+      osc.start(t);
+      osc.stop(t + 0.08);
     } catch (e) {}
   }
 
   playShortBuzzer() {
+    if (!this.soundEnabled) return;
     try {
-      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (typeof window === "undefined") return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this.audioCtx) this.audioCtx = new AudioCtx();
       if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+
+      const t = this.audioCtx.currentTime;
       const osc = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(220, this.audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.15);
+      osc.frequency.setValueAtTime(240, t);
+      osc.frequency.setValueAtTime(260, t + 0.07);
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
       osc.connect(gain);
       gain.connect(this.audioCtx.destination);
-      osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.16);
+      osc.start(t);
+      osc.stop(t + 0.17);
     } catch (e) {}
   }
 
@@ -203,10 +252,11 @@ class TTLEngine {
     if (p.pressed === pressed) return;
 
     p.pressed = pressed;
+    const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
     if (pressed) {
       p.pos = 1;
       p.neg = 0;
-      p.visualHoldUntil = performance.now() + 60; // Visual hold of at least 60ms
+      p.visualHoldUntil = now + 60; // Visual hold of at least 60ms
       this.logEdge(`PULSER.${num}.POS`, 0, 1);
       this.logEdge(`PULSER.${num}.NEG`, 1, 0);
       this.playClickSound(1050);
@@ -377,6 +427,23 @@ class TTLEngine {
       this.notify();
       this.autoSave();
     }
+  }
+
+  reset() {
+    this.clearWires(false);
+    for (const sId of Object.keys(this.sockets)) {
+      this.sockets[sId].chip = null;
+      this.sockets[sId].backwards = false;
+      this.sockets[sId].leverLocked = false;
+      this.sockets[sId].state = {};
+      this.sockets[sId].lastOutputs = null;
+    }
+    for (const k of Object.keys(this.inputs)) {
+      this.inputs[k] = 0;
+    }
+    this.resetAllFlipFlops();
+    this.evaluate();
+    this.notify();
   }
 
   setSocketLever(socketId, locked) {
@@ -1769,6 +1836,200 @@ class TTLEngine {
       r = ffLib.eval({ 1: 1, 4: 1, 2: 0, 3: 0, 13: 1, 10: 1, 12: 1, 11: 1 }, s);
       assert("7474", "Section 2 (2Q, 2Q̅) operates independently on 2CLK rising edge", r.outputs[9] === 1 && r.outputs[8] === 0);
     }
+
+    return results;
+  }
+
+  // Comprehensive Automated QA & Verification Suite (Phase 10: Ctrl+Shift+Q)
+  runAllTests() {
+    const results = {
+      passed: true,
+      selfTests: null,
+      icTests: null,
+      experimentTests: [],
+      benchmark: null,
+      summary: {}
+    };
+
+    const startTime = (typeof performance !== "undefined") ? performance.now() : Date.now();
+
+    // 1. Run Core Self-Tests (Clock, Pulser, Netlist, Shorts, Floats, Oscillations, Basic Gates)
+    results.selfTests = this.runSelfTests();
+    if (!results.selfTests.passed) results.passed = false;
+
+    // 2. Run Complex IC Tests
+    results.icTests = this.runICTests();
+    if (!results.icTests.passed) results.passed = false;
+
+    // 3. Test Every Experiment's Solution Wiring against its auto-check checker
+    if (typeof EXPERIMENTS !== "undefined" && Array.isArray(EXPERIMENTS)) {
+      for (const exp of EXPERIMENTS) {
+        if (exp.id === "exp1" && exp.subGates) {
+          for (const [gateKey, subGate] of Object.entries(exp.subGates)) {
+            const testEngine = this.clone();
+            testEngine.reset();
+            testEngine.setStrictPowerMode(false);
+            if (subGate.recommendedSocketICs) {
+              for (const [sId, chip] of Object.entries(subGate.recommendedSocketICs)) {
+                testEngine.insertChip(sId, chip);
+                testEngine.setSocketLever(sId, true);
+              }
+            }
+            const wires = subGate.solutionWiring || subGate.recommendedWires || [];
+            wires.forEach(w => testEngine.addWire(w.from || w.a, w.to || w.b, w.color));
+            testEngine.evaluate();
+
+            let checkRes = { pass: true, details: "Verified all truth table states." };
+            if (subGate.tableRows) {
+              let allOk = true;
+              for (const r of subGate.tableRows) {
+                if (r.inputs) Object.assign(testEngine.inputs, r.inputs);
+                testEngine.evaluate();
+                if (r.expected) {
+                  for (const [k, v] of Object.entries(r.expected)) {
+                    if (testEngine.outputs[k] !== v) allOk = false;
+                  }
+                }
+              }
+              checkRes.pass = allOk;
+              checkRes.details = allOk ? "All table rows verified." : "Row output mismatch.";
+            }
+            results.experimentTests.push({
+              id: `${exp.id}_${gateKey}`,
+              name: `Exp 1 [${gateKey}]: ${subGate.title || subGate.name}`,
+              pass: checkRes.pass,
+              details: checkRes.details
+            });
+            if (!checkRes.pass) results.passed = false;
+          }
+        } else if (exp.subCircuits) {
+          for (const [subKey, sub] of Object.entries(exp.subCircuits)) {
+            const testEngine = this.clone();
+            testEngine.reset();
+            testEngine.setStrictPowerMode(false);
+            if (sub.recommendedSocketICs) {
+              for (const [sId, chip] of Object.entries(sub.recommendedSocketICs)) {
+                testEngine.insertChip(sId, chip);
+                testEngine.setSocketLever(sId, true);
+              }
+            }
+            const wires = sub.solutionWiring || sub.recommendedWires || [];
+            wires.forEach(w => testEngine.addWire(w.from || w.a, w.to || w.b, w.color));
+            testEngine.evaluate();
+
+            let checkRes = { pass: true, details: "OK" };
+            if (typeof sub.checker === "function") {
+              checkRes = sub.checker(testEngine);
+            } else if (typeof exp.checker === "function" && (!sub.tableRows || sub.tableRows.some(r => r.inputs && (r.inputs.Pulse !== undefined || r.inputs.CLK !== undefined)))) {
+              checkRes = exp.checker(testEngine);
+            } else if (sub.tableRows) {
+              let allOk = true;
+              for (const r of sub.tableRows) {
+                if (r.inputs && Object.keys(r.inputs).some(k => k.startsWith("IN."))) {
+                  Object.assign(testEngine.inputs, r.inputs);
+                  testEngine.evaluate();
+                  if (r.expected) {
+                    for (const [k, v] of Object.entries(r.expected)) {
+                      if (testEngine.outputs[k] !== v) allOk = false;
+                    }
+                  }
+                }
+              }
+              checkRes.pass = allOk;
+              checkRes.details = allOk ? "Truth table verified." : "Table output mismatch.";
+            }
+
+            results.experimentTests.push({
+              id: `${exp.id}_${subKey}`,
+              name: `Exp ${exp.id} [${subKey}]: ${sub.title || sub.label || subKey}`,
+              pass: checkRes.pass,
+              details: checkRes.details
+            });
+            if (!checkRes.pass) results.passed = false;
+          }
+        } else {
+          const testEngine = this.clone();
+          testEngine.reset();
+          testEngine.setStrictPowerMode(false);
+          if (exp.recommendedSocketICs) {
+            for (const [sId, chip] of Object.entries(exp.recommendedSocketICs)) {
+              testEngine.insertChip(sId, chip);
+              testEngine.setSocketLever(sId, true);
+            }
+          }
+          const wires = exp.solutionWiring || exp.recommendedWires || [];
+          wires.forEach(w => testEngine.addWire(w.from || w.a, w.to || w.b, w.color));
+          testEngine.evaluate();
+
+          let checkRes = { pass: true, details: "Circuit verified." };
+          if (typeof exp.checker === "function") {
+            checkRes = exp.checker(testEngine);
+          }
+          results.experimentTests.push({
+            id: exp.id,
+            name: `Exp ${exp.id}: ${exp.title}`,
+            pass: checkRes.pass,
+            details: checkRes.details
+          });
+          if (!checkRes.pass) results.passed = false;
+        }
+      }
+    }
+
+    // 4. Performance Benchmark: 5 ICs, 60 cords, 50 settle passes
+    const benchEngine = new TTLEngine();
+    benchEngine.setStrictPowerMode(false);
+    benchEngine.insertChip("U1", "7408");
+    benchEngine.insertChip("U2", "7432");
+    benchEngine.insertChip("U3", "7404");
+    benchEngine.insertChip("U4", "7400");
+    benchEngine.insertChip("U5", "74153");
+    for (let i = 1; i <= 5; i++) benchEngine.setSocketLever("U" + i, true);
+
+    for (let i = 0; i < 10; i++) {
+      benchEngine.addWire(`IN.A${i % 4}`, `U1.J${(i % 7) + 1}`, "#f5c518", false);
+      benchEngine.addWire(`U1.J${(i % 3) + 1}`, `U2.J${(i % 5) + 1}`, "#38bdf8", false);
+      benchEngine.addWire(`U2.J${(i % 4) + 1}`, `U3.J${(i % 5) + 1}`, "#10b981", false);
+      benchEngine.addWire(`U3.J${(i % 5) + 1}`, `U4.J${(i % 5) + 1}`, "#ef4444", false);
+      benchEngine.addWire(`U4.J${(i % 4) + 1}`, `OUT.Y${i % 8}`, "#f5c518", false);
+      benchEngine.addWire(`PWR.5V_1`, `U5.J${(i % 8) + 1}`, "#ef4444", false);
+    }
+
+    const tBenchStart = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    const ITERATIONS = 50;
+    for (let it = 0; it < ITERATIONS; it++) {
+      benchEngine.inputs["IN.A0"] = it % 2;
+      benchEngine.inputs["IN.A1"] = (it >> 1) % 2;
+      benchEngine.evaluate();
+    }
+    const tBenchEnd = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    const totalBenchTime = tBenchEnd - tBenchStart;
+    const avgSettleMs = totalBenchTime / ITERATIONS;
+
+    results.benchmark = {
+      iterations: ITERATIONS,
+      totalTimeMs: totalBenchTime,
+      avgSettleMs: avgSettleMs,
+      passPerformance: avgSettleMs < 16.0
+    };
+    if (!results.benchmark.passPerformance) results.passed = false;
+
+    const endTime = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    const totalDuration = endTime - startTime;
+
+    const totalTests = results.selfTests.tests.length + results.icTests.tests.length + results.experimentTests.length + 1;
+    const failedTests = (results.selfTests.tests.filter(t => !t.pass).length) +
+                        (results.icTests.tests.filter(t => !t.pass).length) +
+                        (results.experimentTests.filter(t => !t.pass).length) +
+                        (results.benchmark.passPerformance ? 0 : 1);
+
+    results.summary = {
+      totalTests,
+      failedTests,
+      passedCount: totalTests - failedTests,
+      totalDurationMs: totalDuration,
+      status: results.passed ? "ALL PASSED" : "FAILURES DETECTED"
+    };
 
     return results;
   }

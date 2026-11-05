@@ -1012,6 +1012,236 @@ select:focus, input[type="text"]:focus {
 }
 
 
+/* ===== Phase 10: Light Shell Theme, High Contrast, Animations, Splash & Accessibility ===== */
+
+/* 1. Light Theme Shell */
+body.light-theme {
+  --bg-shell: #e2e8f0;
+  --bg-panel: #f1f5f9;
+  --bg-panel-elevated: #ffffff;
+  --bg-panel-hover: #e2e8f0;
+  --border-subtle: #cbd5e1;
+  --border-strong: #94a3b8;
+  color: #0f172a;
+}
+body.light-theme .app-header {
+  background: #f8fafc;
+  border-bottom-color: #cbd5e1;
+}
+body.light-theme .brand-subtitle {
+  color: #64748b;
+}
+body.light-theme .sub-bar {
+  background: #f1f5f9;
+  border-bottom-color: #cbd5e1;
+}
+body.light-theme .subbar-label {
+  color: #475569;
+}
+body.light-theme .view-tab-btn {
+  background: #e2e8f0;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+body.light-theme .view-tab-btn.active {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+body.light-theme .status-chip {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+body.light-theme .console-panel {
+  background: #f8fafc;
+  border-left-color: #cbd5e1;
+}
+body.light-theme .console-tab {
+  color: #64748b;
+}
+body.light-theme .console-tab.active {
+  color: #0284c7;
+  border-bottom-color: #0284c7;
+}
+body.light-theme .console-card {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+body.light-theme .btn {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+body.light-theme .btn:hover {
+  background: #e2e8f0;
+}
+body.light-theme .inventory-card {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+body.light-theme .selected-socket-box {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+body.light-theme .chip-search-input {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+body.light-theme .chip-card {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+/* 2. High Contrast Mode */
+body.high-contrast {
+  --border-subtle: #ffffff;
+  --border-strong: #ffffff;
+  --text-main: #ffffff;
+}
+body.high-contrast .btn {
+  border-width: 2px !important;
+  border-color: #ffffff !important;
+  font-weight: 800 !important;
+}
+body.high-contrast .status-chip {
+  border-width: 2px !important;
+  border-color: #ffffff !important;
+}
+body.high-contrast .patch-cord-path {
+  stroke-width: 6.5px !important;
+}
+
+/* 3. Keyboard Focus & Accessibility */
+:focus-visible {
+  outline: 2px solid #f59e0b !important;
+  outline-offset: 3px !important;
+}
+.jack-group:focus-visible circle:nth-child(2),
+.accessible-jack:focus-visible circle:nth-child(2) {
+  stroke: #f59e0b !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.9)) !important;
+}
+.switch-group:focus-visible rect:first-child {
+  stroke: #f59e0b !important;
+  stroke-width: 2.5px !important;
+}
+.pushbutton-group:focus-visible circle:nth-child(3) {
+  stroke: #f59e0b !important;
+  stroke-width: 2.5px !important;
+}
+
+/* 4. Smooth Cord Wobble Animation */
+@keyframes cord-rebound {
+  0% { transform: scale(1, 0.94); }
+  40% { transform: scale(1, 1.04); }
+  75% { transform: scale(1, 0.985); }
+  100% { transform: scale(1, 1); }
+}
+.cord-animate-in {
+  animation: cord-rebound 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center center;
+}
+
+/* 5. LED Glow / Radiance */
+@keyframes led-radiance {
+  0% { opacity: 0.88; filter: drop-shadow(0 0 6px currentColor); }
+  50% { opacity: 1; filter: drop-shadow(0 0 10px currentColor); }
+  100% { opacity: 0.88; filter: drop-shadow(0 0 6px currentColor); }
+}
+.led-active-glow {
+  animation: led-radiance 2.5s infinite ease-in-out;
+}
+
+/* 6. Touch & Mobile Support */
+#board-svg, .board-container {
+  touch-action: none;
+}
+
+/* 7. Retro Boot Splash Screen */
+#boot-splash {
+  position: fixed;
+  inset: 0;
+  background: #05080c;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-family: var(--font-mono);
+  color: #22c55e;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+  user-select: none;
+}
+#boot-splash.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.splash-terminal {
+  max-width: 580px;
+  width: 90%;
+  background: #090e17;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 35px rgba(34, 197, 94, 0.15), inset 0 0 20px rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  padding: 24px;
+}
+.splash-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #1e293b;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+.splash-progress-fill {
+  height: 100%;
+  background: #22c55e;
+  width: 0%;
+  transition: width 0.65s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+/* 8. QA Modal Dialog */
+#qa-modal .modal-card {
+  max-width: 760px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.qa-results-box {
+  background: #06090e;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.qa-pass-chip {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+  font-weight: 700;
+  font-size: 10px;
+}
+.qa-fail-chip {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  font-weight: 700;
+  font-size: 10px;
+}
+
 
 /* Silkscreen & Board SVG Typography */
 .silkscreen-title {
@@ -1116,6 +1346,26 @@ select:focus, input[type="text"]:focus {
   </style>
 </head>
 <body>
+  <!-- Boot Splash Screen (Hardware POST) -->
+  <div id="boot-splash">
+    <div class="splash-terminal">
+      <div style="font-size: 15px; font-weight: 800; color: #ffffff; margin-bottom: 8px; letter-spacing: 1px;">
+        HI-TECH DIT 9005 DIGITAL IC TRAINER SIMULATOR
+      </div>
+      <div style="font-size: 11px; color: #86efac; line-height: 1.6;">
+        ROM BIOS v2.4 (c) 1988-2026 HI-TECH SYSTEMS PUNE-30<br>
+        INITIALIZING TTL LOGIC CORES & UNION-FIND MATRIX...<br>
+        TESTING 74-SERIES IC LIBRARY (15 MODELS)... OK<br>
+        VERIFYING VOLTAGE REGULATORS (+5V, +12V, GND)... NORMAL<br>
+        CALIBRATING TIMEBASE GENERATOR (0.5Hz – 10kHz)... STABLE<br>
+        SYSTEM READY.
+      </div>
+      <div class="splash-progress-bar">
+        <div class="splash-progress-fill" id="splash-fill"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Header Bar -->
   <header class="app-header">
     <div class="brand-section">
@@ -1146,6 +1396,10 @@ select:focus, input[type="text"]:focus {
       <button class="btn" id="btn-exam-mode" title="Toggle Exam Mode (hides Auto-wire, Hint, and Auto-check for realistic exam practice)">🎓 Exam Mode</button>
       <button class="btn" id="btn-open-guide" title="Open Lab Guide & Controls">📖 Guide</button>
       <button class="btn" id="btn-open-manual" title="View Datasheet Reference">📋 Manual</button>
+      <button class="btn" id="btn-toggle-sound" title="Toggle Mechanical Audio Effects (Default: OFF)">🔇 Sound: OFF</button>
+      <button class="btn" id="btn-toggle-theme" title="Toggle Light / Dark Shell Theme">🌓 Theme</button>
+      <button class="btn" id="btn-toggle-contrast" title="Toggle High Contrast Mode">👁️ Contrast</button>
+      <button class="btn" id="btn-open-qa" title="Run Comprehensive QA & Benchmarks (Ctrl+Shift+Q)">🛠️ QA</button>
       <button class="btn" id="btn-reset-trainer" title="Reset all patch cords and switches">↺ Reset</button>
       <button class="btn" id="btn-clear-cords" title="Clear All Patch Cords">⊘ Clear Cords</button>
 
@@ -1255,6 +1509,25 @@ select:focus, input[type="text"]:focus {
           <li><b>Exam Mode:</b> Toggle <b>"🎓 Exam Mode"</b> to hide auto-wire, hints, and solutions for realistic practical exam practice.</li>
           <li><b>Observation Sheet:</b> Click <b>"🖨️ Observation Sheet"</b> to export and print a completed lab observation sheet with roll number and conclusion.</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- QA Diagnostics Modal (Ctrl+Shift+Q) -->
+  <div class="modal-overlay" id="qa-modal">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+        <h2 style="font-size: 15px; color: #fff; display: flex; align-items: center; gap: 8px;">
+          🛠️ DIT 9005 Automated QA & Verification Suite
+        </h2>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-teal" id="btn-rerun-qa" style="padding: 3px 10px; font-size: 11px;">↺ Re-run QA</button>
+          <button class="btn btn-danger" id="btn-close-qa" style="padding: 2px 8px;">✕ Close</button>
+        </div>
+      </div>
+      <div id="qa-summary-banner" style="margin-bottom: 10px; padding: 10px; border-radius: 6px; font-size: 12px;"></div>
+      <div class="qa-results-box" id="qa-log-container">
+        Running tests...
       </div>
     </div>
   </div>
@@ -4513,8 +4786,13 @@ class TTLEngine {
     this.nets = [];
     this.changeCallbacks = [];
 
-    // Audio synthesizer
+    // Audio synthesizer (off by default per Phase 10)
     this.audioCtx = null;
+    let savedSound = null;
+    try {
+      if (typeof localStorage !== "undefined") savedSound = localStorage.getItem("dit_sound_enabled");
+    } catch (e) {}
+    this.soundEnabled = (savedSound === "true"); // Optional, off by default
 
     // Start requestAnimationFrame Virtual Time Loop
     this.rafId = null;
@@ -4539,39 +4817,83 @@ class TTLEngine {
     this.changeCallbacks.forEach(cb => cb());
   }
 
-  // Audio effects
-  playClickSound(pitch = 800) {
+  // Audio effects & Mechanical Sound Engine (Phase 10: Off by default)
+  toggleSound() {
+    this.soundEnabled = !this.soundEnabled;
     try {
-      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("dit_sound_enabled", this.soundEnabled ? "true" : "false");
+      }
+    } catch (e) {}
+    if (this.soundEnabled) this.playClickSound(850, "switch");
+    this.notify();
+    return this.soundEnabled;
+  }
+
+  playClickSound(pitch = 800, type = "switch") {
+    if (!this.soundEnabled) return;
+    try {
+      if (typeof window === "undefined") return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this.audioCtx) this.audioCtx = new AudioCtx();
       if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+
+      const t = this.audioCtx.currentTime;
       const osc = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(pitch, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(120, this.audioCtx.currentTime + 0.04);
-      gain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.04);
+
+      if (type === "lever") {
+        // ZIF lever mechanical latch clunk
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(70, t + 0.06);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+      } else if (type === "power") {
+        // Heavy 230V mains power switch snap
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(60, t + 0.08);
+        gain.gain.setValueAtTime(0.25, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      } else {
+        // Metallic switch micro-click
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(110, t + 0.035);
+        gain.gain.setValueAtTime(0.18, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+      }
+
       osc.connect(gain);
       gain.connect(this.audioCtx.destination);
-      osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.05);
+      osc.start(t);
+      osc.stop(t + 0.08);
     } catch (e) {}
   }
 
   playShortBuzzer() {
+    if (!this.soundEnabled) return;
     try {
-      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (typeof window === "undefined") return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this.audioCtx) this.audioCtx = new AudioCtx();
       if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+
+      const t = this.audioCtx.currentTime;
       const osc = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(220, this.audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + 0.15);
+      osc.frequency.setValueAtTime(240, t);
+      osc.frequency.setValueAtTime(260, t + 0.07);
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
       osc.connect(gain);
       gain.connect(this.audioCtx.destination);
-      osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.16);
+      osc.start(t);
+      osc.stop(t + 0.17);
     } catch (e) {}
   }
 
@@ -4642,10 +4964,11 @@ class TTLEngine {
     if (p.pressed === pressed) return;
 
     p.pressed = pressed;
+    const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
     if (pressed) {
       p.pos = 1;
       p.neg = 0;
-      p.visualHoldUntil = performance.now() + 60; // Visual hold of at least 60ms
+      p.visualHoldUntil = now + 60; // Visual hold of at least 60ms
       this.logEdge(`PULSER.${num}.POS`, 0, 1);
       this.logEdge(`PULSER.${num}.NEG`, 1, 0);
       this.playClickSound(1050);
@@ -4816,6 +5139,23 @@ class TTLEngine {
       this.notify();
       this.autoSave();
     }
+  }
+
+  reset() {
+    this.clearWires(false);
+    for (const sId of Object.keys(this.sockets)) {
+      this.sockets[sId].chip = null;
+      this.sockets[sId].backwards = false;
+      this.sockets[sId].leverLocked = false;
+      this.sockets[sId].state = {};
+      this.sockets[sId].lastOutputs = null;
+    }
+    for (const k of Object.keys(this.inputs)) {
+      this.inputs[k] = 0;
+    }
+    this.resetAllFlipFlops();
+    this.evaluate();
+    this.notify();
   }
 
   setSocketLever(socketId, locked) {
@@ -6211,6 +6551,200 @@ class TTLEngine {
 
     return results;
   }
+
+  // Comprehensive Automated QA & Verification Suite (Phase 10: Ctrl+Shift+Q)
+  runAllTests() {
+    const results = {
+      passed: true,
+      selfTests: null,
+      icTests: null,
+      experimentTests: [],
+      benchmark: null,
+      summary: {}
+    };
+
+    const startTime = (typeof performance !== "undefined") ? performance.now() : Date.now();
+
+    // 1. Run Core Self-Tests (Clock, Pulser, Netlist, Shorts, Floats, Oscillations, Basic Gates)
+    results.selfTests = this.runSelfTests();
+    if (!results.selfTests.passed) results.passed = false;
+
+    // 2. Run Complex IC Tests
+    results.icTests = this.runICTests();
+    if (!results.icTests.passed) results.passed = false;
+
+    // 3. Test Every Experiment's Solution Wiring against its auto-check checker
+    if (typeof EXPERIMENTS !== "undefined" && Array.isArray(EXPERIMENTS)) {
+      for (const exp of EXPERIMENTS) {
+        if (exp.id === "exp1" && exp.subGates) {
+          for (const [gateKey, subGate] of Object.entries(exp.subGates)) {
+            const testEngine = this.clone();
+            testEngine.reset();
+            testEngine.setStrictPowerMode(false);
+            if (subGate.recommendedSocketICs) {
+              for (const [sId, chip] of Object.entries(subGate.recommendedSocketICs)) {
+                testEngine.insertChip(sId, chip);
+                testEngine.setSocketLever(sId, true);
+              }
+            }
+            const wires = subGate.solutionWiring || subGate.recommendedWires || [];
+            wires.forEach(w => testEngine.addWire(w.from || w.a, w.to || w.b, w.color));
+            testEngine.evaluate();
+
+            let checkRes = { pass: true, details: "Verified all truth table states." };
+            if (subGate.tableRows) {
+              let allOk = true;
+              for (const r of subGate.tableRows) {
+                if (r.inputs) Object.assign(testEngine.inputs, r.inputs);
+                testEngine.evaluate();
+                if (r.expected) {
+                  for (const [k, v] of Object.entries(r.expected)) {
+                    if (testEngine.outputs[k] !== v) allOk = false;
+                  }
+                }
+              }
+              checkRes.pass = allOk;
+              checkRes.details = allOk ? "All table rows verified." : "Row output mismatch.";
+            }
+            results.experimentTests.push({
+              id: `${exp.id}_${gateKey}`,
+              name: `Exp 1 [${gateKey}]: ${subGate.title || subGate.name}`,
+              pass: checkRes.pass,
+              details: checkRes.details
+            });
+            if (!checkRes.pass) results.passed = false;
+          }
+        } else if (exp.subCircuits) {
+          for (const [subKey, sub] of Object.entries(exp.subCircuits)) {
+            const testEngine = this.clone();
+            testEngine.reset();
+            testEngine.setStrictPowerMode(false);
+            if (sub.recommendedSocketICs) {
+              for (const [sId, chip] of Object.entries(sub.recommendedSocketICs)) {
+                testEngine.insertChip(sId, chip);
+                testEngine.setSocketLever(sId, true);
+              }
+            }
+            const wires = sub.solutionWiring || sub.recommendedWires || [];
+            wires.forEach(w => testEngine.addWire(w.from || w.a, w.to || w.b, w.color));
+            testEngine.evaluate();
+
+            let checkRes = { pass: true, details: "OK" };
+            if (typeof sub.checker === "function") {
+              checkRes = sub.checker(testEngine);
+            } else if (typeof exp.checker === "function" && (!sub.tableRows || sub.tableRows.some(r => r.inputs && (r.inputs.Pulse !== undefined || r.inputs.CLK !== undefined)))) {
+              checkRes = exp.checker(testEngine);
+            } else if (sub.tableRows) {
+              let allOk = true;
+              for (const r of sub.tableRows) {
+                if (r.inputs && Object.keys(r.inputs).some(k => k.startsWith("IN."))) {
+                  Object.assign(testEngine.inputs, r.inputs);
+                  testEngine.evaluate();
+                  if (r.expected) {
+                    for (const [k, v] of Object.entries(r.expected)) {
+                      if (testEngine.outputs[k] !== v) allOk = false;
+                    }
+                  }
+                }
+              }
+              checkRes.pass = allOk;
+              checkRes.details = allOk ? "Truth table verified." : "Table output mismatch.";
+            }
+
+            results.experimentTests.push({
+              id: `${exp.id}_${subKey}`,
+              name: `Exp ${exp.id} [${subKey}]: ${sub.title || sub.label || subKey}`,
+              pass: checkRes.pass,
+              details: checkRes.details
+            });
+            if (!checkRes.pass) results.passed = false;
+          }
+        } else {
+          const testEngine = this.clone();
+          testEngine.reset();
+          testEngine.setStrictPowerMode(false);
+          if (exp.recommendedSocketICs) {
+            for (const [sId, chip] of Object.entries(exp.recommendedSocketICs)) {
+              testEngine.insertChip(sId, chip);
+              testEngine.setSocketLever(sId, true);
+            }
+          }
+          const wires = exp.solutionWiring || exp.recommendedWires || [];
+          wires.forEach(w => testEngine.addWire(w.from || w.a, w.to || w.b, w.color));
+          testEngine.evaluate();
+
+          let checkRes = { pass: true, details: "Circuit verified." };
+          if (typeof exp.checker === "function") {
+            checkRes = exp.checker(testEngine);
+          }
+          results.experimentTests.push({
+            id: exp.id,
+            name: `Exp ${exp.id}: ${exp.title}`,
+            pass: checkRes.pass,
+            details: checkRes.details
+          });
+          if (!checkRes.pass) results.passed = false;
+        }
+      }
+    }
+
+    // 4. Performance Benchmark: 5 ICs, 60 cords, 50 settle passes
+    const benchEngine = new TTLEngine();
+    benchEngine.setStrictPowerMode(false);
+    benchEngine.insertChip("U1", "7408");
+    benchEngine.insertChip("U2", "7432");
+    benchEngine.insertChip("U3", "7404");
+    benchEngine.insertChip("U4", "7400");
+    benchEngine.insertChip("U5", "74153");
+    for (let i = 1; i <= 5; i++) benchEngine.setSocketLever("U" + i, true);
+
+    for (let i = 0; i < 10; i++) {
+      benchEngine.addWire(`IN.A${i % 4}`, `U1.J${(i % 7) + 1}`, "#f5c518", false);
+      benchEngine.addWire(`U1.J${(i % 3) + 1}`, `U2.J${(i % 5) + 1}`, "#38bdf8", false);
+      benchEngine.addWire(`U2.J${(i % 4) + 1}`, `U3.J${(i % 5) + 1}`, "#10b981", false);
+      benchEngine.addWire(`U3.J${(i % 5) + 1}`, `U4.J${(i % 5) + 1}`, "#ef4444", false);
+      benchEngine.addWire(`U4.J${(i % 4) + 1}`, `OUT.Y${i % 8}`, "#f5c518", false);
+      benchEngine.addWire(`PWR.5V_1`, `U5.J${(i % 8) + 1}`, "#ef4444", false);
+    }
+
+    const tBenchStart = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    const ITERATIONS = 50;
+    for (let it = 0; it < ITERATIONS; it++) {
+      benchEngine.inputs["IN.A0"] = it % 2;
+      benchEngine.inputs["IN.A1"] = (it >> 1) % 2;
+      benchEngine.evaluate();
+    }
+    const tBenchEnd = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    const totalBenchTime = tBenchEnd - tBenchStart;
+    const avgSettleMs = totalBenchTime / ITERATIONS;
+
+    results.benchmark = {
+      iterations: ITERATIONS,
+      totalTimeMs: totalBenchTime,
+      avgSettleMs: avgSettleMs,
+      passPerformance: avgSettleMs < 16.0
+    };
+    if (!results.benchmark.passPerformance) results.passed = false;
+
+    const endTime = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    const totalDuration = endTime - startTime;
+
+    const totalTests = results.selfTests.tests.length + results.icTests.tests.length + results.experimentTests.length + 1;
+    const failedTests = (results.selfTests.tests.filter(t => !t.pass).length) +
+                        (results.icTests.tests.filter(t => !t.pass).length) +
+                        (results.experimentTests.filter(t => !t.pass).length) +
+                        (results.benchmark.passPerformance ? 0 : 1);
+
+    results.summary = {
+      totalTests,
+      failedTests,
+      passedCount: totalTests - failedTests,
+      totalDurationMs: totalDuration,
+      status: results.passed ? "ALL PASSED" : "FAILURES DETECTED"
+    };
+
+    return results;
+  }
 }
 if (typeof window !== "undefined") {
   window.TTLEngine = TTLEngine;
@@ -6412,8 +6946,8 @@ const SVG_COMPONENTS = {
     `;
 
     return `
-      <g class="jack-group" data-jack="${id}" id="jack-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})">
-        <circle r="18" fill="transparent" class="jack-hitbox" />
+      <g class="jack-group accessible-jack" data-jack="${id}" id="jack-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})" tabindex="0" role="button" aria-label="Terminal Jack ${id}">
+        <circle r="22" fill="transparent" class="jack-hitbox" />
         <circle r="11" fill="url(#brassJack)" filter="url(#shadowJack)" />
         <circle r="11" fill="none" stroke="#3d2c02" stroke-width="0.75" />
         <circle r="8.5" fill="none" stroke="#fff4a3" stroke-width="0.6" opacity="0.6" />
@@ -6436,7 +6970,7 @@ const SVG_COMPONENTS = {
     const batAngle = isHigh ? -18 : 18;
 
     return `
-      <g class="switch-group" data-switch="${id}" transform="translate(${cx}, ${cy})">
+      <g class="switch-group" data-switch="${id}" transform="translate(${cx}, ${cy})" tabindex="0" role="switch" aria-checked="${isHigh ? 'true' : 'false'}" aria-label="Input Switch ${id} (${isHigh ? 'Logic 1' : 'Logic 0'})">
         <rect x="-14" y="-22" width="28" height="44" rx="4" fill="#242830" stroke="#4a5260" stroke-width="1" filter="url(#shadowBevel)" />
         <circle cx="0" cy="-16" r="1.5" fill="#888" />
         <circle cx="0" cy="16" r="1.5" fill="#888" />
@@ -6479,7 +7013,7 @@ const SVG_COMPONENTS = {
     ` : "";
 
     return `
-      <g class="led-group" data-led="${id}">
+      <g class="led-group ${b > 0.05 ? 'led-active-glow' : ''}" data-led="${id}">
         <circle cx="${cx}" cy="${cy}" r="7" fill="#1a1e24" stroke="#333" stroke-width="0.5" />
         ${glowSvg}
         <circle cx="${cx}" cy="${cy}" r="5.5" fill="${fill}" />
@@ -6555,7 +7089,7 @@ const SVG_COMPONENTS = {
     const shadowOpacity = isPressed ? "0.3" : "0.7";
 
     return `
-      <g class="pushbutton-group" data-pulser="${id}" transform="translate(${cx}, ${cy})">
+      <g class="pushbutton-group" data-pulser="${id}" transform="translate(${cx}, ${cy})" tabindex="0" role="button" aria-label="Manual Pulser ${id}">
         <circle cx="0" cy="0" r="19" fill="url(#screwHead)" filter="url(#shadowBevel)" />
         <circle cx="0" cy="0" r="15" fill="#181818" />
         <circle cx="0" cy="${rOffset}" r="14" fill="${btnFill}" opacity="${shadowOpacity}" filter="url(#shadowBevel)" />
@@ -6579,7 +7113,7 @@ const SVG_COMPONENTS = {
     const angle = -135 + knobT * 270;
 
     return `
-      <g class="knob-group" data-knob="${id}" transform="translate(${cx}, ${cy})">
+      <g class="knob-group" data-knob="${id}" transform="translate(${cx}, ${cy})" tabindex="0" role="slider" aria-label="Clock Frequency Knob" aria-valuemin="0" aria-valuemax="1" aria-valuenow="${knobT.toFixed(2)}">
         <!-- Radial scale graduation ticks and labels -->
         <circle cx="0" cy="0" r="34" fill="none" stroke="#3e4a5c" stroke-width="1.5" stroke-dasharray="2, 6" />
         <text x="-32" y="22" class="silkscreen-text mini" text-anchor="middle">0.5Hz</text>
@@ -6684,7 +7218,7 @@ const SVG_COMPONENTS = {
         <rect x="${x + 8}" y="${y + 8}" width="${width - 16}" height="${height - 16}" rx="3" fill="#10345c" stroke="#0b2440" stroke-width="1" />
         ${pinHoles}
         <polygon points="${x + 14},${is40 ? y + 16 : y + height - 12} ${x + 20},${is40 ? y + 22 : y + height - 6} ${x + 8},${is40 ? y + 22 : y + height - 6}" fill="#93c5fd" opacity="0.6" />
-        <g class="zif-lever" data-socket="${socketId}" transform="translate(${leverX}, ${leverY}) ${leverTransform}" style="cursor: pointer;">
+        <g class="zif-lever" data-socket="${socketId}" transform="translate(${leverX}, ${leverY}) ${leverTransform}" style="cursor: pointer;" tabindex="0" role="button" aria-label="ZIF Socket ${socketId} Lever (${leverLocked ? 'Locked' : 'Open'})">
           <rect x="${is40 ? -3 : -24}" y="${is40 ? 0 : -3}" width="${is40 ? 6 : 28}" height="${is40 ? 28 : 6}" rx="2" fill="url(#screwHead)" stroke="#333" stroke-width="0.5" />
           <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="7" fill="#1d4ed8" stroke="#93c5fd" stroke-width="1" />
         </g>
@@ -6901,7 +7435,7 @@ const SVG_COMPONENTS = {
     `;
 
     return `
-      <g class="patch-cord-group ${isSelected ? 'selected' : ''}" data-wire-id="${wire.id}">
+      <g class="patch-cord-group ${isSelected ? 'selected' : ''} cord-animate-in" data-wire-id="${wire.id}">
         <title>Patch Cord ${wire.id}: ${wire.from} ↔ ${wire.to}</title>
         <!-- Soft Ground Shadow -->
         <path d="${shadowPath}" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" pointer-events="none" />
@@ -6993,10 +7527,16 @@ class BoardRenderer {
     this.ghostWires = [];
     this.highlightedJacks = [];
 
+    // Performance: requestAnimationFrame batching
+    this.renderRequested = false;
+    this.cordsRenderRequested = false;
+
     this.setupViewPresets();
     this.bindEvents();
     this.bindPanZoom();
     this.bindKnobDrag();
+    this.bindTouchEvents();
+    this.bindKeyboardAccessibility();
   }
 
   setGhostWires(wires, show = true) {
@@ -7550,7 +8090,20 @@ class BoardRenderer {
   }
 
   // High performance cord-layer update (instant 60fps with 60+ cords)
-  renderCordsOnly() {
+  renderCordsOnly(immediate = false) {
+    if (immediate || typeof requestAnimationFrame === "undefined") {
+      this.doRenderCords();
+      return;
+    }
+    if (this.cordsRenderRequested) return;
+    this.cordsRenderRequested = true;
+    requestAnimationFrame(() => {
+      this.cordsRenderRequested = false;
+      this.doRenderCords();
+    });
+  }
+
+  doRenderCords() {
     const layer = this.svg.querySelector("#wires-layer");
     if (!layer) return;
 
@@ -7579,7 +8132,20 @@ class BoardRenderer {
     }
   }
 
-  render() {
+  render(immediate = false) {
+    if (immediate || typeof requestAnimationFrame === "undefined") {
+      this.doRender();
+      return;
+    }
+    if (this.renderRequested) return;
+    this.renderRequested = true;
+    requestAnimationFrame(() => {
+      this.renderRequested = false;
+      this.doRender();
+    });
+  }
+
+  doRender() {
     this.jackCoords = {};
     let svgContent = SVG_COMPONENTS.renderDefs();
 
@@ -8020,6 +8586,265 @@ class BoardRenderer {
         }
       }
     }
+  }
+
+  // Phase 10 Touch Support: Pinch-to-zoom, 2-finger pan, tap jack -> tap jack
+  bindTouchEvents() {
+    const container = this.svg.parentElement;
+    if (!container) return;
+
+    let initialDistance = 0;
+    let initialViewBox = null;
+    let initialMidpoint = null;
+    let touchStartTime = 0;
+    let touchStartPos = null;
+
+    const getDistAndMid = (t1, t2) => {
+      const dx = t2.clientX - t1.clientX;
+      const dy = t2.clientY - t1.clientY;
+      const dist = Math.hypot(dx, dy);
+      const mid = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+      };
+      return { dist, mid };
+    };
+
+    container.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const { dist, mid } = getDistAndMid(t1, t2);
+        initialDistance = dist;
+        initialViewBox = { ...this.viewBox };
+        initialMidpoint = mid;
+        this.isPanning = false;
+        this.isDraggingCord = false;
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        touchStartTime = Date.now();
+        touchStartPos = { x: touch.clientX, y: touch.clientY };
+
+        const targetJack = touch.target.closest(".jack-group");
+        if (targetJack) {
+          e.preventDefault();
+          const jackId = targetJack.dataset.jack;
+          this.dragStartJack = jackId;
+          this.dragStartPos = this.getSVGCoords(touch);
+          this.tempMousePos = this.dragStartPos;
+          this.isDraggingCord = true;
+          this.updateRubberBand();
+          return;
+        }
+
+        // Check interactive components on touch
+        const switchGroup = touch.target.closest(".switch-group");
+        if (switchGroup) {
+          e.preventDefault();
+          this.engine.toggleInput(switchGroup.dataset.switch);
+          return;
+        }
+
+        const zifLever = touch.target.closest(".zif-lever");
+        if (zifLever) {
+          e.preventDefault();
+          const sId = zifLever.dataset.socket;
+          this.engine.setSocketLever(sId, !this.engine.sockets[sId].leverLocked);
+          return;
+        }
+
+        const pulserBtn = touch.target.closest(".pushbutton-group");
+        if (pulserBtn) {
+          e.preventDefault();
+          const pulserNum = parseInt(pulserBtn.dataset.pulser, 10);
+          this.engine.setPulser(pulserNum, true);
+          return;
+        }
+
+        // Single finger pan start if on empty board
+        this.isPanning = true;
+        this.panStart = { x: touch.clientX, y: touch.clientY };
+      }
+    }, { passive: false });
+
+    container.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 2 && initialDistance > 0 && initialViewBox) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const { dist, mid } = getDistAndMid(t1, t2);
+
+        const scale = initialDistance / Math.max(10, dist);
+        const centerCoords = this.getSVGCoords({ clientX: mid.x, clientY: mid.y });
+
+        const newW = Math.max(300, Math.min(2400, initialViewBox.w * scale));
+        const newH = Math.max(220, Math.min(1740, initialViewBox.h * scale));
+        const ratioX = (centerCoords.x - initialViewBox.x) / initialViewBox.w;
+        const ratioY = (centerCoords.y - initialViewBox.y) / initialViewBox.h;
+
+        const panDx = (mid.x - initialMidpoint.x) * (newW / this.svg.clientWidth);
+        const panDy = (mid.y - initialMidpoint.y) * (newH / this.svg.clientHeight);
+
+        this.viewBox.x = centerCoords.x - ratioX * newW - panDx;
+        this.viewBox.y = centerCoords.y - ratioY * newH - panDy;
+        this.viewBox.w = newW;
+        this.viewBox.h = newH;
+        this.applyViewBox();
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        if (this.isDraggingCord) {
+          e.preventDefault();
+          this.tempMousePos = this.getSVGCoords(touch);
+          const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+          const targetGroup = elem ? elem.closest(".jack-group") : null;
+          this.hoverTargetJack = targetGroup ? targetGroup.dataset.jack : null;
+          this.updateRubberBand();
+        } else if (this.isPanning) {
+          e.preventDefault();
+          const dx = (touch.clientX - this.panStart.x) * (this.viewBox.w / this.svg.clientWidth);
+          const dy = (touch.clientY - this.panStart.y) * (this.viewBox.h / this.svg.clientHeight);
+          this.viewBox.x -= dx;
+          this.viewBox.y -= dy;
+          this.panStart = { x: touch.clientX, y: touch.clientY };
+          this.applyViewBox();
+        }
+      }
+    }, { passive: false });
+
+    container.addEventListener("touchend", (e) => {
+      // Release pulsers on touch end
+      if (this.engine.board.pulsers[1].pressed) this.engine.setPulser(1, false);
+      if (this.engine.board.pulsers[2].pressed) this.engine.setPulser(2, false);
+
+      if (initialDistance > 0 && e.touches.length < 2) {
+        initialDistance = 0;
+        initialViewBox = null;
+        initialMidpoint = null;
+      }
+
+      if (this.isDraggingCord && this.dragStartJack) {
+        const lastTouch = e.changedTouches[0];
+        const elem = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
+        const targetGroup = elem ? elem.closest(".jack-group") : null;
+        const targetJack = targetGroup ? targetGroup.dataset.jack : null;
+        const movedDist = touchStartPos ? Math.hypot(lastTouch.clientX - touchStartPos.x, lastTouch.clientY - touchStartPos.y) : 0;
+
+        if (targetJack && targetJack !== this.dragStartJack) {
+          this.engine.addWire(this.dragStartJack, targetJack, this.activeColor);
+          this.selectedJack = null;
+        } else if (movedDist < 14) {
+          // Tap jack -> Tap jack to connect
+          if (!this.selectedJack) {
+            this.selectedJack = this.dragStartJack;
+            this.engine.playClickSound(950);
+          } else if (this.selectedJack === this.dragStartJack) {
+            this.selectedJack = null;
+          } else {
+            this.engine.addWire(this.selectedJack, this.dragStartJack, this.activeColor);
+            this.selectedJack = null;
+          }
+        }
+
+        this.isDraggingCord = false;
+        this.dragStartJack = null;
+        this.hoverTargetJack = null;
+        this.tempMousePos = null;
+        this.updateRubberBand();
+        this.renderCordsOnly();
+      }
+
+      this.isPanning = false;
+    }, { passive: false });
+  }
+
+  // Phase 10 Keyboard Accessibility (Tab Focus + Enter/Space/Escape)
+  bindKeyboardAccessibility() {
+    this.svg.addEventListener("keydown", (e) => {
+      const active = document.activeElement;
+      if (!active) return;
+
+      if (e.key === "Enter" || e.key === " ") {
+        const jackGroup = active.closest(".jack-group");
+        if (jackGroup) {
+          e.preventDefault();
+          const jackId = jackGroup.dataset.jack;
+          if (!this.selectedJack) {
+            this.selectedJack = jackId;
+            this.engine.playClickSound(950);
+          } else if (this.selectedJack === jackId) {
+            this.selectedJack = null;
+          } else {
+            this.engine.addWire(this.selectedJack, jackId, this.activeColor);
+            this.selectedJack = null;
+          }
+          this.render();
+          return;
+        }
+
+        const switchGroup = active.closest(".switch-group");
+        if (switchGroup) {
+          e.preventDefault();
+          this.engine.toggleInput(switchGroup.dataset.switch);
+          this.render();
+          return;
+        }
+
+        const zifLever = active.closest(".zif-lever");
+        if (zifLever) {
+          e.preventDefault();
+          const sId = zifLever.dataset.socket;
+          this.engine.setSocketLever(sId, !this.engine.sockets[sId].leverLocked);
+          this.render();
+          return;
+        }
+
+        const pulserBtn = active.closest(".pushbutton-group");
+        if (pulserBtn) {
+          e.preventDefault();
+          const pulserNum = parseInt(pulserBtn.dataset.pulser, 10);
+          this.engine.setPulser(pulserNum, true);
+          setTimeout(() => {
+            this.engine.setPulser(pulserNum, false);
+            this.render();
+          }, 120);
+          return;
+        }
+      }
+
+      if (e.key === "Escape") {
+        if (this.selectedJack || this.selectedCordId) {
+          e.preventDefault();
+          this.selectedJack = null;
+          this.selectedCordId = null;
+          this.render();
+        }
+      }
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+        const knobGroup = active.closest(".knob-group");
+        if (knobGroup) {
+          e.preventDefault();
+          this.engine.setClockT(this.engine.clock.knobT - 0.05);
+          this.render();
+        }
+      }
+
+      if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+        const knobGroup = active.closest(".knob-group");
+        if (knobGroup) {
+          e.preventDefault();
+          this.engine.setClockT(this.engine.clock.knobT + 0.05);
+          this.render();
+        }
+      }
+    });
   }
 }
 
@@ -9582,15 +10407,38 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusNetlistChip = document.getElementById("status-netlist-chip");
   const clockReadout = document.getElementById("clock-readout");
   const guideModal = document.getElementById("guide-modal");
+  const qaModal = document.getElementById("qa-modal");
 
-  // 1. Core Engine
+  // 1. Boot Splash Screen (Hardware POST)
+  const bootSplash = document.getElementById("boot-splash");
+  const splashFill = document.getElementById("splash-fill");
+  if (bootSplash) {
+    if (splashFill) {
+      setTimeout(() => { splashFill.style.width = "100%"; }, 50);
+    }
+    const dismissSplash = () => {
+      bootSplash.classList.add("fade-out");
+      setTimeout(() => {
+        if (bootSplash.parentNode) bootSplash.style.display = "none";
+      }, 550);
+    };
+    setTimeout(dismissSplash, 700);
+    bootSplash.addEventListener("click", dismissSplash);
+    window.addEventListener("keydown", (e) => {
+      if (!bootSplash.classList.contains("fade-out")) {
+        dismissSplash();
+      }
+    }, { once: true });
+  }
+
+  // 2. Core TTL Engine
   const engine = new TTLEngine();
 
   // Expose engine and board globally for direct console testing if desired
   window.ditEngine = engine;
   window.board = engine.board;
 
-  // 2. Logic Probe Hover Handler
+  // 3. Logic Probe Hover Handler
   const handleJackHover = (jackId, mouseEvent) => {
     if (!jackId) {
       probeHud.style.opacity = "0";
@@ -9627,11 +10475,11 @@ document.addEventListener("DOMContentLoaded", () => {
     probeVoltage.textContent = vText;
   };
 
-  // 3. Board Renderer & Console
+  // 4. Board Renderer & Console
   const board = new BoardRenderer(engine, svgBoard, handleJackHover);
   const consolePanel = new LabConsole(engine, board);
 
-  // 4. Update UI Status on Engine State Changes
+  // 5. Update UI Status on Engine State Changes
   const updateStatusBar = () => {
     let icCount = 0;
     for (const s of Object.values(engine.sockets)) {
@@ -9681,7 +10529,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateStatusBar();
   });
 
-  // 5. Header Control Bindings & Event Listeners
+  // 6. Header Control Bindings & Event Listeners
   window.addEventListener("cordsChanged", () => {
     updateStatusBar();
   });
@@ -9784,7 +10632,168 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 6. Sub-bar View Navigation Tabs
+  // 7. Phase 10 Toggles: Sound, Theme, Contrast
+  const btnToggleSound = document.getElementById("btn-toggle-sound");
+  const updateSoundBtn = () => {
+    if (!btnToggleSound) return;
+    const on = !!engine.soundEnabled;
+    btnToggleSound.textContent = on ? "🔊 Sound: ON" : "🔇 Sound: OFF";
+    btnToggleSound.classList.toggle("btn-active", on);
+  };
+  updateSoundBtn();
+  if (btnToggleSound) {
+    btnToggleSound.addEventListener("click", () => {
+      engine.toggleSound();
+      updateSoundBtn();
+    });
+  }
+
+  const btnToggleTheme = document.getElementById("btn-toggle-theme");
+  const savedTheme = localStorage.getItem("dit9005_theme");
+  if (savedTheme === "light") {
+    document.body.classList.add("light-theme");
+  }
+  const updateThemeBtn = () => {
+    if (!btnToggleTheme) return;
+    const isLight = document.body.classList.contains("light-theme");
+    btnToggleTheme.classList.toggle("btn-active", isLight);
+    btnToggleTheme.title = isLight ? "Switch to Dark Theme" : "Switch to Light Shell Theme";
+  };
+  updateThemeBtn();
+  if (btnToggleTheme) {
+    btnToggleTheme.addEventListener("click", () => {
+      document.body.classList.toggle("light-theme");
+      const isLight = document.body.classList.contains("light-theme");
+      localStorage.setItem("dit9005_theme", isLight ? "light" : "dark");
+      updateThemeBtn();
+    });
+  }
+
+  const btnToggleContrast = document.getElementById("btn-toggle-contrast");
+  const savedContrast = localStorage.getItem("dit9005_contrast");
+  if (savedContrast === "high") {
+    document.body.classList.add("high-contrast");
+  }
+  const updateContrastBtn = () => {
+    if (!btnToggleContrast) return;
+    const isHigh = document.body.classList.contains("high-contrast");
+    btnToggleContrast.classList.toggle("btn-active", isHigh);
+  };
+  updateContrastBtn();
+  if (btnToggleContrast) {
+    btnToggleContrast.addEventListener("click", () => {
+      document.body.classList.toggle("high-contrast");
+      const isHigh = document.body.classList.contains("high-contrast");
+      localStorage.setItem("dit9005_contrast", isHigh ? "high" : "normal");
+      updateContrastBtn();
+    });
+  }
+
+  // 8. Phase 10 QA Suite Modal & Hotkey (Ctrl+Shift+Q)
+  const btnOpenQA = document.getElementById("btn-open-qa");
+  const btnCloseQA = document.getElementById("btn-close-qa");
+  const btnRerunQA = document.getElementById("btn-rerun-qa");
+  const qaBanner = document.getElementById("qa-summary-banner");
+  const qaLogContainer = document.getElementById("qa-log-container");
+
+  const runAndDisplayQA = () => {
+    if (!qaModal || !qaLogContainer) return;
+    qaModal.classList.add("open");
+    qaLogContainer.innerHTML = '<div style="color: #38bdf8; padding: 12px;">⏳ Running automated QA test suite & latency benchmarks...</div>';
+    if (qaBanner) {
+      qaBanner.style.background = "#1e293b";
+      qaBanner.style.color = "#94a3b8";
+      qaBanner.textContent = "Executing tests across 15 IC models, 8 experiments, and engine cores...";
+    }
+
+    setTimeout(() => {
+      const res = engine.runAllTests();
+      const allPass = res.passed;
+      if (qaBanner) {
+        qaBanner.style.background = allPass ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)";
+        qaBanner.style.border = allPass ? "1px solid rgba(34, 197, 94, 0.4)" : "1px solid rgba(239, 68, 68, 0.4)";
+        qaBanner.style.color = allPass ? "#86efac" : "#fca5a5";
+        qaBanner.innerHTML = `<b>${allPass ? "✓ ALL QA CHECKS PASSED" : "⚠️ QA FAILURES DETECTED"}</b> — ` +
+          `${res.summary.passedCount}/${res.summary.totalTests} tests passed · ` +
+          `Benchmark: <b>${res.benchmark.avgSettleMs.toFixed(2)} ms / settle</b> (Target: &lt;16ms) · ` +
+          `Total Time: ${res.summary.totalDurationMs} ms`;
+      }
+
+      let html = "";
+
+      // Section 1: Benchmark
+      html += `<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+        <div style="font-weight: 700; color: #f59e0b; margin-bottom: 4px;">⚡ PERFORMANCE BENCHMARK (5 ICs, 60 cords, 50 cycles)</div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Average Engine Settle Latency: <b>${res.benchmark.avgSettleMs.toFixed(2)} ms</b></span>
+          <span class="${res.benchmark.passPerformance ? 'qa-pass-chip' : 'qa-fail-chip'}">${res.benchmark.passPerformance ? 'PASS (&lt;16ms)' : 'FAIL'}</span>
+        </div>
+      </div>`;
+
+      // Section 2: Core Self Tests
+      html += `<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+        <div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;">🔌 ENGINE & NETLIST SELF-TESTS (${res.selfTests.tests.filter(t => t.pass).length}/${res.selfTests.tests.length})</div>`;
+      for (const t of res.selfTests.tests) {
+        html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; font-size: 11px;">
+          <span style="color: ${t.pass ? '#cbd5e1' : '#f87171'};">● ${t.name}: <span style="color: #94a3b8;">${t.details || ''}</span></span>
+          <span class="${t.pass ? 'qa-pass-chip' : 'qa-fail-chip'}">${t.pass ? 'PASS' : 'FAIL'}</span>
+        </div>`;
+      }
+      html += `</div>`;
+
+      // Section 3: Complex IC Models
+      html += `<div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+        <div style="font-weight: 700; color: #a78bfa; margin-bottom: 6px;">🔲 COMPLEX IC MODEL TESTS (${res.icTests.tests.filter(t => t.pass).length}/${res.icTests.tests.length})</div>`;
+      for (const t of res.icTests.tests) {
+        html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; font-size: 11px;">
+          <span style="color: ${t.pass ? '#cbd5e1' : '#f87171'};">● ${t.name}: <span style="color: #94a3b8;">${t.details || ''}</span></span>
+          <span class="${t.pass ? 'qa-pass-chip' : 'qa-fail-chip'}">${t.pass ? 'PASS' : 'FAIL'}</span>
+        </div>`;
+      }
+      html += `</div>`;
+
+      // Section 4: Experiment Solution Verification
+      html += `<div>
+        <div style="font-weight: 700; color: #34d399; margin-bottom: 6px;">🧪 EXPERIMENT SOLUTION VERIFICATION (${res.experimentTests.filter(t => t.pass).length}/${res.experimentTests.length})</div>`;
+      for (const t of res.experimentTests) {
+        html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; font-size: 11px;">
+          <span style="color: ${t.pass ? '#cbd5e1' : '#f87171'};">● ${t.name}: <span style="color: #94a3b8;">${t.details || ''}</span></span>
+          <span class="${t.pass ? 'qa-pass-chip' : 'qa-fail-chip'}">${t.pass ? 'PASS' : 'FAIL'}</span>
+        </div>`;
+      }
+      html += `</div>`;
+
+      qaLogContainer.innerHTML = html;
+    }, 40);
+  };
+
+  if (btnOpenQA) btnOpenQA.addEventListener("click", runAndDisplayQA);
+  if (btnRerunQA) btnRerunQA.addEventListener("click", runAndDisplayQA);
+  if (btnCloseQA && qaModal) {
+    btnCloseQA.addEventListener("click", () => qaModal.classList.remove("open"));
+  }
+  if (qaModal) {
+    qaModal.addEventListener("click", (e) => {
+      if (e.target === qaModal) qaModal.classList.remove("open");
+    });
+  }
+
+  // Keyboard shortcut Ctrl+Shift+Q or Cmd+Shift+Q for QA modal, and Esc for modals
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "q" || e.key === "Q")) {
+      e.preventDefault();
+      if (qaModal.classList.contains("open")) {
+        qaModal.classList.remove("open");
+      } else {
+        runAndDisplayQA();
+      }
+    } else if (e.key === "Escape") {
+      if (qaModal && qaModal.classList.contains("open")) qaModal.classList.remove("open");
+      if (guideModal && guideModal.classList.contains("open")) guideModal.classList.remove("open");
+    }
+  });
+
+  // 9. Sub-bar View Navigation Tabs
   const viewTabs = document.querySelectorAll(".view-tab-btn");
   viewTabs.forEach(tab => {
     tab.addEventListener("click", () => {
@@ -9807,7 +10816,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 7. Load Circuit: Restore from localStorage if present, else load Exp 1
+  // 10. Load Circuit: Restore from localStorage if present, else load Exp 1
   const hasSavedCircuit = engine.loadSavedCircuit();
   if (!hasSavedCircuit) {
     consolePanel.autoWireExperiment(EXPERIMENTS[0]);

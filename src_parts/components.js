@@ -191,8 +191,8 @@ const SVG_COMPONENTS = {
     `;
 
     return `
-      <g class="jack-group" data-jack="${id}" id="jack-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})">
-        <circle r="18" fill="transparent" class="jack-hitbox" />
+      <g class="jack-group accessible-jack" data-jack="${id}" id="jack-${id.replace(/[^a-zA-Z0-9_]/g, '_')}" transform="translate(${cx}, ${cy})" tabindex="0" role="button" aria-label="Terminal Jack ${id}">
+        <circle r="22" fill="transparent" class="jack-hitbox" />
         <circle r="11" fill="url(#brassJack)" filter="url(#shadowJack)" />
         <circle r="11" fill="none" stroke="#3d2c02" stroke-width="0.75" />
         <circle r="8.5" fill="none" stroke="#fff4a3" stroke-width="0.6" opacity="0.6" />
@@ -215,7 +215,7 @@ const SVG_COMPONENTS = {
     const batAngle = isHigh ? -18 : 18;
 
     return `
-      <g class="switch-group" data-switch="${id}" transform="translate(${cx}, ${cy})">
+      <g class="switch-group" data-switch="${id}" transform="translate(${cx}, ${cy})" tabindex="0" role="switch" aria-checked="${isHigh ? 'true' : 'false'}" aria-label="Input Switch ${id} (${isHigh ? 'Logic 1' : 'Logic 0'})">
         <rect x="-14" y="-22" width="28" height="44" rx="4" fill="#242830" stroke="#4a5260" stroke-width="1" filter="url(#shadowBevel)" />
         <circle cx="0" cy="-16" r="1.5" fill="#888" />
         <circle cx="0" cy="16" r="1.5" fill="#888" />
@@ -258,7 +258,7 @@ const SVG_COMPONENTS = {
     ` : "";
 
     return `
-      <g class="led-group" data-led="${id}">
+      <g class="led-group ${b > 0.05 ? 'led-active-glow' : ''}" data-led="${id}">
         <circle cx="${cx}" cy="${cy}" r="7" fill="#1a1e24" stroke="#333" stroke-width="0.5" />
         ${glowSvg}
         <circle cx="${cx}" cy="${cy}" r="5.5" fill="${fill}" />
@@ -334,7 +334,7 @@ const SVG_COMPONENTS = {
     const shadowOpacity = isPressed ? "0.3" : "0.7";
 
     return `
-      <g class="pushbutton-group" data-pulser="${id}" transform="translate(${cx}, ${cy})">
+      <g class="pushbutton-group" data-pulser="${id}" transform="translate(${cx}, ${cy})" tabindex="0" role="button" aria-label="Manual Pulser ${id}">
         <circle cx="0" cy="0" r="19" fill="url(#screwHead)" filter="url(#shadowBevel)" />
         <circle cx="0" cy="0" r="15" fill="#181818" />
         <circle cx="0" cy="${rOffset}" r="14" fill="${btnFill}" opacity="${shadowOpacity}" filter="url(#shadowBevel)" />
@@ -358,7 +358,7 @@ const SVG_COMPONENTS = {
     const angle = -135 + knobT * 270;
 
     return `
-      <g class="knob-group" data-knob="${id}" transform="translate(${cx}, ${cy})">
+      <g class="knob-group" data-knob="${id}" transform="translate(${cx}, ${cy})" tabindex="0" role="slider" aria-label="Clock Frequency Knob" aria-valuemin="0" aria-valuemax="1" aria-valuenow="${knobT.toFixed(2)}">
         <!-- Radial scale graduation ticks and labels -->
         <circle cx="0" cy="0" r="34" fill="none" stroke="#3e4a5c" stroke-width="1.5" stroke-dasharray="2, 6" />
         <text x="-32" y="22" class="silkscreen-text mini" text-anchor="middle">0.5Hz</text>
@@ -463,7 +463,7 @@ const SVG_COMPONENTS = {
         <rect x="${x + 8}" y="${y + 8}" width="${width - 16}" height="${height - 16}" rx="3" fill="#10345c" stroke="#0b2440" stroke-width="1" />
         ${pinHoles}
         <polygon points="${x + 14},${is40 ? y + 16 : y + height - 12} ${x + 20},${is40 ? y + 22 : y + height - 6} ${x + 8},${is40 ? y + 22 : y + height - 6}" fill="#93c5fd" opacity="0.6" />
-        <g class="zif-lever" data-socket="${socketId}" transform="translate(${leverX}, ${leverY}) ${leverTransform}" style="cursor: pointer;">
+        <g class="zif-lever" data-socket="${socketId}" transform="translate(${leverX}, ${leverY}) ${leverTransform}" style="cursor: pointer;" tabindex="0" role="button" aria-label="ZIF Socket ${socketId} Lever (${leverLocked ? 'Locked' : 'Open'})">
           <rect x="${is40 ? -3 : -24}" y="${is40 ? 0 : -3}" width="${is40 ? 6 : 28}" height="${is40 ? 28 : 6}" rx="2" fill="url(#screwHead)" stroke="#333" stroke-width="0.5" />
           <circle cx="${is40 ? 0 : -24}" cy="${is40 ? 28 : 0}" r="7" fill="#1d4ed8" stroke="#93c5fd" stroke-width="1" />
         </g>
@@ -680,7 +680,7 @@ const SVG_COMPONENTS = {
     `;
 
     return `
-      <g class="patch-cord-group ${isSelected ? 'selected' : ''}" data-wire-id="${wire.id}">
+      <g class="patch-cord-group ${isSelected ? 'selected' : ''} cord-animate-in" data-wire-id="${wire.id}">
         <title>Patch Cord ${wire.id}: ${wire.from} ↔ ${wire.to}</title>
         <!-- Soft Ground Shadow -->
         <path d="${shadowPath}" fill="none" stroke="rgba(0, 0, 0, 0.45)" stroke-width="8" stroke-linecap="round" filter="url(#cordShadowFilter)" pointer-events="none" />

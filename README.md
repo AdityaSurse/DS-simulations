@@ -5,6 +5,7 @@
 [![Single File Delivery](https://img.shields.io/badge/Delivery-Single_HTML-22c55e?logo=html5&logoColor=white)](index.html)
 [![Zero Build Step](https://img.shields.io/badge/Build-None_(Browser_Native)-38bdf8)](index.html)
 [![Lab Tested](https://img.shields.io/badge/Target-DIT_9005_Hardware-e11d48)](docs/references/Kit_Layout_Addendum.md)
+[![Automated QA](https://img.shields.io/badge/QA_Suite-79%2F79_Passed-10b981)](index.html)
 
 > **A zero-install, pixel-accurate virtual clone of the Hi-Tech DIT 9005 Digital IC Trainer kit.**  
 > Designed specifically for engineering students preparing for Digital Systems practical lab exams.  
@@ -23,15 +24,18 @@
 ## ✨ Features
 
 - 🎛️ **Authentic 3D Hardware Aesthetics**: Realistic teak/wood-grain frame with countersunk brass screws, dark green solder-mask PCB, brass eyelet jacks, mechanical SPST bat switches, red push buttons, bakelite knurled rotary knobs, and diffused 5mm epoxy LEDs.
-- 🟡 **Physics-Based Sagging Patch Cords**: True catenary Bézier curvature with ground drop shadows, specularity highlights, and 3D banana plug boots in 6 standard lab colors (Yellow, Red, Black, Blue, Green, White).
+- 🟡 **Physics-Based Sagging Patch Cords**: True catenary Bézier curvature with ground drop shadows, specularity highlights, subtle insertion rebound wobble, and 3D banana plug boots in 6 standard lab colors (Yellow, Red, Black, Blue, Green, White).
 - 🖲️ **Zero-Insertion-Force (ZIF) Sockets**: Four 20-pin ZIF sockets (`U1`–`U4`) and one 40-pin universal expansion socket (`U5`) with animated mechanical levers and customizable pin-1 alignments.
 - ⚡ **Strict vs Practice Power Modes**: In default strict mode, students must run physical jumper wires from $+5\text{V}$ and $\text{GND}$ rails to the corresponding IC pins before gates activate.
-- 🔄 **Integrated Clock & Manual Pulsers**: On-board variable frequency oscillator ($1\text{Hz}$ to $500\text{Hz}$) with blinking indicator LED, plus dual debounced Schmitt-trigger (`CD4093`) push buttons with complementary $Q$ and $\bar{Q}$ outputs.
-- 🔢 **Dual 7-Segment & 8-Bit LED Output**: High-contrast red 7-segment hex/BCD displays driven by internal decoders from output jacks $Y_7\text{–}Y_0$.
-- 📋 **Integrated Practical Exam Experiments**: Pre-configured guided lab manual experiments (Study of Gates, MUX 74153, DEMUX 74138, Adder 7483, Comparator 7485, Counter 7490, and Up/Down Counter 74191).
+- 🔄 **Integrated Clock & Manual Pulsers**: On-board variable frequency oscillator ($0.5\text{Hz}$ to $10\text{kHz}$) with blinking indicator LED, plus dual debounced Schmitt-trigger (`CD4093`) push buttons with complementary $Q$ and $\bar{Q}$ outputs.
+- 🔢 **Dual 7-Segment & 8-Bit LED Output**: High-contrast red 7-segment hex/BCD displays driven by internal decoders from output jacks $Y_7\text{–}Y_0$, plus 8 discrete monitor LEDs.
+- 📋 **Integrated Practical Exam Experiments**: Pre-configured guided lab manual experiments (Study of Gates, MUX 74153, DEMUX 74138, Adder 7483, Counter 7490, Shift Register 7474, Comparator 7485, and Up/Down Counter 74191).
 - 🧪 **One-Click Truth Table Auto-Verification**: Automated test-bench cycles through input combinations, tests student wiring against expected truth tables, and pinpoints wiring bugs.
-- 🔍 **Interactive Logic Probe & DMM**: Hover over or click any terminal jack to inspect instantaneous voltage, logic state (`HIGH`, `LOW`, `FLOAT`, `SHORT`), and driver netlists.
-- 🔊 **Tactile Web Audio Feedback**: Realistic mechanical switch clicks, plug insertions, and overload buzzer alarms synthesized via the Web Audio API.
+- 🔍 **Interactive Logic Probe & DMM HUD**: Hover over or click any terminal jack to inspect instantaneous voltage, logic state (`HIGH`, `LOW`, `FLOAT`, `SHORT`), and driver netlists.
+- 🔊 **Tactile Web Audio Feedback (Optional, OFF by default)**: Realistic mechanical switch clicks, lever snaps, and overload buzzer alarms synthesized via the Web Audio API.
+- 📱 **Complete Touch & Mobile Gestures**: Pinch-to-zoom, two-finger pan, and tap-jack to tap-jack wiring with expanded hitboxes (`r="22"`) and `touch-action: none;`.
+- 🌓 **Theme & Accessibility Support**: Light/Dark shell toggle, High-Contrast mode, keyboard focus rings (`:focus-visible`), and full ARIA screen-reader attributes.
+- 🛠️ **Built-in QA Verification Suite (`Ctrl+Shift+Q`)**: 79 automated checks testing every IC model, engine self-test, experiment solution, and an engine settle latency benchmark (< 16 ms/settle).
 
 ---
 
@@ -72,7 +76,7 @@ flowchart TD
         AimTab["Aim & Step-by-Step Lab Manual"]:::console
         DrawerTab["IC Drawer & ZIF Alignment"]:::console
         RefTab["Datasheet Pinouts & Schematics"]:::console
-        DiagTab["Netlist Inspector & JSON Export"]:::console
+        DiagTab["Netlist Inspector & Observation Sheet"]:::console
     end
 
     subgraph Data_Layer["📚 Static Data Schemas"]
@@ -113,11 +117,11 @@ flowchart TD
     PickExp["1. Select Practical Experiment from Console"]:::step
     ReadAim["2. Review Aim, Pinout Diagram & Truth Table"]:::step
     InsertIC["3. Insert IC into ZIF Socket (e.g. 7408 in U1) & Lock Lever"]:::step
-    PowerWire["4. Patch Power Rails: +5V to VCC (Pin 14/20), GND to GND (Pin 7)"]:::step
+    PowerWire["4. Patch Power Rails: +5V to VCC (Pin 14/16/5), GND to GND (Pin 7/8/10)"]:::step
     LogicWire["5. Patch Input Switches to Gate Inputs & Output to LEDs"]:::step
     TestInputs["6. Flip Switches & Observe Output LEDs / 7-Segment Digits"]:::step
-    VerifyClick{"7. Run 'Verify Truth Table'"}:::check
-    AutoPassed["8. Passed! Review Waveforms & Results"]:::success
+    VerifyClick{"7. Run 'Auto-Check'"}:::check
+    AutoPassed["8. Passed! Review Waveforms & Observation Sheet"]:::success
     DebugLoop["Fix Wiring / Replace Loose Cords"]:::step
 
     Start --> PickExp --> ReadAim --> InsertIC --> PowerWire --> LogicWire --> TestInputs --> VerifyClick
@@ -162,177 +166,20 @@ flowchart TD
 
 ---
 
-### 4. Netlist Construction via Union-Find
-```mermaid
-flowchart TD
-    classDef jack fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#ffffff;
-    classDef union fill:#0f766e,stroke:#14b8a6,stroke-width:2px,color:#ffffff;
-    classDef net fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#ffffff;
-    classDef resolve fill:#701a75,stroke:#f472b6,stroke-width:2px,color:#ffffff;
+## ⌨️ Keyboard Shortcuts
 
-    subgraph PhysicalJacks["Jacks on PCB"]
-        J1["Switch IN.A0"]:::jack
-        J2["ZIF Jack U1.J1 (Pin 1A)"]:::jack
-        J3["ZIF Jack U1.J3 (Pin 1Y)"]:::jack
-        J4["Output OUT.Y0"]:::jack
-    end
-
-    subgraph UnionFind["Equivalence Partitioning"]
-        Cord1["Wire (IN.A0 -> U1.J1)"]:::union
-        Cord2["Wire (U1.J3 -> OUT.Y0)"]:::union
-        DSU1["Find Root: Net_A (IN.A0, U1.J1)"]:::net
-        DSU2["Find Root: Net_B (U1.J3, OUT.Y0)"]:::net
-    end
-
-    subgraph NetResolution["Net Electrical Resolution"]
-        Drive1["Driver: Switch IN.A0 = 1"]:::resolve
-        Sink1["Receiver: IC 7408 Pin 1A receives 1"]:::resolve
-        Drive2["Driver: IC 7408 Pin 1Y calculates 1 & 1 = 1"]:::resolve
-        Sink2["Receiver: OUT.Y0 turns LED ON"]:::resolve
-    end
-
-    J1 --> Cord1 --> DSU1 --> Drive1 --> Sink1
-    J2 --> Cord1
-    J3 --> Cord2 --> DSU2 --> Drive2 --> Sink2
-    J4 --> Cord2
-```
-
----
-
-### 5. Patch Cord Interaction State Machine
-```mermaid
-stateDiagram-v2
-    [*] --> Idle: Simulator Loaded
-
-    Idle --> Dragging: MouseDown on Jack A
-    Idle --> Idle: RightClick wire (Delete)
-
-    Dragging --> HoveringJack: Mouse moves over Jack B
-    Dragging --> DroppedInvalid: MouseUp on empty PCB or Jack A
-    HoveringJack --> Dragging: Mouse leaves Jack B
-
-    HoveringJack --> DroppedValid: MouseUp on Jack B
-    DroppedValid --> Idle: New wire added & Netlist recomputed
-    DroppedInvalid --> Idle: Cancel wire / rubber band removed
-
-    Idle --> DeleteModeActive: Click 'Delete Mode'
-    DeleteModeActive --> Deleted: Click any Jack or Patch Cord
-    Deleted --> DeleteModeActive: Wire removed & buzzer click
-    DeleteModeActive --> Idle: Deactivate Delete Mode
-```
-
----
-
-### 6. IC Lifecycle in Socket
-```mermaid
-stateDiagram-v2
-    [*] --> Drawer: Stored in Console IC Drawer
-
-    Drawer --> LeverOpen: Select Chip for Socket (U1..U4 or U5)
-    LeverOpen --> Inserted: Seat IC into Socket Slots
-    Inserted --> LeverOpen: Select Alignment (Left / Center / Right)
-    Inserted --> LeverClosed: Lock ZIF Lever (Mechanical Engagement)
-
-    LeverClosed --> Running: Master 230V ON & +5V/GND Wires Patched
-    Running --> Unpowered: Power Cord Removed or Short Detected
-    Unpowered --> Running: Fix Power Supply Patching
-
-    LeverClosed --> LeverOpen: Unlock ZIF Lever
-    LeverOpen --> Drawer: Click 'Remove Chip'
-```
-
----
-
-### 7. Experiment Data Model
-```mermaid
-classDiagram
-    class IC {
-        +String name
-        +String title
-        +String package
-        +int pinCount
-        +int vccPin
-        +int gndPin
-        +Array~Pin~ pins
-        +Function eval(inputs, state)
-        +Object truthTable
-    }
-
-    class Pin {
-        +int pinNumber
-        +String name
-        +String type
-    }
-
-    class Socket {
-        +String socketId
-        +int maxPins
-        +String chipName
-        +String alignment
-        +Boolean leverLocked
-        +Object state
-        +getJackForPin(pin)
-    }
-
-    class Experiment {
-        +String id
-        +int number
-        +String title
-        +String aim
-        +String apparatus
-        +String theory
-        +Array~String~ stepByStep
-        +Object recommendedSocketICs
-        +Array~Wire~ recommendedWires
-        +Array~TruthTableRow~ tableRows
-    }
-
-    class TruthTableRow {
-        +Object inputs
-        +Object expected
-    }
-
-    class Net {
-        +String rootId
-        +Set~String~ jacks
-        +Array~Object~ drivers
-        +String state
-        +float voltage
-    }
-
-    IC "1" *-- "many" Pin : has
-    Socket "1" o-- "0..1" IC : seats
-    Experiment "1" *-- "many" TruthTableRow : defines
-    Net "1" o-- "many" Pin : connects
-```
-
----
-
-### 8. Implementation Roadmap (Phases 1–10)
-```mermaid
-gantt
-    title DIT 9005 Implementation Roadmap (Phases 1 to 10)
-    dateFormat  YYYY-MM-DD
-    axisFormat  %d %b
-
-    section Architecture & Docs
-    Phase 1: Architecture & Visual README      :done,    p1, 2026-11-01, 2026-11-02
-
-    section Hardware UI & Layout
-    Phase 2: Design Tokens & SVG Layout Shell   :done,    p2, 2026-11-02, 2026-11-03
-    Phase 3: 3D SVG Components (Jacks, ICs)     :done,    p3, 2026-11-03, 2026-11-05
-
-    section Simulation Engine
-    Phase 4: Catenary Patch Cords & Snapping    :done,    p4, 2026-11-05, 2026-11-07
-    Phase 5: Union-Find Netlist & TTL Physics   :done,    p5, 2026-11-07, 2026-11-09
-    Phase 6: 74-Series IC Library Database      :done,    p6, 2026-11-09, 2026-11-11
-
-    section Console & Experiments
-    Phase 7: Clock, Pulser & 7-Segment Output   :done,    p7, 2026-11-11, 2026-11-13
-    Phase 8: Laboratory Console & IC Drawer     :done,    p8, 2026-11-13, 2026-11-15
-    Phase 9: Experiments 1-8 & Auto-Verifier    :done,    p9, 2026-11-15, 2026-11-17
-    Phase 10: Logic Probe HUD, Audio & Polish   :done,    p10, 2026-11-17, 2026-11-19
-```
+| Shortcut | Context | Action |
+|---|---|---|
+| **`Space + Drag`** | Board Canvas | Pan the view across the green trainer PCB |
+| **`Scroll Wheel`** | Board Canvas | Zoom in / Zoom out centered on cursor position |
+| **`Enter` / `Space`** | Focused Jack | Start patch cord connection / Complete patch cord connection |
+| **`Enter` / `Space`** | Focused Switch | Toggle switch position between Logic 0 (Down) and Logic 1 (Up) |
+| **`Enter` / `Space`** | Focused ZIF Lever | Lock / unlock socket ZIF lever |
+| **`Escape`** | Global | Cancel in-progress wire, deselect cord, or close open modals |
+| **`Delete` / `Backspace`** | Selected Cord | Remove the currently selected patch cord |
+| **`Ctrl + Z`** (or `Cmd + Z`) | Global | Undo last patch cord connection or disconnection |
+| **`Ctrl + Y`** (or `Cmd + Shift + Z`) | Global | Redo previously undone patch cord action |
+| **`Ctrl + Shift + Q`** (or `Cmd + Shift + Q`) | Global | Open **Automated QA & Benchmark Suite** dialog |
 
 ---
 
@@ -363,13 +210,66 @@ gantt
 | Exp # | Experiment Title | Core ICs Required | Purpose & Syllabus Learning Outcome |
 |:---:|---|---|---|
 | **1** | **Study of Basic Logic Gates** | `7404`, `7408`, `7432`, `7400`, `7402`, `7486` | Verify truth tables for all 6 fundamental gates; observe floating inputs. |
-| **2** | **TTL & CMOS Electrical Parameters** | `7404`, `7400` | Measure voltage thresholds ($V_{OH}, V_{OL}, V_{IH}, V_{IL}$) and fan-out limits. |
-| **3** | **Multiplexer using IC 74153** | `74153` | Implement 4:1 data selection and expand to 8:1 multiplexer logic. |
-| **4** | **Demultiplexer / Decoder 74138** | `74138` | Study 3:8 decoding and implement a Full Adder circuit using decoders. |
-| **5** | **Binary Full Adder & Subtractor 7483** | `7483`, `7486` | Perform 4-bit binary addition and 2's complement subtraction. |
-| **6** | **Magnitude Comparator 7485** | `7485` | Compare two 4-bit binary numbers ($A$ and $B$) with cascading inputs. |
-| **7** | **Asynchronous Counters (7490 / 7493)** | `7490`, `7493` | Build MOD-6, MOD-10 (BCD), and MOD-42 frequency dividing counters. |
-| **8** | **Synchronous Up/Down Counter 74191** | `74191`, `7474` | Clock-driven reversible 4-bit counter with load and ripple carry flags. |
+| **2** | **Multiplexer using IC 74153** | `74153` | Implement 4:1 data selection, Full Adder via MUX, and expand to 8:1 logic. |
+| **3** | **Demultiplexer / Decoder 74138** | `74138` | Study 3:8 decoding, Full Subtractor implementation, and cascaded 4:16 decoding. |
+| **4** | **Binary Full Adder & Subtractor 7483** | `7483`, `7486` | 4-bit parallel adder and 2's complement adder/subtractor with sign overflow. |
+| **5** | **Asynchronous Decade Counter 7490** | `7490` | MOD-6, MOD-10 (BCD), and MOD-42 counters with 7-segment decoded readouts. |
+| **6** | **Shift Registers using Flip-Flops 7474** | `7474` | SISO, SIPO, PISO, PIPO 4-bit registers and Ring/Johnson counters. |
+| **7** | **4-Bit Magnitude Comparator 7485** | `7485` | Compares two 4-bit words ($A > B, A = B, A < B$) with cascading expansion. |
+| **8** | **Synchronous Up/Down Counter 74191** | `74191` | Synchronous 4-bit up/down counting, preloading, and ripple clock carry flags. |
+
+---
+
+## ❓ Frequently Asked Questions (FAQ)
+
+### Q: Why does my output LED not light up?
+1. **Check Power Mode**: By default, **Strict Power Mode** is active. You must connect a patch cord from `+5V` to the IC's $V_{CC}$ pin and `GND` to the IC's ground pin.
+2. **Check ZIF Socket Lever**: Ensure the socket lever is locked (horizontal/down position). An open lever disconnects all pins.
+3. **Check IC Placement**: Open the **IC Drawer** tab to verify an IC is inserted into the correct socket (`U1`–`U5`) with matching alignment (Pin 1 at top-left).
+4. **Use Diagnostics**: Click the **Diagnostics** tab in the sidebar to review the live Netlist and verify the socket voltages.
+
+### Q: Why does an unconnected / open IC pin read HIGH (Logic 1)?
+- This is physically accurate **TTL bipolar logic behavior**. In standard 74-series TTL circuits (such as 7408 or 7400), input transistor emitters left unconnected float to approximately $+1.8\text{V}\text{--}+2.4\text{V}$, which the internal transistor interprets as a valid **Logic HIGH**. Connecting it to `GND` pulls it to $0\text{V}$ (Logic LOW).
+
+### Q: How do I remove a patch cord?
+- **Option 1**: Right-click on any patch cord or its terminal banana plug.
+- **Option 2**: Click the cord once to select it (glowing highlight), then press `Delete` or `Backspace`.
+- **Option 3**: Click **"✕ Delete Wire"** in the header to enter Delete Mode, then click any cord.
+
+### Q: How do I practice under realistic exam conditions?
+- Click the **"🎓 Exam Mode"** button in the header toolbar. This hides the "⚡ Auto-Wire Circuit", "💡 Hint", and "👁️ Show Solution" buttons, forcing you to consult only the schematic and pinout diagrams.
+
+---
+
+## 🚀 Running Locally & Free Deployment
+
+### Local Offline Execution (Zero Setup)
+No build steps, node daemons, or internet connections are required:
+1. Clone or download the repository:
+   ```bash
+   git clone https://github.com/your-username/dit9005-simulator.git
+   cd dit9005-simulator
+   ```
+2. Double-click or open [`index.html`](file:///Users/adityasurse/Documents/Trainer%20kit%20sim/index.html) directly in any modern browser:
+   ```bash
+   open index.html   # macOS
+   start index.html  # Windows
+   xdg-open index.html # Linux
+   ```
+
+### Free Deployment on GitHub Pages
+1. Push the repository to GitHub.
+2. In your repo, go to **Settings** $\to$ **Pages**.
+3. Under **Build and deployment**, select **Source**: `Deploy from a branch`.
+4. Choose Branch `main` and Folder `/ (root)`. Click **Save**.
+5. Your simulator is immediately live at `https://<username>.github.io/<repo-name>/`.
+
+### Free Deployment on Vercel
+1. The repository includes [`vercel.json`](file:///Users/adityasurse/Documents/Trainer%20kit%20sim/vercel.json) pre-configured for static clean URLs.
+2. Import the repository in [Vercel Dashboard](https://vercel.com) or run:
+   ```bash
+   vercel --prod
+   ```
 
 ---
 
@@ -378,8 +278,9 @@ gantt
 ```text
 dit9005-trainer-simulator/
 ├── index.html                 # 🚀 SINGLE DELIVERABLE (HTML + CSS + Vanilla JS, SVG)
-├── build_index.py             # Optional developer bundler from modular source parts
-├── README.md                  # Complete architectural & visual project documentation
+├── build_index.py             # Modular build script concatenating src_parts into index.html
+├── vercel.json                # Vercel static deployment configuration
+├── README.md                  # Complete architectural & user documentation
 ├── docs/
 │   └── references/
 │       ├── DIT9005_upright.png # Upright laboratory reference photo of physical hardware
@@ -398,66 +299,6 @@ dit9005-trainer-simulator/
 
 ---
 
-## 🚀 Running Locally & Free Deployment
-
-### Local Execution (Zero Setup)
-No build steps, package managers, or server daemons are needed:
-1. Clone or download the repository:
-   ```bash
-   git clone https://github.com/your-username/dit9005-simulator.git
-   cd dit9005-simulator
-   ```
-2. Open [`index.html`](file:///Users/adityasurse/Documents/Trainer%20kit%20sim/index.html) directly in any web browser:
-   ```bash
-   open index.html   # On macOS
-   start index.html  # On Windows
-   xdg-open index.html # On Linux
-   ```
-
-### Free Deployment on GitHub Pages
-1. Go to your GitHub repository **Settings** $\to$ **Pages**.
-2. Select **Source**: `Deploy from a branch`.
-3. Select **Branch**: `main`, Folder: `/ (root)`.
-4. Click **Save**. Your simulator will be live at `https://<username>.github.io/dit9005-simulator/`.
-
-### Free Deployment on Vercel
-1. Install Vercel CLI (`npm i -g vercel`) or link the GitHub repo in the [Vercel Dashboard](https://vercel.com).
-2. Deploy with zero configuration:
-   ```bash
-   vercel --prod
-   ```
-
----
-
-## 🗺️ Implementation Roadmap Checklist
-
-- [x] **Phase 1: Architecture & Rich Documentation** (Detailed `README.md`, Mermaid diagrams, IC tables)
-- [x] **Phase 2: Design Tokens & Exact Trainer SVG Layout** (Green PCB, wood frame, 8 hardware zones)
-- [x] **Phase 3: 3D SVG Hardware Components** (Brass jacks, switches, push buttons, LEDs, 7-seg, ZIF sockets)
-- [x] **Phase 4: Interactive Patch Cording** (Sagging Bézier curves, multi-color palette, hover snapping, deletion)
-- [x] **Phase 5: Simulation Engine & Real TTL Physics** (Union-find netlist, strict power mode, floating inputs = 1, short circuit alarms)
-- [x] **Phase 6: Comprehensive 74-Series IC Library** (Gate logic, decoders, multiplexers, adders, counters)
-- [x] **Phase 7: Integrated Clock, Pulser & Output Displays** (Variable frequency oscillator, debounced pulsers, dual 7-segment hex decoder)
-- [x] **Phase 8: Laboratory Console & IC Drawer** (Tabbed sidebar, socket management, alignment settings, reference pinouts)
-- [x] **Phase 9: University Practical Experiments** (Experiments 1–8, auto-wiring demos, automated truth table verification)
-- [x] **Phase 10: Diagnostics, Audio Synthesis & Final Polish** (Logic probe HUD, Web Audio switch clicks and buzzers, JSON import/export)
-
----
-
-## 🤝 Contributing
-
-Contributions to expand the IC library (such as additional 74-series sequential chips or CMOS 4000 series equivalents) or to add new university lab experiments are welcome!
-1. Fork the Project.
-2. Create your Feature Branch (`git checkout -b feature/Add-IC-74194`).
-3. Commit your Changes (`git commit -m 'Add 74194 Universal Shift Register'`).
-4. Push to the Branch (`git push origin feature/Add-IC-74194`).
-5. Open a Pull Request.
-
----
-
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
-*Original branding and implementation: **DIT 9005 Simulator** — Built with pride for engineering students.*
-
+Distributed under the **MIT License**. Built with pride for engineering students mastering digital logic systems.

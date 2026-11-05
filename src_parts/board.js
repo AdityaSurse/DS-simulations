@@ -30,10 +30,16 @@ class BoardRenderer {
     this.ghostWires = [];
     this.highlightedJacks = [];
 
+    // Performance: requestAnimationFrame batching
+    this.renderRequested = false;
+    this.cordsRenderRequested = false;
+
     this.setupViewPresets();
     this.bindEvents();
     this.bindPanZoom();
     this.bindKnobDrag();
+    this.bindTouchEvents();
+    this.bindKeyboardAccessibility();
   }
 
   setGhostWires(wires, show = true) {
@@ -587,7 +593,20 @@ class BoardRenderer {
   }
 
   // High performance cord-layer update (instant 60fps with 60+ cords)
-  renderCordsOnly() {
+  renderCordsOnly(immediate = false) {
+    if (immediate || typeof requestAnimationFrame === "undefined") {
+      this.doRenderCords();
+      return;
+    }
+    if (this.cordsRenderRequested) return;
+    this.cordsRenderRequested = true;
+    requestAnimationFrame(() => {
+      this.cordsRenderRequested = false;
+      this.doRenderCords();
+    });
+  }
+
+  doRenderCords() {
     const layer = this.svg.querySelector("#wires-layer");
     if (!layer) return;
 
@@ -616,7 +635,20 @@ class BoardRenderer {
     }
   }
 
-  render() {
+  render(immediate = false) {
+    if (immediate || typeof requestAnimationFrame === "undefined") {
+      this.doRender();
+      return;
+    }
+    if (this.renderRequested) return;
+    this.renderRequested = true;
+    requestAnimationFrame(() => {
+      this.renderRequested = false;
+      this.doRender();
+    });
+  }
+
+  doRender() {
     this.jackCoords = {};
     let svgContent = SVG_COMPONENTS.renderDefs();
 
@@ -1057,5 +1089,264 @@ class BoardRenderer {
         }
       }
     }
+  }
+
+  // Phase 10 Touch Support: Pinch-to-zoom, 2-finger pan, tap jack -> tap jack
+  bindTouchEvents() {
+    const container = this.svg.parentElement;
+    if (!container) return;
+
+    let initialDistance = 0;
+    let initialViewBox = null;
+    let initialMidpoint = null;
+    let touchStartTime = 0;
+    let touchStartPos = null;
+
+    const getDistAndMid = (t1, t2) => {
+      const dx = t2.clientX - t1.clientX;
+      const dy = t2.clientY - t1.clientY;
+      const dist = Math.hypot(dx, dy);
+      const mid = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+      };
+      return { dist, mid };
+    };
+
+    container.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const { dist, mid } = getDistAndMid(t1, t2);
+        initialDistance = dist;
+        initialViewBox = { ...this.viewBox };
+        initialMidpoint = mid;
+        this.isPanning = false;
+        this.isDraggingCord = false;
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        touchStartTime = Date.now();
+        touchStartPos = { x: touch.clientX, y: touch.clientY };
+
+        const targetJack = touch.target.closest(".jack-group");
+        if (targetJack) {
+          e.preventDefault();
+          const jackId = targetJack.dataset.jack;
+          this.dragStartJack = jackId;
+          this.dragStartPos = this.getSVGCoords(touch);
+          this.tempMousePos = this.dragStartPos;
+          this.isDraggingCord = true;
+          this.updateRubberBand();
+          return;
+        }
+
+        // Check interactive components on touch
+        const switchGroup = touch.target.closest(".switch-group");
+        if (switchGroup) {
+          e.preventDefault();
+          this.engine.toggleInput(switchGroup.dataset.switch);
+          return;
+        }
+
+        const zifLever = touch.target.closest(".zif-lever");
+        if (zifLever) {
+          e.preventDefault();
+          const sId = zifLever.dataset.socket;
+          this.engine.setSocketLever(sId, !this.engine.sockets[sId].leverLocked);
+          return;
+        }
+
+        const pulserBtn = touch.target.closest(".pushbutton-group");
+        if (pulserBtn) {
+          e.preventDefault();
+          const pulserNum = parseInt(pulserBtn.dataset.pulser, 10);
+          this.engine.setPulser(pulserNum, true);
+          return;
+        }
+
+        // Single finger pan start if on empty board
+        this.isPanning = true;
+        this.panStart = { x: touch.clientX, y: touch.clientY };
+      }
+    }, { passive: false });
+
+    container.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 2 && initialDistance > 0 && initialViewBox) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const { dist, mid } = getDistAndMid(t1, t2);
+
+        const scale = initialDistance / Math.max(10, dist);
+        const centerCoords = this.getSVGCoords({ clientX: mid.x, clientY: mid.y });
+
+        const newW = Math.max(300, Math.min(2400, initialViewBox.w * scale));
+        const newH = Math.max(220, Math.min(1740, initialViewBox.h * scale));
+        const ratioX = (centerCoords.x - initialViewBox.x) / initialViewBox.w;
+        const ratioY = (centerCoords.y - initialViewBox.y) / initialViewBox.h;
+
+        const panDx = (mid.x - initialMidpoint.x) * (newW / this.svg.clientWidth);
+        const panDy = (mid.y - initialMidpoint.y) * (newH / this.svg.clientHeight);
+
+        this.viewBox.x = centerCoords.x - ratioX * newW - panDx;
+        this.viewBox.y = centerCoords.y - ratioY * newH - panDy;
+        this.viewBox.w = newW;
+        this.viewBox.h = newH;
+        this.applyViewBox();
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        if (this.isDraggingCord) {
+          e.preventDefault();
+          this.tempMousePos = this.getSVGCoords(touch);
+          const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+          const targetGroup = elem ? elem.closest(".jack-group") : null;
+          this.hoverTargetJack = targetGroup ? targetGroup.dataset.jack : null;
+          this.updateRubberBand();
+        } else if (this.isPanning) {
+          e.preventDefault();
+          const dx = (touch.clientX - this.panStart.x) * (this.viewBox.w / this.svg.clientWidth);
+          const dy = (touch.clientY - this.panStart.y) * (this.viewBox.h / this.svg.clientHeight);
+          this.viewBox.x -= dx;
+          this.viewBox.y -= dy;
+          this.panStart = { x: touch.clientX, y: touch.clientY };
+          this.applyViewBox();
+        }
+      }
+    }, { passive: false });
+
+    container.addEventListener("touchend", (e) => {
+      // Release pulsers on touch end
+      if (this.engine.board.pulsers[1].pressed) this.engine.setPulser(1, false);
+      if (this.engine.board.pulsers[2].pressed) this.engine.setPulser(2, false);
+
+      if (initialDistance > 0 && e.touches.length < 2) {
+        initialDistance = 0;
+        initialViewBox = null;
+        initialMidpoint = null;
+      }
+
+      if (this.isDraggingCord && this.dragStartJack) {
+        const lastTouch = e.changedTouches[0];
+        const elem = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
+        const targetGroup = elem ? elem.closest(".jack-group") : null;
+        const targetJack = targetGroup ? targetGroup.dataset.jack : null;
+        const movedDist = touchStartPos ? Math.hypot(lastTouch.clientX - touchStartPos.x, lastTouch.clientY - touchStartPos.y) : 0;
+
+        if (targetJack && targetJack !== this.dragStartJack) {
+          this.engine.addWire(this.dragStartJack, targetJack, this.activeColor);
+          this.selectedJack = null;
+        } else if (movedDist < 14) {
+          // Tap jack -> Tap jack to connect
+          if (!this.selectedJack) {
+            this.selectedJack = this.dragStartJack;
+            this.engine.playClickSound(950);
+          } else if (this.selectedJack === this.dragStartJack) {
+            this.selectedJack = null;
+          } else {
+            this.engine.addWire(this.selectedJack, this.dragStartJack, this.activeColor);
+            this.selectedJack = null;
+          }
+        }
+
+        this.isDraggingCord = false;
+        this.dragStartJack = null;
+        this.hoverTargetJack = null;
+        this.tempMousePos = null;
+        this.updateRubberBand();
+        this.renderCordsOnly();
+      }
+
+      this.isPanning = false;
+    }, { passive: false });
+  }
+
+  // Phase 10 Keyboard Accessibility (Tab Focus + Enter/Space/Escape)
+  bindKeyboardAccessibility() {
+    this.svg.addEventListener("keydown", (e) => {
+      const active = document.activeElement;
+      if (!active) return;
+
+      if (e.key === "Enter" || e.key === " ") {
+        const jackGroup = active.closest(".jack-group");
+        if (jackGroup) {
+          e.preventDefault();
+          const jackId = jackGroup.dataset.jack;
+          if (!this.selectedJack) {
+            this.selectedJack = jackId;
+            this.engine.playClickSound(950);
+          } else if (this.selectedJack === jackId) {
+            this.selectedJack = null;
+          } else {
+            this.engine.addWire(this.selectedJack, jackId, this.activeColor);
+            this.selectedJack = null;
+          }
+          this.render();
+          return;
+        }
+
+        const switchGroup = active.closest(".switch-group");
+        if (switchGroup) {
+          e.preventDefault();
+          this.engine.toggleInput(switchGroup.dataset.switch);
+          this.render();
+          return;
+        }
+
+        const zifLever = active.closest(".zif-lever");
+        if (zifLever) {
+          e.preventDefault();
+          const sId = zifLever.dataset.socket;
+          this.engine.setSocketLever(sId, !this.engine.sockets[sId].leverLocked);
+          this.render();
+          return;
+        }
+
+        const pulserBtn = active.closest(".pushbutton-group");
+        if (pulserBtn) {
+          e.preventDefault();
+          const pulserNum = parseInt(pulserBtn.dataset.pulser, 10);
+          this.engine.setPulser(pulserNum, true);
+          setTimeout(() => {
+            this.engine.setPulser(pulserNum, false);
+            this.render();
+          }, 120);
+          return;
+        }
+      }
+
+      if (e.key === "Escape") {
+        if (this.selectedJack || this.selectedCordId) {
+          e.preventDefault();
+          this.selectedJack = null;
+          this.selectedCordId = null;
+          this.render();
+        }
+      }
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+        const knobGroup = active.closest(".knob-group");
+        if (knobGroup) {
+          e.preventDefault();
+          this.engine.setClockT(this.engine.clock.knobT - 0.05);
+          this.render();
+        }
+      }
+
+      if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+        const knobGroup = active.closest(".knob-group");
+        if (knobGroup) {
+          e.preventDefault();
+          this.engine.setClockT(this.engine.clock.knobT + 0.05);
+          this.render();
+        }
+      }
+    });
   }
 }
