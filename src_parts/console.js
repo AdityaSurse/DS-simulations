@@ -205,6 +205,21 @@ class LabConsole {
         ` : ""}
       </div>
 
+      <!-- Power Mode Configuration (Aim Tab) -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Power Mode Configuration</span>
+          <button class="btn ${this.engine.strictPowerMode ? 'btn-teal' : ''}" id="aim-strict-toggle" style="padding: 3px 8px; font-size: 11px;">
+            ${this.engine.strictPowerMode ? "Strict Mode (VCC+GND Required)" : "Auto-Power Mode"}
+          </button>
+        </div>
+        <p style="font-size: 11px; color: #8b949e; margin-top: 4px;">
+          ${this.engine.strictPowerMode
+            ? "<b>Strict Power Mode:</b> ICs require patch cords from +5V to VCC and GND to operate."
+            : "<b>Auto-Power Mode:</b> Sockets are automatically powered when their levers are locked."}
+        </p>
+      </div>
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">Truth Table & Real-Time State</span>
@@ -421,20 +436,41 @@ class LabConsole {
 
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Circuit Status & Shorts</span>
+          <span class="card-title">Circuit Status & Diagnostics</span>
         </div>
         ${this.engine.shorts.length > 0 ? `
           <div class="verdict-banner failure" style="margin-bottom: 8px;">
             ⚠️ SHORT CIRCUIT DETECTED (${this.engine.shorts.length})
           </div>
-          <ul style="font-size: 11px; color: #fca5a5; line-height: 1.5; padding-left: 16px;">
+          <ul style="font-size: 11px; color: #fca5a5; line-height: 1.5; padding-left: 16px; margin-bottom: 8px;">
             ${this.engine.shorts.map(s => `<li>${s}</li>`).join("")}
           </ul>
-        ` : `
-          <div class="verdict-banner success">
-            ✓ Circuit Healthy: No short circuits detected.
+        ` : ''}
+
+        ${this.engine.oscillating ? `
+          <div class="verdict-banner failure" style="margin-bottom: 8px;">
+            🔄 FEEDBACK OSCILLATION DETECTED
           </div>
-        `}
+          <ul style="font-size: 11px; color: #fca5a5; line-height: 1.5; padding-left: 16px; margin-bottom: 8px;">
+            ${this.engine.diagnostics.oscillations.map(o => `<li>${o}</li>`).join("")}
+          </ul>
+        ` : ''}
+
+        ${this.engine.diagnostics.floatingInputs.length > 0 ? `
+          <div style="font-size: 11px; color: #f59e0b; margin-bottom: 4px; font-weight: 600;">
+            ⚡ Floating Inputs Detected (Defaulting to Logic 1):
+          </div>
+          <ul style="font-size: 10.5px; color: #cbd5e1; line-height: 1.4; padding-left: 16px; margin-bottom: 8px;">
+            ${this.engine.diagnostics.floatingInputs.slice(0, 4).map(f => `<li>${f.message}</li>`).join("")}
+            ${this.engine.diagnostics.floatingInputs.length > 4 ? `<li>... and ${this.engine.diagnostics.floatingInputs.length - 4} more</li>` : ''}
+          </ul>
+        ` : ''}
+
+        ${this.engine.shorts.length === 0 && !this.engine.oscillating && this.engine.diagnostics.floatingInputs.length === 0 ? `
+          <div class="verdict-banner success">
+            ✓ Circuit Healthy: No shorts or feedback oscillations detected.
+          </div>
+        ` : ''}
       </div>
 
       <div class="card">
@@ -464,6 +500,45 @@ class LabConsole {
           `}
         </div>
       </div>
+
+      <!-- Collapsible Live Netlist Debug Panel (Phase 5 Requirement 9) -->
+      <details class="card" style="margin-top: 10px;">
+        <summary style="cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-teal); padding: 4px 0;">
+          🔍 Live Netlist Debug Panel (${this.engine.nets.length} Nets)
+        </summary>
+        <div style="max-height: 220px; overflow-y: auto; margin-top: 8px; font-family: var(--font-mono); font-size: 10px;">
+          <table class="truth-table" style="font-size: 10px;">
+            <thead>
+              <tr>
+                <th>Net Root</th>
+                <th>Val</th>
+                <th>V</th>
+                <th>Drivers</th>
+                <th>Connected Jacks</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${this.engine.nets.map(n => `
+                <tr>
+                  <td style="font-weight: 600; color: #fff;">${n.root}</td>
+                  <td>
+                    <span class="status-chip ${n.val === 1 ? 'healthy' : (n.val === 'X' ? 'short' : '')}" style="padding: 1px 5px; font-size: 9px;">
+                      ${n.val}
+                    </span>
+                  </td>
+                  <td>${n.voltage.toFixed(2)}V</td>
+                  <td style="max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${n.drivers.map(d => `${d.source}=${d.level}`).join(', ')}">
+                    ${n.drivers.length > 0 ? n.drivers.map(d => d.source).join(', ') : 'None (Z)'}
+                  </td>
+                  <td style="max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${Array.from(n.jacks).join(', ')}">
+                    ${Array.from(n.jacks).join(', ')}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </details>
     `;
   }
 
@@ -578,6 +653,15 @@ class LabConsole {
     const diagStrict = this.container.querySelector("#diag-strict-toggle");
     if (diagStrict) {
       diagStrict.addEventListener("click", () => {
+        this.engine.setStrictPowerMode(!this.engine.strictPowerMode);
+        this.board.render();
+        this.render();
+      });
+    }
+
+    const aimStrict = this.container.querySelector("#aim-strict-toggle");
+    if (aimStrict) {
+      aimStrict.addEventListener("click", () => {
         this.engine.setStrictPowerMode(!this.engine.strictPowerMode);
         this.board.render();
         this.render();

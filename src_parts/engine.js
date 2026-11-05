@@ -60,7 +60,13 @@ class TTLEngine {
     };
 
     this.segDigits = [0, 0]; // High nibble (Y7..Y4), Low nibble (Y3..Y0)
-    this.shorts = [];
+    this.diagnostics = {
+      shorts: [],
+      floatingInputs: [],
+      oscillations: []
+    };
+    this.shorts = this.diagnostics.shorts;
+    this.oscillating = false;
     this.netMap = new Map();
     this.nets = [];
     this.changeCallbacks = [];
@@ -664,9 +670,67 @@ class TTLEngine {
     return false;
   }
 
-  // Simulation Evaluation
+  // 4-Value Net Resolution: 0, 1, Z, X
+  resolveNets() {
+    let hadShort = false;
+    for (const net of this.nets) {
+      let has1 = false, has0 = false, has12 = false;
+      const drivers0 = [];
+      const drivers1 = [];
+
+      for (const d of net.drivers) {
+        if (d.level === 1) {
+          has1 = true;
+          drivers1.push(d.source);
+        } else if (d.level === 0) {
+          has0 = true;
+          drivers0.push(d.source);
+        } else if (d.level === "12V") {
+          has12 = true;
+          drivers1.push(d.source);
+        }
+      }
+
+      if ((has1 && has0) || (has12 && has0)) {
+        net.val = "X";
+        net.state = "X";
+        net.voltage = 0.5;
+        hadShort = true;
+        const msg = `Short circuit / contention on net [${Array.from(net.jacks).slice(0, 3).join(", ")}]: conflict between High [${drivers1.join(", ")}] and Low [${drivers0.join(", ")}]`;
+        if (!this.shorts.includes(msg)) {
+          this.shorts.push(msg);
+        }
+      } else if (has12) {
+        net.val = 1;
+        net.state = "12V";
+        net.voltage = 12.0;
+      } else if (has1) {
+        net.val = 1;
+        net.state = 1;
+        net.voltage = 4.8;
+      } else if (has0) {
+        net.val = 0;
+        net.state = 0;
+        net.voltage = 0.2;
+      } else {
+        net.val = "Z";
+        net.state = "Z";
+        net.voltage = 1.4;
+      }
+    }
+
+    if (hadShort) this.playShortBuzzer();
+  }
+
+  // Simulation Evaluation & Multi-Pass Settle Loop
   evaluate() {
-    this.shorts = [];
+    this.diagnostics = {
+      shorts: [],
+      floatingInputs: [],
+      oscillations: []
+    };
+    this.shorts = this.diagnostics.shorts;
+    this.oscillating = false;
     this.netMap.clear();
     this.nets = [];
 
@@ -741,7 +805,8 @@ class TTLEngine {
         root,
         jacks: jackSet,
         drivers: [],
-        state: "FLOAT",
+        val: "Z",
+        state: "Z",
         voltage: 1.4
       });
       for (const j of jackSet) {
@@ -783,40 +848,25 @@ class TTLEngine {
       for (const [pinStr, outVal] of Object.entries(sData.lastOutputs)) {
         const pin = parseInt(pinStr, 10);
         const outJack = this.getJackForICPin(sId, pin, icDef.pinCount, sData.alignment);
-        addDriver(outJack, outVal, `IC_${sId}_${sData.chip}_P${pin}`);
+        if (outVal !== "Z") {
+          addDriver(outJack, outVal, `IC_${sId}_${sData.chip}_P${pin}`);
+        }
       }
     }
 
-    // 2. Multi-Pass Combinational & Sequential Evaluation
-    const MAX_PASSES = 6;
-    for (let pass = 0; pass < MAX_PASSES; pass++) {
-      for (const net of this.nets) {
-        let has1 = false, has0 = false, has12 = false;
-        for (const d of net.drivers) {
-          if (d.level === 1) has1 = true;
-          else if (d.level === 0) has0 = true;
-          else if (d.level === "12V") has12 = true;
-        }
+    // 2. Multi-Pass Settle Loop (Iterate until stable or 50 iterations)
+    const MAX_SETTLE_ITERATIONS = 50;
+    let iteration = 0;
+    let stable = false;
 
-        if ((has1 && has0) || (has12 && has0)) {
-          net.state = "SHORT";
-          net.voltage = 0.5;
-        } else if (has12) {
-          net.state = "12V";
-          net.voltage = 12.0;
-        } else if (has1) {
-          net.state = 1;
-          net.voltage = 4.8;
-        } else if (has0) {
-          net.state = 0;
-          net.voltage = 0.2;
-        } else {
-          // Unconnected TTL input floats to 1!
-          net.state = 1;
-          net.voltage = 1.6;
-        }
-      }
+    while (iteration < MAX_SETTLE_ITERATIONS) {
+      iteration++;
 
+      // Resolve current nets
+      this.resolveNets();
+      const snapshot = this.nets.map(n => n.val);
+
+      // Clear previous IC drivers before re-evaluating
       for (const net of this.nets) {
         net.drivers = net.drivers.filter(d => !d.source.startsWith("IC_"));
       }
@@ -833,69 +883,92 @@ class TTLEngine {
           const vccNet = this.netMap.get(vccJack);
           const gndNet = this.netMap.get(gndJack);
 
-          const hasVcc = vccNet && vccNet.drivers.some(d => d.source.includes("+5V"));
-          const hasGnd = gndNet && gndNet.drivers.some(d => d.source.includes("GND"));
+          const hasVcc = vccNet && vccNet.val === 1;
+          const hasGnd = gndNet && gndNet.val === 0;
           isPowered = (hasVcc && hasGnd);
+        } else {
+          isPowered = (this.masterPower && sData.leverLocked);
         }
 
-        if (!isPowered) continue;
+        if (!isPowered) {
+          sData.lastOutputs = {};
+          continue;
+        }
 
+        // Standardized IC readPin function implementing TTL floating input rule
         const inMap = {};
+        const readPin = (pinNum) => {
+          const jack = this.getJackForICPin(sId, pinNum, icDef.pinCount, sData.alignment);
+          const net = this.netMap.get(jack);
+          if (!net || net.val === "Z") {
+            const diagKey = `${sId}_P${pinNum}`;
+            if (!this.diagnostics.floatingInputs.some(f => f.key === diagKey)) {
+              this.diagnostics.floatingInputs.push({
+                key: diagKey,
+                socket: sId,
+                pin: pinNum,
+                message: `Floating input on ${sId} Pin ${pinNum} (reads as TTL Logic 1)`
+              });
+            }
+            return 1; // TTL Rule: floating input reads as 1
+          }
+          if (net.val === "X") return 0;
+          return net.val === 1 ? 1 : 0;
+        };
+
         for (const pinInfo of icDef.pins) {
           if (pinInfo.type === "in") {
-            const jack = this.getJackForICPin(sId, pinInfo.pin, icDef.pinCount, sData.alignment);
-            const net = this.netMap.get(jack);
-            inMap[pinInfo.pin] = (net ? (net.state === "SHORT" ? 0 : (net.state === 1 ? 1 : 0)) : 1);
+            inMap[pinInfo.pin] = readPin(pinInfo.pin);
           }
         }
+        Object.assign(readPin, inMap);
 
-        const evalResult = icDef.eval(inMap, sData.state);
-        sData.state = evalResult.nextState;
-        sData.lastOutputs = evalResult.outputs;
+        const edgeHelpers = {
+          risingEdge: (oldVal, newVal) => oldVal === 0 && newVal === 1,
+          fallingEdge: (oldVal, newVal) => oldVal === 1 && newVal === 0
+        };
 
-        for (const [pinStr, outVal] of Object.entries(evalResult.outputs)) {
+        const evalResult = typeof icDef.eval === "function" ? icDef.eval(readPin, sData.state, edgeHelpers) : null;
+        if (!evalResult) continue;
+
+        sData.state = evalResult.nextState || sData.state;
+        sData.lastOutputs = evalResult.outputs || {};
+
+        for (const [pinStr, outVal] of Object.entries(sData.lastOutputs)) {
           const pin = parseInt(pinStr, 10);
           const outJack = this.getJackForICPin(sId, pin, icDef.pinCount, sData.alignment);
-          addDriver(outJack, outVal, `IC_${sId}_${sData.chip}_P${pin}`);
+          if (outVal !== "Z") {
+            addDriver(outJack, outVal, `IC_${sId}_${sData.chip}_P${pin}`);
+          }
         }
       }
-    }
 
-    // 3. Final Net Resolving
-    let hadShort = false;
-    for (const net of this.nets) {
-      const has1 = net.drivers.some(d => d.level === 1);
-      const has0 = net.drivers.some(d => d.level === 0);
-      const has12 = net.drivers.some(d => d.level === "12V");
+      this.resolveNets();
 
-      if ((has1 && has0) || (has12 && has0)) {
-        net.state = "SHORT";
-        net.voltage = 0.5;
-        hadShort = true;
-        const driverNames = net.drivers.map(d => `${d.source}=${d.level}`).join(", ");
-        this.shorts.push(`Short circuit on net with [${driverNames}]`);
-      } else if (has12) {
-        net.state = "12V";
-        net.voltage = 12.0;
-      } else if (has1) {
-        net.state = 1;
-        net.voltage = 4.8;
-      } else if (has0) {
-        net.state = 0;
-        net.voltage = 0.2;
-      } else {
-        net.state = "FLOAT";
-        net.voltage = 1.4;
+      let changed = false;
+      for (let i = 0; i < this.nets.length; i++) {
+        if (this.nets[i].val !== snapshot[i]) {
+          changed = true;
+          break;
+        }
+      }
+
+      if (!changed) {
+        stable = true;
+        break;
       }
     }
 
-    if (hadShort) this.playShortBuzzer();
+    if (!stable) {
+      this.oscillating = true;
+      this.diagnostics.oscillations.push("Oscillation / unstable feedback detected (exceeded 50 iterations)");
+    }
 
-    // 4. Update trainer outputs and 7-segment display
+    // 3. Update trainer outputs and 7-segment display
     for (let i = 0; i < 8; i++) {
       const jack = `OUT.Y${i}`;
       const net = this.netMap.get(jack);
-      this.outputs[jack] = (net && net.state === 1) ? 1 : 0;
+      this.outputs[jack] = (net && net.val === 1) ? 1 : 0;
     }
 
     const highNibble = (this.outputs["OUT.Y7"] << 3) |
@@ -913,18 +986,20 @@ class TTLEngine {
 
   probeJack(jackId) {
     if (!this.masterPower) {
-      return { id: jackId, state: "OFF", voltage: 0.0, net: null };
+      return { id: jackId, state: "OFF", val: "Z", voltage: 0.0, net: null, drivers: [], netSize: 0, netRoot: null };
     }
     const net = this.netMap.get(jackId);
     if (!net) {
-      return { id: jackId, state: "OPEN", voltage: 0.0, net: null };
+      return { id: jackId, state: "Z", val: "Z", voltage: 1.4, net: null, drivers: [], netSize: 0, netRoot: null };
     }
     return {
       id: jackId,
       state: net.state,
+      val: net.val,
       voltage: net.voltage,
       drivers: net.drivers,
-      netSize: net.jacks.size
+      netSize: net.jacks.size,
+      netRoot: net.root
     };
   }
 
@@ -1033,7 +1108,53 @@ class TTLEngine {
     assert("7490 Decade Counter counts 0..9 and wraps on falling edges", seqMatches,
            `Observed: [${countsObserved.join(",")}]`);
 
+    // Test 5: Union-Find Netlist Construction
+    const origWires = [...this.wires];
+    this.clearWires(false);
+    this.addWire("IN.A0", "IN.A1", "#f5c518", false);
+    this.addWire("IN.A1", "IN.A2", "#f5c518", false);
+    this.evaluate();
+    const probeA0 = this.probeJack("IN.A0");
+    const probeA1 = this.probeJack("IN.A1");
+    const probeA2 = this.probeJack("IN.A2");
+    assert("Union-Find Netlist: connected jacks share same net root",
+           probeA0.netRoot && probeA0.netRoot === probeA1.netRoot && probeA1.netRoot === probeA2.netRoot,
+           `Root=${probeA0.netRoot}`);
+    assert("Union-Find Netlist: net groups all connected jacks", probeA0.netSize >= 3, `Size=${probeA0.netSize}`);
+
+    // Test 6: Conflict Detection (4-Value Logic 'X' and Short Diagnostic)
+    this.clearWires(false);
+    this.addWire("PWR.5V_1", "PWR.GND_1", "#ef4444", false);
+    this.evaluate();
+    const probeShort = this.probeJack("PWR.5V_1");
+    assert("Conflict Detection: opposing drivers produce 'X'", probeShort.val === "X", `Val=${probeShort.val}`);
+    assert("Conflict Detection: short circuit diagnostic logged", this.shorts.length > 0, `Shorts count=${this.shorts.length}`);
+
+    // Test 7: Floating Input (4-Value Logic 'Z' reads as TTL 1 & logs diagnostic)
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "TEST_GATE", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    this.evaluate();
+    const probePin1 = this.probeJack("U1.J1");
+    assert("Floating Input: unconnected pin resolves to 'Z'", probePin1.val === "Z", `Val=${probePin1.val}`);
+    const floatDiag = this.diagnostics.floatingInputs.find(f => f.socket === "U1" && f.pin === 1);
+    assert("Floating Input: reading 'Z' logs diagnostic & reads as 1", !!floatDiag, floatDiag ? floatDiag.message : "Not found");
+
+    // Test 8: Oscillation Detection (Inverter fed back to itself exceeds 50 iterations)
+    this.clearWires(false);
+    this.sockets.U1 = { id: "U1", chip: "7404", alignment: "left", leverLocked: true, state: {}, lastOutputs: null };
+    this.setStrictPowerMode(false);
+    // Wire Pin 2 (1Y) directly to Pin 1 (1A)
+    this.addWire("U1.J2", "U1.J1", "#f5c518", false);
+    this.evaluate();
+    assert("Oscillation Detection: NOT gate self-feedback triggers oscillation flag", this.oscillating === true,
+           `Oscillating=${this.oscillating}`);
+    assert("Oscillation Detection: diagnostic logged for unstable feedback", this.diagnostics.oscillations.length > 0,
+           this.diagnostics.oscillations[0] || "");
+
     // Restore state
+    this.clearWires(false);
+    for (const w of origWires) this.addWire(w.from, w.to, w.color, false);
     this.sockets.U1 = origU1;
     this.clock.freq = origClock.freq;
     this.clock.knobT = origClock.knobT;

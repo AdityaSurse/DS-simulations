@@ -46,6 +46,49 @@ const IC_LIBRARY = {
     }
   },
 
+  "TEST_GATE": {
+    name: "TEST_GATE",
+    title: "Test Inverter Gate",
+    package: "DIP-14",
+    pinCount: 14,
+    vccPin: 14,
+    gndPin: 7,
+    pinNames: { 1: "1A", 2: "1Y", 7: "GND", 14: "VCC" },
+    inputs: [1],
+    outputs: [2],
+    pins: [
+      { pin: 1, name: "1A", type: "in" },
+      { pin: 2, name: "1Y", type: "out" },
+      { pin: 3, name: "NC", type: "nc" },
+      { pin: 4, name: "NC", type: "nc" },
+      { pin: 5, name: "NC", type: "nc" },
+      { pin: 6, name: "NC", type: "nc" },
+      { pin: 7, name: "GND", type: "gnd" },
+      { pin: 8, name: "NC", type: "nc" },
+      { pin: 9, name: "NC", type: "nc" },
+      { pin: 10, name: "NC", type: "nc" },
+      { pin: 11, name: "NC", type: "nc" },
+      { pin: 12, name: "NC", type: "nc" },
+      { pin: 13, name: "NC", type: "nc" },
+      { pin: 14, name: "VCC", type: "pwr" }
+    ],
+    eval: (readPin, state) => {
+      const get = typeof readPin === "function" ? readPin : (p => readPin[p]);
+      const inVal = get(1);
+      return {
+        outputs: { 2: inVal === 1 ? 0 : 1 },
+        nextState: state || {}
+      };
+    },
+    truthTable: {
+      headers: ["1A", "1Y"],
+      rows: [
+        [0, 1],
+        [1, 0]
+      ]
+    }
+  },
+
   "7408": {
     name: "7408",
     title: "Quad 2-Input AND Gate",
