@@ -103,8 +103,8 @@ body {
   align-items: center;
   justify-content: center;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.4);
-  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .brand-titles {
@@ -162,7 +162,7 @@ body {
   align-items: center;
   gap: 5px;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .btn:hover {
@@ -244,7 +244,7 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0, 0, 0, 0.35);
   padding: 3px 8px;
   border-radius: 20px;
   border: 1px solid var(--border-subtle);
@@ -300,7 +300,7 @@ body {
   display: flex;
   align-items: center;
   gap: 3px;
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.25);
   padding: 2px;
   border-radius: 6px;
   border: 1px solid var(--border-subtle);
@@ -345,7 +345,7 @@ body {
   gap: 6px;
   padding: 2px 8px;
   border-radius: 12px;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-subtle);
 }
 
@@ -362,8 +362,13 @@ body {
 }
 
 @keyframes pulse-short {
-  from { box-shadow: 0 0 4px rgba(239, 68, 68, 0.4); }
-  to { box-shadow: 0 0 12px rgba(239, 68, 68, 0.9); }
+  from {
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+  }
+
+  to {
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.9);
+  }
 }
 
 .zoom-controls {
@@ -421,6 +426,7 @@ body {
 .board-container.panning {
   cursor: grab;
 }
+
 .board-container.panning:active {
   cursor: grabbing;
 }
@@ -539,9 +545,11 @@ body.delete-mode #board-svg {
 .console-content::-webkit-scrollbar {
   width: 6px;
 }
+
 .console-content::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .console-content::-webkit-scrollbar-thumb {
   background: var(--border-strong);
   border-radius: 3px;
@@ -580,7 +588,8 @@ body.delete-mode #board-svg {
   font-weight: 500;
 }
 
-select, input[type="text"] {
+select,
+input[type="text"] {
   width: 100%;
   background: #090c10;
   border: 1px solid var(--border-strong);
@@ -593,7 +602,8 @@ select, input[type="text"] {
   transition: border-color 0.15s ease;
 }
 
-select:focus, input[type="text"]:focus {
+select:focus,
+input[type="text"]:focus {
   border-color: var(--accent-teal);
   box-shadow: 0 0 6px var(--accent-teal-glow);
 }
@@ -606,7 +616,8 @@ select:focus, input[type="text"]:focus {
   margin-top: 8px;
 }
 
-.truth-table th, .truth-table td {
+.truth-table th,
+.truth-table td {
   border: 1px solid var(--border-strong);
   padding: 4px 6px;
   text-align: center;
@@ -725,9 +736,20 @@ select:focus, input[type="text"]:focus {
 
 /* Hint Jack Pulse Animation */
 @keyframes hintPulse {
-  0% { transform: scale(0.92); opacity: 0.6; }
-  50% { transform: scale(1.18); opacity: 1; }
-  100% { transform: scale(0.92); opacity: 0.6; }
+  0% {
+    transform: scale(0.92);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.92);
+    opacity: 0.6;
+  }
 }
 
 .hint-pulse-ring {
@@ -750,15 +772,18 @@ select:focus, input[type="text"]:focus {
   border-radius: 10px;
   margin-left: 4px;
 }
+
 .diag-count-badge.error {
   background: #ef4444;
   color: #fff;
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
 }
+
 .diag-count-badge.warn {
   background: #f59e0b;
   color: #000;
 }
+
 .diag-count-badge.ok {
   background: #10b981;
   color: #fff;
@@ -852,6 +877,7 @@ select:focus, input[type="text"]:focus {
 .chip-list-scroll::-webkit-scrollbar {
   width: 5px;
 }
+
 .chip-list-scroll::-webkit-scrollbar-thumb {
   background: var(--border-strong);
   border-radius: 3px;
@@ -1093,9 +1119,15 @@ select:focus, input[type="text"]:focus {
     color: #000000 !important;
     overflow: visible !important;
   }
-  .app-header, .sub-bar, .main-workspace, .modal-overlay, .probe-hud {
+
+  .app-header,
+  .sub-bar,
+  .main-workspace,
+  .modal-overlay,
+  .probe-hud {
     display: none !important;
   }
+
   #observation-sheet-printable {
     display: block !important;
     position: absolute !important;
@@ -1119,71 +1151,88 @@ body.light-theme {
   --border-strong: #94a3b8;
   color: #0f172a;
 }
+
 body.light-theme .app-header {
   background: #f8fafc;
   border-bottom-color: #cbd5e1;
 }
+
 body.light-theme .brand-subtitle {
   color: #64748b;
 }
+
 body.light-theme .sub-bar {
   background: #f1f5f9;
   border-bottom-color: #cbd5e1;
 }
+
 body.light-theme .subbar-label {
   color: #475569;
 }
+
 body.light-theme .view-tab-btn {
   background: #e2e8f0;
   color: #334155;
   border-color: #cbd5e1;
 }
+
 body.light-theme .view-tab-btn.active {
   background: #0ea5e9;
   color: #ffffff;
 }
+
 body.light-theme .status-chip {
   background: #ffffff;
   border-color: #cbd5e1;
   color: #334155;
 }
+
 body.light-theme .console-panel {
   background: #f8fafc;
   border-left-color: #cbd5e1;
 }
+
 body.light-theme .console-tab {
   color: #64748b;
 }
+
 body.light-theme .console-tab.active {
   color: #0284c7;
   border-bottom-color: #0284c7;
 }
+
 body.light-theme .console-card {
   background: #ffffff;
   border-color: #cbd5e1;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
+
 body.light-theme .btn {
   background: #f1f5f9;
   color: #1e293b;
   border-color: #cbd5e1;
 }
+
 body.light-theme .btn:hover {
   background: #e2e8f0;
 }
+
 body.light-theme .inventory-card {
   background: #ffffff;
   border-color: #cbd5e1;
 }
+
 body.light-theme .selected-socket-box {
   background: #ffffff;
   border-color: #cbd5e1;
 }
+
 body.light-theme .chip-search-input {
   background: #ffffff;
   border-color: #cbd5e1;
   color: #0f172a;
 }
+
 body.light-theme .chip-card {
   background: #ffffff;
   border-color: #cbd5e1;
@@ -1195,15 +1244,18 @@ body.high-contrast {
   --border-strong: #ffffff;
   --text-main: #ffffff;
 }
+
 body.high-contrast .btn {
   border-width: 2px !important;
   border-color: #ffffff !important;
   font-weight: 800 !important;
 }
+
 body.high-contrast .status-chip {
   border-width: 2px !important;
   border-color: #ffffff !important;
 }
+
 body.high-contrast .patch-cord-path {
   stroke-width: 6.5px !important;
 }
@@ -1213,12 +1265,14 @@ body.high-contrast .patch-cord-path {
   outline: 2px solid #f59e0b !important;
   outline-offset: 3px !important;
 }
+
 .jack-group:focus-visible circle:nth-child(2),
 .accessible-jack:focus-visible circle:nth-child(2) {
   stroke: #f59e0b !important;
   stroke-width: 3px !important;
   filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.9)) !important;
 }
+
 .switch-group, .switch-hitbox {
   cursor: pointer;
   user-select: none;
@@ -1227,6 +1281,7 @@ body.high-contrast .patch-cord-path {
   stroke: #f59e0b !important;
   stroke-width: 2.5px !important;
 }
+
 .pushbutton-group:focus-visible circle:nth-child(3) {
   stroke: #f59e0b !important;
   stroke-width: 2.5px !important;
@@ -1239,16 +1294,29 @@ body.high-contrast .patch-cord-path {
 
 /* 5. LED Glow / Radiance */
 @keyframes led-radiance {
-  0% { opacity: 0.88; filter: drop-shadow(0 0 6px currentColor); }
-  50% { opacity: 1; filter: drop-shadow(0 0 10px currentColor); }
-  100% { opacity: 0.88; filter: drop-shadow(0 0 6px currentColor); }
+  0% {
+    opacity: 0.88;
+    filter: drop-shadow(0 0 6px currentColor);
+  }
+
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 10px currentColor);
+  }
+
+  100% {
+    opacity: 0.88;
+    filter: drop-shadow(0 0 6px currentColor);
+  }
 }
+
 .led-active-glow {
   animation: led-radiance 2.5s infinite ease-in-out;
 }
 
 /* 6. Touch & Mobile Support */
-#board-svg, .board-container {
+#board-svg,
+.board-container {
   touch-action: none;
 }
 
@@ -1267,11 +1335,13 @@ body.high-contrast .patch-cord-path {
   transition: opacity 0.5s ease, visibility 0.5s ease;
   user-select: none;
 }
+
 #boot-splash.fade-out {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
 }
+
 .splash-terminal {
   max-width: 580px;
   width: 90%;
@@ -1281,6 +1351,7 @@ body.high-contrast .patch-cord-path {
   border-radius: 8px;
   padding: 24px;
 }
+
 .splash-progress-bar {
   width: 100%;
   height: 6px;
@@ -1289,6 +1360,7 @@ body.high-contrast .patch-cord-path {
   overflow: hidden;
   margin-top: 16px;
 }
+
 .splash-progress-fill {
   height: 100%;
   background: #22c55e;
@@ -1303,6 +1375,7 @@ body.high-contrast .patch-cord-path {
   display: flex;
   flex-direction: column;
 }
+
 .qa-results-box {
   background: #06090e;
   border: 1px solid var(--border-subtle);
@@ -1315,6 +1388,7 @@ body.high-contrast .patch-cord-path {
   max-height: 420px;
   overflow-y: auto;
 }
+
 .qa-pass-chip {
   display: inline-block;
   padding: 2px 6px;
@@ -1324,6 +1398,7 @@ body.high-contrast .patch-cord-path {
   font-weight: 700;
   font-size: 10px;
 }
+
 .qa-fail-chip {
   display: inline-block;
   padding: 2px 6px;
@@ -1333,7 +1408,6 @@ body.high-contrast .patch-cord-path {
   font-weight: 700;
   font-size: 10px;
 }
-
 
 /* Silkscreen & Board SVG Typography */
 .silkscreen-title {
@@ -5185,10 +5259,18 @@ class TTLEngine {
         }
 
         this.updateDisplaySmoothing(dt);
+
+        // Targeted DOM updates for dynamic elements only — ZERO SVG destruction!
+        if (typeof window !== "undefined" && window.board && typeof window.board.updateDynamicDisplay === "function") {
+          window.board.updateDynamicDisplay();
+        }
       } else {
         // Master power is OFF: all LEDs are completely dark, no virtual time advances
         for (const k of Object.keys(this.board.leds)) {
           this.board.leds[k] = 0.0;
+        }
+        if (typeof window !== "undefined" && window.board && typeof window.board.updateDynamicDisplay === "function") {
+          window.board.updateDynamicDisplay();
         }
       }
       this.rafId = requestAnimationFrame(loop);
@@ -5234,9 +5316,8 @@ class TTLEngine {
       }
     }
 
-    if (edgesThisFrame > 0) {
-      this.notify();
-    }
+    // Clock edge simulation complete for this frame.
+    // Dynamic displays (LEDs, 7-seg) update via 60fps updateDynamicDisplay() without destroying board SVG.
   }
 
   // Display smoothing: time-weighted average for high frequencies
@@ -5289,6 +5370,7 @@ class TTLEngine {
   toggleInput(jackId) {
     if (this.inputs.hasOwnProperty(jackId)) {
       this.inputs[jackId] = this.inputs[jackId] === 1 ? 0 : 1;
+      this.board.switches[jackId] = this.inputs[jackId];
       this.playClickSound(this.inputs[jackId] === 1 ? 950 : 700);
       this.evaluate();
       this.notify();
@@ -7202,15 +7284,15 @@ const SVG_COMPONENTS = {
         <circle cx="0" cy="16" r="1.5" fill="#888" />
         <circle cx="0" cy="0" r="9" fill="url(#screwHead)" stroke="#333" stroke-width="0.7" />
         <circle cx="0" cy="0" r="6" fill="#111" />
-        <g transform="rotate(${batAngle}, 0, 0)">
+        <g class="switch-bat" transform="rotate(${batAngle}, 0, 0)">
           <ellipse cx="2" cy="${batY + 2}" rx="4.5" ry="7" fill="rgba(0,0,0,0.5)" />
           <path d="M -3 0 L -4 ${batY * 0.7} L -5 ${batY} C -5 ${batY + (isHigh ? -5 : 5)} 5 ${batY + (isHigh ? -5 : 5)} 5 ${batY} L 4 ${batY * 0.7} L 3 0 Z"
                 fill="url(#chromeBat)" stroke="#444" stroke-width="0.5" filter="url(#shadowBevel)" />
           <ellipse cx="0" cy="${batY}" rx="3.5" ry="2.5" fill="#ffffff" opacity="0.8" />
         </g>
-        <rect x="-16" y="-24" width="32" height="48" fill="transparent" class="switch-hitbox" />
+        <rect x="-18" y="-36" width="36" height="64" fill="transparent" class="switch-hitbox" />
+        ${label ? `<text x="0" y="-28" class="silkscreen-text bold switch-label" text-anchor="middle" pointer-events="none">${label}</text>` : ""}
       </g>
-      ${label ? `<text x="${cx}" y="${cy - 28}" class="silkscreen-text bold" text-anchor="middle">${label}</text>` : ""}
     `;
   },
   renderToggleSwitch(id, label, cx, cy, isHigh) {
@@ -7242,7 +7324,7 @@ const SVG_COMPONENTS = {
       <g class="led-group ${b > 0.05 ? 'led-active-glow' : ''}" data-led="${id}">
         <circle cx="${cx}" cy="${cy}" r="7" fill="#1a1e24" stroke="#333" stroke-width="0.5" />
         ${glowSvg}
-        <circle cx="${cx}" cy="${cy}" r="5.5" fill="${fill}" />
+        <circle cx="${cx}" cy="${cy}" r="5.5" fill="${fill}" class="led-lens" />
         <circle cx="${cx - 1.8}" cy="${cy - 1.8}" r="1.5" fill="#ffffff" opacity="${Math.max(0.2, b * 0.9)}" />
       </g>
       ${label ? `<text x="${lx}" y="${ly}" class="silkscreen-text" text-anchor="middle">${label}</text>` : ""}
@@ -8199,11 +8281,18 @@ class BoardRenderer {
       }
 
       // 12-Bit Data Input Toggle Switch (instant toggle on mousedown irrespective of kit power state)
-      const switchGroup = e.target.closest(".switch-group");
+      const switchGroup = (e.target && typeof e.target.closest === "function") ? e.target.closest(".switch-group") : null;
       if (switchGroup) {
         const swId = switchGroup.dataset.switch;
         this.lastSwitchToggleTime = Date.now();
         this.engine.toggleInput(swId);
+        const isHigh = this.engine.inputs[swId] === 1;
+        const bat = switchGroup.querySelector(".switch-bat");
+        if (bat) {
+          const batAngle = isHigh ? -18 : 18;
+          bat.setAttribute("transform", `rotate(${batAngle}, 0, 0)`);
+        }
+        switchGroup.setAttribute("aria-checked", isHigh ? "true" : "false");
         e.preventDefault();
         return;
       }
@@ -8260,7 +8349,7 @@ class BoardRenderer {
       }
 
       // 3. Toggle Switch
-      const switchGroup = e.target.closest(".switch-group");
+      const switchGroup = (e.target && typeof e.target.closest === "function") ? e.target.closest(".switch-group") : null;
       if (switchGroup) {
         if (this.lastSwitchToggleTime && Date.now() - this.lastSwitchToggleTime < 350) {
           return;
@@ -8268,6 +8357,13 @@ class BoardRenderer {
         this.lastSwitchToggleTime = Date.now();
         const swId = switchGroup.dataset.switch;
         this.engine.toggleInput(swId);
+        const isHigh = this.engine.inputs[swId] === 1;
+        const bat = switchGroup.querySelector(".switch-bat");
+        if (bat) {
+          const batAngle = isHigh ? -18 : 18;
+          bat.setAttribute("transform", `rotate(${batAngle}, 0, 0)`);
+        }
+        switchGroup.setAttribute("aria-checked", isHigh ? "true" : "false");
         return;
       }
 
@@ -8635,6 +8731,85 @@ class BoardRenderer {
     }
   }
 
+  // Lightweight 60fps dynamic element updates (clock, pulsers, outputs, 7-seg) without wiping board SVG
+  updateDynamicDisplay() {
+    if (!this.svg) return;
+
+    // 1. Clock LEDs
+    this.updateLEDElement("LED_CLK_POS", this.engine.masterPower ? this.engine.board.leds["LED_CLK_POS"] : 0.0, "green");
+    this.updateLEDElement("LED_CLK_NEG", this.engine.masterPower ? this.engine.board.leds["LED_CLK_NEG"] : 0.0, "green");
+
+    // 2. Pulser LEDs
+    this.updateLEDElement("LED_P1_POS", this.engine.masterPower ? (this.engine.board.leds["LED_PULSER_1_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_1_POS"] : (this.engine.board.pulsers[1].pos ? 1.0 : 0.0)) : 0.0, "red");
+    this.updateLEDElement("LED_P1_NEG", this.engine.masterPower ? (this.engine.board.pulsers[1].neg ? 1.0 : 0.0) : 0.0, "red");
+    this.updateLEDElement("LED_P2_POS", this.engine.masterPower ? (this.engine.board.leds["LED_PULSER_2_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_2_POS"] : (this.engine.board.pulsers[2].pos ? 1.0 : 0.0)) : 0.0, "red");
+    this.updateLEDElement("LED_P2_NEG", this.engine.masterPower ? (this.engine.board.pulsers[2].neg ? 1.0 : 0.0) : 0.0, "red");
+
+    // 3. 8 Output LEDs (Y7..Y0)
+    for (let i = 0; i < 8; i++) {
+      const bitNum = 7 - i;
+      const jId = `OUT.Y${bitNum}`;
+      const brightness = this.engine.board.leds[`LED_${jId}`] !== undefined
+        ? this.engine.board.leds[`LED_${jId}`]
+        : (this.engine.outputs[jId] ? 1.0 : 0.0);
+      this.updateLEDElement(`LED_${jId}`, this.engine.masterPower ? brightness : 0.0, "red");
+    }
+
+    // 4. 12 Data Input Switch LEDs (C3..A0)
+    const switchJacks = [
+      "IN.C3", "IN.C2", "IN.C1", "IN.C0",
+      "IN.B3", "IN.B2", "IN.B1", "IN.B0",
+      "IN.A3", "IN.A2", "IN.A1", "IN.A0"
+    ];
+    for (const sId of switchJacks) {
+      const isOn = (this.engine.inputs[sId] === 1) && this.engine.masterPower;
+      this.updateLEDElement(`LED_${sId}`, isOn ? 1.0 : 0.0, "red");
+    }
+
+    // 5. 7-Segment display digits
+    const segGroup = this.svg.querySelector("#output-7seg");
+    if (segGroup) {
+      const digits = this.engine.masterPower ? this.engine.segDigits : [-1, -1];
+      const newSegSvg = SVG_COMPONENTS.drawSevenSeg({
+        id: "output-7seg",
+        x: 1249, y: 78,
+        digits
+      });
+      const tempWrapper = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      tempWrapper.innerHTML = newSegSvg;
+      const newChild = tempWrapper.firstElementChild;
+      if (newChild && segGroup.parentNode) {
+        segGroup.parentNode.replaceChild(newChild, segGroup);
+      }
+    }
+
+    // 6. Header clock readout
+    if (typeof window !== "undefined" && typeof window.updateStatusBar === "function") {
+      window.updateStatusBar();
+    }
+  }
+
+  updateLEDElement(ledId, brightness, color = "red") {
+    const el = this.svg.querySelector(`[data-led="${ledId}"]`);
+    if (!el) return;
+    const b = brightness !== null && brightness !== undefined ? brightness : 0.0;
+    const gradMap = {
+      red: "url(#ledOnRed)",
+      green: "url(#ledOnGreen)",
+      amber: "url(#ledOnAmber)",
+      blue: "url(#ledOnBlue)"
+    };
+    const fill = b > 0.05 ? (gradMap[color] || "url(#ledOnRed)") : "url(#ledOff)";
+    
+    // Lens circle update
+    const lens = el.querySelector(".led-lens") || el.querySelectorAll("circle")[1];
+    if (lens) lens.setAttribute("fill", fill);
+    
+    // Active glow class
+    if (b > 0.05) el.classList.add("led-active-glow");
+    else el.classList.remove("led-active-glow");
+  }
+
   render(immediate = false) {
     if (immediate || typeof requestAnimationFrame === "undefined") {
       this.doRender();
@@ -8685,20 +8860,20 @@ class BoardRenderer {
         </g>
 
         ${SVG_COMPONENTS.drawZIFSocket({
-          socketId: "U5",
-          x: 130, y: 120, width: 140, height: 840,
-          pinCount: 40,
-          leverLocked: this.engine.sockets.U5.leverLocked
-        })}
+      socketId: "U5",
+      x: 130, y: 120, width: 140, height: 840,
+      pinCount: 40,
+      leverLocked: this.engine.sockets.U5.leverLocked
+    })}
         ${SVG_COMPONENTS.drawICChip({
-          socketId: "U5",
-          chipName: this.engine.sockets.U5.chip,
-          marking: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.marking || ("SN" + this.engine.sockets.U5.chip + "N")) : "",
-          socketX: 130, socketY: 120, socketW: 140, socketH: 840,
-          icPinCount: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.pinCount || 40) : 40,
-          alignment: "left",
-          backwards: !!this.engine.sockets.U5.backwards
-        })}
+      socketId: "U5",
+      chipName: this.engine.sockets.U5.chip,
+      marking: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.marking || ("SN" + this.engine.sockets.U5.chip + "N")) : "",
+      socketX: 130, socketY: 120, socketW: 140, socketH: 840,
+      icPinCount: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.pinCount || 40) : 40,
+      alignment: "left",
+      backwards: !!this.engine.sockets.U5.backwards
+    })}
       </g>
     `;
 
@@ -8791,10 +8966,10 @@ class BoardRenderer {
         <text x="1410" y="130" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle">74LS47 (L)</text>
 
         ${SVG_COMPONENTS.drawSevenSeg({
-          id: "output-7seg",
-          x: 1249, y: 78,
-          digits: this.engine.masterPower ? this.engine.segDigits : [-1, -1]
-        })}
+      id: "output-7seg",
+      x: 1249, y: 78,
+      digits: this.engine.masterPower ? this.engine.segDigits : [-1, -1]
+    })}
       </g>
     `;
 
@@ -8859,13 +9034,13 @@ class BoardRenderer {
         <text x="924" y="384" class="silkscreen-text mini" text-anchor="middle">DEBOUNCED SCHMITT-TRIGGER (CD4093)</text>
 
         ${SVG_COMPONENTS.drawPushButton({
-          id: 1, label: "PULSER 1", cx: 790, cy: 434,
-          isPressed: this.engine.board.pulsers[1].pressed
-        })}
+      id: 1, label: "PULSER 1", cx: 790, cy: 434,
+      isPressed: this.engine.board.pulsers[1].pressed
+    })}
         ${SVG_COMPONENTS.drawPushButton({
-          id: 2, label: "PULSER 2", cx: 1058, cy: 434,
-          isPressed: this.engine.board.pulsers[2].pressed
-        })}
+      id: 2, label: "PULSER 2", cx: 1058, cy: 434,
+      isPressed: this.engine.board.pulsers[2].pressed
+    })}
 
         <rect x="894" y="416" width="60" height="34" rx="2" fill="url(#icBody)" stroke="#333" stroke-width="0.8" />
         <text x="924" y="438" fill="#cbd5e1" font-family="var(--font-mono)" font-size="9" text-anchor="middle">CD4093</text>
@@ -8918,12 +9093,12 @@ class BoardRenderer {
         <text x="1344" y="384" class="silkscreen-text mini" text-anchor="middle">0.5 Hz - 10 kHz VARIABLE OSCILLATOR</text>
 
         ${SVG_COMPONENTS.drawClockKnob({
-          id: "clock-knob", label: this.engine.formatClockFreq(),
-          cx: 1220, cy: 446,
-          freq: this.engine.clock.freq,
-          knobT: this.engine.clock.knobT,
-          running: this.engine.clock.running
-        })}
+      id: "clock-knob", label: this.engine.formatClockFreq(),
+      cx: 1220, cy: 446,
+      freq: this.engine.clock.freq,
+      knobT: this.engine.clock.knobT,
+      running: this.engine.clock.running
+    })}
 
         <!-- Clock control buttons (Run/Pause & Step) -->
         <g id="btn-clk-run-pause" transform="translate(1310, 420)" style="cursor: pointer;">
@@ -8980,12 +9155,12 @@ class BoardRenderer {
       const leverLabel = leverLocked ? "🔒 LEVER: LOCKED" : "🔓 LEVER: OPEN";
 
       svgContent += `
-        <text x="${cell.x + 10}" y="${cell.y - 48}" class="silkscreen-title bold">${cell.label}</text>
-        <text x="${cell.x + 50}" y="${cell.y - 48}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''})` : `[EMPTY 20-PIN ZIF]`}</text>
+        <text x="${cell.x + 10}" y="${cell.y - 78}" class="silkscreen-title bold">${cell.label}</text>
+        <text x="${cell.x + 50}" y="${cell.y - 78}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''})` : `[EMPTY 20-PIN ZIF]`}</text>
         <g class="zif-lever-badge" data-socket="${cell.id}" style="cursor: pointer;" tabindex="0" role="button" aria-label="Toggle ${cell.id} lever (${leverLocked ? 'Locked' : 'Open'})">
           <title>Click to toggle lever (${leverLocked ? 'Locked' : 'Open'})</title>
-          <rect x="${cell.x + zifW - 145}" y="${cell.y - 62}" width="145" height="20" rx="4" fill="${leverBadgeBg}" stroke="${leverBadgeBorder}" stroke-width="1.2" />
-          <text x="${cell.x + zifW - 72}" y="${cell.y - 48}" fill="${leverBadgeColor}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${leverLabel}</text>
+          <rect x="${cell.x + zifW - 145}" y="${cell.y - 92}" width="145" height="18" rx="4" fill="${leverBadgeBg}" stroke="${leverBadgeBorder}" stroke-width="1.2" />
+          <text x="${cell.x + zifW - 72}" y="${cell.y - 79}" fill="${leverBadgeColor}" font-family="var(--font-mono)" font-size="10" font-weight="700" text-anchor="middle">${leverLabel}</text>
         </g>
       `;
 
@@ -9166,7 +9341,7 @@ class BoardRenderer {
           return;
         }
 
-        const zifLever = touch.target.closest(".zif-lever");
+        const zifLever = touch.target.closest(".zif-lever") || touch.target.closest(".zif-lever-badge");
         if (zifLever) {
           e.preventDefault();
           const sId = zifLever.dataset.socket;
@@ -10993,9 +11168,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // 2. Core TTL Engine
   const engine = new TTLEngine();
 
-  // Expose engine and board globally for direct console testing if desired
+  // Expose engine globally
   window.ditEngine = engine;
-  window.board = engine.board;
+  window.boardState = engine.board;
 
   // 3. Logic Probe Hover Handler
   const handleJackHover = (jackId, mouseEvent) => {
@@ -11037,6 +11212,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // 4. Board Renderer & Console
   const board = new BoardRenderer(engine, svgBoard, handleJackHover);
   const consolePanel = new LabConsole(engine, board);
+  window.board = board;
+  window.boardRenderer = board;
+  window.consolePanel = consolePanel;
 
   // 5. Update UI Status on Engine State Changes
   const updateStatusBar = () => {
@@ -11086,6 +11264,7 @@ document.addEventListener("DOMContentLoaded", () => {
       expSelect.value = consolePanel.currentExpId;
     }
   };
+  window.updateStatusBar = updateStatusBar;
 
   engine.onChange(() => {
     board.render();

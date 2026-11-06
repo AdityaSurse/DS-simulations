@@ -296,10 +296,18 @@ class TTLEngine {
         }
 
         this.updateDisplaySmoothing(dt);
+
+        // Targeted DOM updates for dynamic elements only — ZERO SVG destruction!
+        if (typeof window !== "undefined" && window.board && typeof window.board.updateDynamicDisplay === "function") {
+          window.board.updateDynamicDisplay();
+        }
       } else {
         // Master power is OFF: all LEDs are completely dark, no virtual time advances
         for (const k of Object.keys(this.board.leds)) {
           this.board.leds[k] = 0.0;
+        }
+        if (typeof window !== "undefined" && window.board && typeof window.board.updateDynamicDisplay === "function") {
+          window.board.updateDynamicDisplay();
         }
       }
       this.rafId = requestAnimationFrame(loop);
@@ -345,9 +353,8 @@ class TTLEngine {
       }
     }
 
-    if (edgesThisFrame > 0) {
-      this.notify();
-    }
+    // Clock edge simulation complete for this frame.
+    // Dynamic displays (LEDs, 7-seg) update via 60fps updateDynamicDisplay() without destroying board SVG.
   }
 
   // Display smoothing: time-weighted average for high frequencies
@@ -400,6 +407,7 @@ class TTLEngine {
   toggleInput(jackId) {
     if (this.inputs.hasOwnProperty(jackId)) {
       this.inputs[jackId] = this.inputs[jackId] === 1 ? 0 : 1;
+      this.board.switches[jackId] = this.inputs[jackId];
       this.playClickSound(this.inputs[jackId] === 1 ? 950 : 700);
       this.evaluate();
       this.notify();

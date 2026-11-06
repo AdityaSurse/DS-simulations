@@ -38,9 +38,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // 2. Core TTL Engine
   const engine = new TTLEngine();
 
-  // Expose engine and board globally for direct console testing if desired
+  // Expose engine globally
   window.ditEngine = engine;
-  window.board = engine.board;
+  window.boardState = engine.board;
 
   // 3. Logic Probe Hover Handler
   const handleJackHover = (jackId, mouseEvent) => {
@@ -82,6 +82,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // 4. Board Renderer & Console
   const board = new BoardRenderer(engine, svgBoard, handleJackHover);
   const consolePanel = new LabConsole(engine, board);
+  window.board = board;
+  window.boardRenderer = board;
+  window.consolePanel = consolePanel;
 
   // 5. Update UI Status on Engine State Changes
   const updateStatusBar = () => {
@@ -131,6 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
       expSelect.value = consolePanel.currentExpId;
     }
   };
+  window.updateStatusBar = updateStatusBar;
 
   engine.onChange(() => {
     board.render();

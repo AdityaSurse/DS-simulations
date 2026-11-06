@@ -273,11 +273,18 @@ class BoardRenderer {
       }
 
       // 12-Bit Data Input Toggle Switch (instant toggle on mousedown irrespective of kit power state)
-      const switchGroup = e.target.closest(".switch-group");
+      const switchGroup = (e.target && typeof e.target.closest === "function") ? e.target.closest(".switch-group") : null;
       if (switchGroup) {
         const swId = switchGroup.dataset.switch;
         this.lastSwitchToggleTime = Date.now();
         this.engine.toggleInput(swId);
+        const isHigh = this.engine.inputs[swId] === 1;
+        const bat = switchGroup.querySelector(".switch-bat");
+        if (bat) {
+          const batAngle = isHigh ? -18 : 18;
+          bat.setAttribute("transform", `rotate(${batAngle}, 0, 0)`);
+        }
+        switchGroup.setAttribute("aria-checked", isHigh ? "true" : "false");
         e.preventDefault();
         return;
       }
@@ -334,7 +341,7 @@ class BoardRenderer {
       }
 
       // 3. Toggle Switch
-      const switchGroup = e.target.closest(".switch-group");
+      const switchGroup = (e.target && typeof e.target.closest === "function") ? e.target.closest(".switch-group") : null;
       if (switchGroup) {
         if (this.lastSwitchToggleTime && Date.now() - this.lastSwitchToggleTime < 350) {
           return;
@@ -342,6 +349,13 @@ class BoardRenderer {
         this.lastSwitchToggleTime = Date.now();
         const swId = switchGroup.dataset.switch;
         this.engine.toggleInput(swId);
+        const isHigh = this.engine.inputs[swId] === 1;
+        const bat = switchGroup.querySelector(".switch-bat");
+        if (bat) {
+          const batAngle = isHigh ? -18 : 18;
+          bat.setAttribute("transform", `rotate(${batAngle}, 0, 0)`);
+        }
+        switchGroup.setAttribute("aria-checked", isHigh ? "true" : "false");
         return;
       }
 
@@ -709,6 +723,85 @@ class BoardRenderer {
     }
   }
 
+  // Lightweight 60fps dynamic element updates (clock, pulsers, outputs, 7-seg) without wiping board SVG
+  updateDynamicDisplay() {
+    if (!this.svg) return;
+
+    // 1. Clock LEDs
+    this.updateLEDElement("LED_CLK_POS", this.engine.masterPower ? this.engine.board.leds["LED_CLK_POS"] : 0.0, "green");
+    this.updateLEDElement("LED_CLK_NEG", this.engine.masterPower ? this.engine.board.leds["LED_CLK_NEG"] : 0.0, "green");
+
+    // 2. Pulser LEDs
+    this.updateLEDElement("LED_P1_POS", this.engine.masterPower ? (this.engine.board.leds["LED_PULSER_1_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_1_POS"] : (this.engine.board.pulsers[1].pos ? 1.0 : 0.0)) : 0.0, "red");
+    this.updateLEDElement("LED_P1_NEG", this.engine.masterPower ? (this.engine.board.pulsers[1].neg ? 1.0 : 0.0) : 0.0, "red");
+    this.updateLEDElement("LED_P2_POS", this.engine.masterPower ? (this.engine.board.leds["LED_PULSER_2_POS"] !== undefined ? this.engine.board.leds["LED_PULSER_2_POS"] : (this.engine.board.pulsers[2].pos ? 1.0 : 0.0)) : 0.0, "red");
+    this.updateLEDElement("LED_P2_NEG", this.engine.masterPower ? (this.engine.board.pulsers[2].neg ? 1.0 : 0.0) : 0.0, "red");
+
+    // 3. 8 Output LEDs (Y7..Y0)
+    for (let i = 0; i < 8; i++) {
+      const bitNum = 7 - i;
+      const jId = `OUT.Y${bitNum}`;
+      const brightness = this.engine.board.leds[`LED_${jId}`] !== undefined
+        ? this.engine.board.leds[`LED_${jId}`]
+        : (this.engine.outputs[jId] ? 1.0 : 0.0);
+      this.updateLEDElement(`LED_${jId}`, this.engine.masterPower ? brightness : 0.0, "red");
+    }
+
+    // 4. 12 Data Input Switch LEDs (C3..A0)
+    const switchJacks = [
+      "IN.C3", "IN.C2", "IN.C1", "IN.C0",
+      "IN.B3", "IN.B2", "IN.B1", "IN.B0",
+      "IN.A3", "IN.A2", "IN.A1", "IN.A0"
+    ];
+    for (const sId of switchJacks) {
+      const isOn = (this.engine.inputs[sId] === 1) && this.engine.masterPower;
+      this.updateLEDElement(`LED_${sId}`, isOn ? 1.0 : 0.0, "red");
+    }
+
+    // 5. 7-Segment display digits
+    const segGroup = this.svg.querySelector("#output-7seg");
+    if (segGroup) {
+      const digits = this.engine.masterPower ? this.engine.segDigits : [-1, -1];
+      const newSegSvg = SVG_COMPONENTS.drawSevenSeg({
+        id: "output-7seg",
+        x: 1249, y: 78,
+        digits
+      });
+      const tempWrapper = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      tempWrapper.innerHTML = newSegSvg;
+      const newChild = tempWrapper.firstElementChild;
+      if (newChild && segGroup.parentNode) {
+        segGroup.parentNode.replaceChild(newChild, segGroup);
+      }
+    }
+
+    // 6. Header clock readout
+    if (typeof window !== "undefined" && typeof window.updateStatusBar === "function") {
+      window.updateStatusBar();
+    }
+  }
+
+  updateLEDElement(ledId, brightness, color = "red") {
+    const el = this.svg.querySelector(`[data-led="${ledId}"]`);
+    if (!el) return;
+    const b = brightness !== null && brightness !== undefined ? brightness : 0.0;
+    const gradMap = {
+      red: "url(#ledOnRed)",
+      green: "url(#ledOnGreen)",
+      amber: "url(#ledOnAmber)",
+      blue: "url(#ledOnBlue)"
+    };
+    const fill = b > 0.05 ? (gradMap[color] || "url(#ledOnRed)") : "url(#ledOff)";
+    
+    // Lens circle update
+    const lens = el.querySelector(".led-lens") || el.querySelectorAll("circle")[1];
+    if (lens) lens.setAttribute("fill", fill);
+    
+    // Active glow class
+    if (b > 0.05) el.classList.add("led-active-glow");
+    else el.classList.remove("led-active-glow");
+  }
+
   render(immediate = false) {
     if (immediate || typeof requestAnimationFrame === "undefined") {
       this.doRender();
@@ -759,20 +852,20 @@ class BoardRenderer {
         </g>
 
         ${SVG_COMPONENTS.drawZIFSocket({
-          socketId: "U5",
-          x: 130, y: 120, width: 140, height: 840,
-          pinCount: 40,
-          leverLocked: this.engine.sockets.U5.leverLocked
-        })}
+      socketId: "U5",
+      x: 130, y: 120, width: 140, height: 840,
+      pinCount: 40,
+      leverLocked: this.engine.sockets.U5.leverLocked
+    })}
         ${SVG_COMPONENTS.drawICChip({
-          socketId: "U5",
-          chipName: this.engine.sockets.U5.chip,
-          marking: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.marking || ("SN" + this.engine.sockets.U5.chip + "N")) : "",
-          socketX: 130, socketY: 120, socketW: 140, socketH: 840,
-          icPinCount: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.pinCount || 40) : 40,
-          alignment: "left",
-          backwards: !!this.engine.sockets.U5.backwards
-        })}
+      socketId: "U5",
+      chipName: this.engine.sockets.U5.chip,
+      marking: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.marking || ("SN" + this.engine.sockets.U5.chip + "N")) : "",
+      socketX: 130, socketY: 120, socketW: 140, socketH: 840,
+      icPinCount: this.engine.sockets.U5.chip ? (IC_LIBRARY[this.engine.sockets.U5.chip]?.pinCount || 40) : 40,
+      alignment: "left",
+      backwards: !!this.engine.sockets.U5.backwards
+    })}
       </g>
     `;
 
@@ -865,10 +958,10 @@ class BoardRenderer {
         <text x="1410" y="130" fill="#94a3b8" font-family="var(--font-mono)" font-size="8" text-anchor="middle">74LS47 (L)</text>
 
         ${SVG_COMPONENTS.drawSevenSeg({
-          id: "output-7seg",
-          x: 1249, y: 78,
-          digits: this.engine.masterPower ? this.engine.segDigits : [-1, -1]
-        })}
+      id: "output-7seg",
+      x: 1249, y: 78,
+      digits: this.engine.masterPower ? this.engine.segDigits : [-1, -1]
+    })}
       </g>
     `;
 
@@ -933,13 +1026,13 @@ class BoardRenderer {
         <text x="924" y="384" class="silkscreen-text mini" text-anchor="middle">DEBOUNCED SCHMITT-TRIGGER (CD4093)</text>
 
         ${SVG_COMPONENTS.drawPushButton({
-          id: 1, label: "PULSER 1", cx: 790, cy: 434,
-          isPressed: this.engine.board.pulsers[1].pressed
-        })}
+      id: 1, label: "PULSER 1", cx: 790, cy: 434,
+      isPressed: this.engine.board.pulsers[1].pressed
+    })}
         ${SVG_COMPONENTS.drawPushButton({
-          id: 2, label: "PULSER 2", cx: 1058, cy: 434,
-          isPressed: this.engine.board.pulsers[2].pressed
-        })}
+      id: 2, label: "PULSER 2", cx: 1058, cy: 434,
+      isPressed: this.engine.board.pulsers[2].pressed
+    })}
 
         <rect x="894" y="416" width="60" height="34" rx="2" fill="url(#icBody)" stroke="#333" stroke-width="0.8" />
         <text x="924" y="438" fill="#cbd5e1" font-family="var(--font-mono)" font-size="9" text-anchor="middle">CD4093</text>
@@ -992,12 +1085,12 @@ class BoardRenderer {
         <text x="1344" y="384" class="silkscreen-text mini" text-anchor="middle">0.5 Hz - 10 kHz VARIABLE OSCILLATOR</text>
 
         ${SVG_COMPONENTS.drawClockKnob({
-          id: "clock-knob", label: this.engine.formatClockFreq(),
-          cx: 1220, cy: 446,
-          freq: this.engine.clock.freq,
-          knobT: this.engine.clock.knobT,
-          running: this.engine.clock.running
-        })}
+      id: "clock-knob", label: this.engine.formatClockFreq(),
+      cx: 1220, cy: 446,
+      freq: this.engine.clock.freq,
+      knobT: this.engine.clock.knobT,
+      running: this.engine.clock.running
+    })}
 
         <!-- Clock control buttons (Run/Pause & Step) -->
         <g id="btn-clk-run-pause" transform="translate(1310, 420)" style="cursor: pointer;">
@@ -1054,12 +1147,12 @@ class BoardRenderer {
       const leverLabel = leverLocked ? "🔒 LEVER: LOCKED" : "🔓 LEVER: OPEN";
 
       svgContent += `
-        <text x="${cell.x + 10}" y="${cell.y - 48}" class="silkscreen-title bold">${cell.label}</text>
-        <text x="${cell.x + 50}" y="${cell.y - 48}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''})` : `[EMPTY 20-PIN ZIF]`}</text>
+        <text x="${cell.x + 10}" y="${cell.y - 78}" class="silkscreen-title bold">${cell.label}</text>
+        <text x="${cell.x + 50}" y="${cell.y - 78}" class="silkscreen-text">${sData.chip ? `${sData.chip} (${icDef ? icDef.title : ''})` : `[EMPTY 20-PIN ZIF]`}</text>
         <g class="zif-lever-badge" data-socket="${cell.id}" style="cursor: pointer;" tabindex="0" role="button" aria-label="Toggle ${cell.id} lever (${leverLocked ? 'Locked' : 'Open'})">
           <title>Click to toggle lever (${leverLocked ? 'Locked' : 'Open'})</title>
-          <rect x="${cell.x + zifW - 145}" y="${cell.y - 62}" width="145" height="20" rx="4" fill="${leverBadgeBg}" stroke="${leverBadgeBorder}" stroke-width="1.2" />
-          <text x="${cell.x + zifW - 72}" y="${cell.y - 48}" fill="${leverBadgeColor}" font-family="var(--font-mono)" font-size="10.5" font-weight="700" text-anchor="middle">${leverLabel}</text>
+          <rect x="${cell.x + zifW - 145}" y="${cell.y - 92}" width="145" height="18" rx="4" fill="${leverBadgeBg}" stroke="${leverBadgeBorder}" stroke-width="1.2" />
+          <text x="${cell.x + zifW - 72}" y="${cell.y - 79}" fill="${leverBadgeColor}" font-family="var(--font-mono)" font-size="10" font-weight="700" text-anchor="middle">${leverLabel}</text>
         </g>
       `;
 
@@ -1240,7 +1333,7 @@ class BoardRenderer {
           return;
         }
 
-        const zifLever = touch.target.closest(".zif-lever");
+        const zifLever = touch.target.closest(".zif-lever") || touch.target.closest(".zif-lever-badge");
         if (zifLever) {
           e.preventDefault();
           const sId = zifLever.dataset.socket;

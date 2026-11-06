@@ -251,15 +251,15 @@ const SVG_COMPONENTS = {
         <circle cx="0" cy="16" r="1.5" fill="#888" />
         <circle cx="0" cy="0" r="9" fill="url(#screwHead)" stroke="#333" stroke-width="0.7" />
         <circle cx="0" cy="0" r="6" fill="#111" />
-        <g transform="rotate(${batAngle}, 0, 0)">
+        <g class="switch-bat" transform="rotate(${batAngle}, 0, 0)">
           <ellipse cx="2" cy="${batY + 2}" rx="4.5" ry="7" fill="rgba(0,0,0,0.5)" />
           <path d="M -3 0 L -4 ${batY * 0.7} L -5 ${batY} C -5 ${batY + (isHigh ? -5 : 5)} 5 ${batY + (isHigh ? -5 : 5)} 5 ${batY} L 4 ${batY * 0.7} L 3 0 Z"
                 fill="url(#chromeBat)" stroke="#444" stroke-width="0.5" filter="url(#shadowBevel)" />
           <ellipse cx="0" cy="${batY}" rx="3.5" ry="2.5" fill="#ffffff" opacity="0.8" />
         </g>
-        <rect x="-16" y="-24" width="32" height="48" fill="transparent" class="switch-hitbox" />
+        <rect x="-18" y="-36" width="36" height="64" fill="transparent" class="switch-hitbox" />
+        ${label ? `<text x="0" y="-28" class="silkscreen-text bold switch-label" text-anchor="middle" pointer-events="none">${label}</text>` : ""}
       </g>
-      ${label ? `<text x="${cx}" y="${cy - 28}" class="silkscreen-text bold" text-anchor="middle">${label}</text>` : ""}
     `;
   },
   renderToggleSwitch(id, label, cx, cy, isHigh) {
@@ -291,7 +291,7 @@ const SVG_COMPONENTS = {
       <g class="led-group ${b > 0.05 ? 'led-active-glow' : ''}" data-led="${id}">
         <circle cx="${cx}" cy="${cy}" r="7" fill="#1a1e24" stroke="#333" stroke-width="0.5" />
         ${glowSvg}
-        <circle cx="${cx}" cy="${cy}" r="5.5" fill="${fill}" />
+        <circle cx="${cx}" cy="${cy}" r="5.5" fill="${fill}" class="led-lens" />
         <circle cx="${cx - 1.8}" cy="${cy - 1.8}" r="1.5" fill="#ffffff" opacity="${Math.max(0.2, b * 0.9)}" />
       </g>
       ${label ? `<text x="${lx}" y="${ly}" class="silkscreen-text" text-anchor="middle">${label}</text>` : ""}
