@@ -1864,6 +1864,89 @@ class TTLEngine {
       assert("7474", "Section 2 (2Q, 2Q̅) operates independently on 2CLK rising edge", r.outputs[9] === 1 && r.outputs[8] === 0);
     }
 
+    // 6. 74151 / 74LS151 1-of-8 Data Selector / Multiplexer
+    const mux8Lib = IC_LIBRARY["74151"] || IC_LIBRARY["74LS151"];
+    if (mux8Lib) {
+      // Test 1: With S̅=1: Y=0, W=1 for all select and data combinations
+      let strobeInhibitOk = true;
+      for (let c = 0; c <= 1; c++) {
+        for (let b = 0; b <= 1; b++) {
+          for (let a = 0; a <= 1; a++) {
+            const rAll1 = mux8Lib.eval({ 7: 1, 9: c, 10: b, 11: a, 4: 1, 3: 1, 2: 1, 1: 1, 15: 1, 14: 1, 13: 1, 12: 1 }, null);
+            const rAll0 = mux8Lib.eval({ 7: 1, 9: c, 10: b, 11: a, 4: 0, 3: 0, 2: 0, 1: 0, 15: 0, 14: 0, 13: 0, 12: 0 }, null);
+            if (rAll1.outputs[5] !== 0 || rAll1.outputs[6] !== 1 || rAll0.outputs[5] !== 0 || rAll0.outputs[6] !== 1) {
+              strobeInhibitOk = false;
+            }
+          }
+        }
+      }
+      assert("74151", "With S̅=1: Y=0, W=1 for all select and data combinations", strobeInhibitOk);
+
+      // Test 2: With S̅=0: for every (C,B,A) and for 20 random 8-bit data patterns, Y equals D[index] and W equals the complement
+      let sweepOk = true;
+      const dataPins = [4, 3, 2, 1, 15, 14, 13, 12]; // D0..D7
+      for (let patternIdx = 0; patternIdx < 20; patternIdx++) {
+        const pattern = [];
+        for (let bit = 0; bit < 8; bit++) {
+          pattern.push((patternIdx * 17 + bit * 31 + 7) % 2);
+        }
+        for (let c = 0; c <= 1; c++) {
+          for (let b = 0; b <= 1; b++) {
+            for (let a = 0; a <= 1; a++) {
+              const selIndex = (c * 4) + (b * 2) + a;
+              const inMap = { 7: 0, 9: c, 10: b, 11: a };
+              for (let i = 0; i < 8; i++) {
+                inMap[dataPins[i]] = pattern[i];
+              }
+              const r = mux8Lib.eval(inMap, null);
+              const expY = pattern[selIndex];
+              const expW = expY === 1 ? 0 : 1;
+              if (r.outputs[5] !== expY || r.outputs[6] !== expW) {
+                sweepOk = false;
+              }
+            }
+          }
+        }
+      }
+      assert("74151", "With S̅=0: for every (C,B,A) and 20 data patterns, Y=D[index] and W=NOT D[index]", sweepOk);
+
+      // Test 3: Strict power: remove VCC -> Y and W float and Diagnostics names the missing pin
+      const pwrEngine = this.clone();
+      pwrEngine.reset();
+      pwrEngine.setStrictPowerMode(true);
+      pwrEngine.insertChip("U1", "74151");
+      pwrEngine.setSocketLever("U1", true);
+      // Connect GND only (pin 8 -> J8), omit VCC (pin 16 -> J20)
+      pwrEngine.addWire("PWR.GND_1", "U1.J8");
+      pwrEngine.addWire("PWR.GND_2", "U1.J7"); // S̅=0
+      pwrEngine.addWire("PWR.5V_1", "U1.J4");  // D0=1
+      pwrEngine.evaluate();
+
+      const missingVccDiag = pwrEngine.diagnostics.missingPower.find(d => d.socket === "U1" && d.pin === 16);
+      const u1Outputs = pwrEngine.sockets.U1.lastOutputs || {};
+      const strictPowerPass = !!missingVccDiag && u1Outputs[5] === undefined && u1Outputs[6] === undefined;
+      assert("74151", "Strict power: missing VCC on pin 16 leaves outputs floating ('Z') and logs diagnostic", strictPowerPass, missingVccDiag ? missingVccDiag.message : "Missing diag");
+
+      // Test 4: Floating S̅ reads as 1 (outputs disabled) and the diagnostic fires
+      const floatEngine = this.clone();
+      floatEngine.reset();
+      floatEngine.setStrictPowerMode(false);
+      floatEngine.insertChip("U1", "74151");
+      floatEngine.setSocketLever("U1", true);
+      // Connect D0=1, CBA=000, but leave S̅ (J7) floating
+      floatEngine.addWire("PWR.5V_1", "U1.J4");
+      floatEngine.addWire("PWR.GND_1", "U1.J15");
+      floatEngine.addWire("PWR.GND_2", "U1.J14");
+      floatEngine.addWire("PWR.GND_3", "U1.J13");
+      floatEngine.evaluate();
+
+      const floatDiag = floatEngine.diagnostics.floatingInputs.find(d => d.socket === "U1" && d.pin === 7);
+      const floatOutputs = floatEngine.sockets.U1.lastOutputs || {};
+      // Floating S̅ reads as 1 -> Y=0, W=1
+      const floatPass = !!floatDiag && floatOutputs[5] === 0 && floatOutputs[6] === 1;
+      assert("74151", "Floating S̅ reads as TTL Logic 1 (outputs disabled Y=0, W=1) and flags floating input diagnostic", floatPass, floatDiag ? floatDiag.message : "Missing float diag");
+    }
+
     return results;
   }
 

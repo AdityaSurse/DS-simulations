@@ -473,24 +473,308 @@ const EXPERIMENTS = [
   },
 
   // -------------------------------------------------------------
-  // EXPERIMENT 2: 8:1 MUX using 74153 + 7404 + 7432
+  // EXPERIMENT 2: 8:1 MUX using 74151 (Direct) & 74153 (Cascaded)
   // -------------------------------------------------------------
   {
     id: "exp2",
     number: 2,
-    title: "Multiplexer using IC 74153 (8:1 MUX & Function Generator)",
-    aim: "To design and implement an 8:1 Multiplexer using IC 74LS153, 7404, and 7432, and implement logic functions f(C,B,A)=Σ(0,2,3,5) and f(I,J,K,L)=Σ(0,2,3,7,11,14,15).",
+    title: "Multiplexer (8:1 MUX & Function Generator)",
+    aim: "To design and implement an 8:1 Multiplexer using IC 74151 (1-of-8 Data Selector) and IC 74LS153 (dual 4:1 MUX with 7404 & 7432), and implement logic functions f(C,B,A)=Σ(0,2,3,5) and f(I,J,K,L)=Σ(0,2,3,7,11,14,15).",
     apparatus: [
+      { ic: "74151", qty: 1 },
       { ic: "74153", qty: 1 },
       { ic: "7404", qty: 1 },
       { ic: "7432", qty: 1 }
     ],
-    requiredICs: ["74153", "7404", "7432"],
-    theory: "IC 74153 contains two 4:1 multiplexers with common select inputs S1, S0 and separate active-low strobes 1G', 2G'. An 8:1 MUX is constructed by cascading both sections: high-order select line S2 drives 1G' directly and 2G' via an inverter (7404), with outputs 1Y and 2Y OR'ed (7432).",
+    requiredICs: ["74151", "74153", "7404", "7432"],
+    theory: "An 8:1 Multiplexer selects one of eight data lines (D0–D7) based on 3 select lines (C, B, A) and routes it to true output Y and complementary output W.\n\n• Approach 1: Implement directly with IC 74151 (monolithic 1-of-8 data selector in DIP-16). Strobe S̅ (active LOW on Pin 7) enables the multiplexer when tied to 0V (GND). If S̅=1, outputs are inhibited (Y=0, W=1). Select inputs: C=Pin 9 (MSB), B=Pin 10, A=Pin 11 (LSB). Outputs: Y=Pin 5, W=Pin 6. Data inputs: D0=Pin 4, D1=Pin 3, D2=Pin 2, D3=Pin 1, D4=Pin 15, D5=Pin 14, D6=Pin 13, D7=Pin 12. Power: VCC=Pin 16, GND=Pin 8.\n  - 3-Variable Function f(C,B,A) = Σ(0,2,3,5): Connect C, B, A to select lines. Set D0=1, D1=0, D2=1, D3=1, D4=0, D5=1, D6=0, D7=0.\n  - 4-Variable Function f(I,J,K,L) = Σ(0,2,3,7,11,14,15): Connect I, J, K to select lines C, B, A; 4th variable L drives data inputs via IC 7404 (D0=L̅, D1=1, D2=0, D3=L, D4=0, D5=L, D6=0, D7=1).\n\n• Approach 2: Implement with IC 74153 dual 4:1 MUX by cascading sections with an inverter (7404) on strobes 1G'/2G' and OR'ing outputs 1Y and 2Y with 7432.",
     subCircuits: {
+      "mux8_151_3var": {
+        id: "mux8_151_3var",
+        label: "74151: f(C,B,A)=Σ(0,2,3,5)",
+        title: "8:1 MUX with IC 74151: 3-Variable Function f(C,B,A) = Σ(0,2,3,5)",
+        apparatusText: "IC 74151 ×1",
+        procedure: [
+          "1. Insert IC 74151 into socket U1 and lock the lever.",
+          "2. Power IC 74151: Connect +5V (PWR.5V_1) to U1.J20 (Pin 16 VCC) and 0V (PWR.GND_1) to U1.J8 (Pin 8 GND).",
+          "3. Enable the multiplexer: Tie active-LOW strobe S̅ (Pin 7, U1.J7) to GND (0V).",
+          "4. Connect select inputs: IN.A2 (C, MSB) to U1.J13 (Pin 9), IN.A1 (B) to U1.J14 (Pin 10), IN.A0 (A, LSB) to U1.J15 (Pin 11).",
+          "5. Wire data inputs D0–D7 for f(C,B,A)=Σ(0,2,3,5):",
+          "   - D0 (Pin 4, J4) = 1 (+5V)",
+          "   - D1 (Pin 3, J3) = 0 (GND)",
+          "   - D2 (Pin 2, J2) = 1 (+5V)",
+          "   - D3 (Pin 1, J1) = 1 (+5V)",
+          "   - D4 (Pin 15, J19) = 0 (GND)",
+          "   - D5 (Pin 14, J18) = 1 (+5V)",
+          "   - D6 (Pin 13, J17) = 0 (GND)",
+          "   - D7 (Pin 12, J16) = 0 (GND)",
+          "6. Read output Y at U1.J5 (Pin 5) connected to OUT.Y0, and inverted output W at U1.J6 (Pin 6) connected to OUT.Y1.",
+          "7. Sweep CBA switches from 000 to 111 and verify Y0 is HIGH only for minterms 0, 2, 3, 5."
+        ],
+        stepByStep: [
+          "1. Insert 74151 into U1 and close lever.",
+          "2. Power: +5V to U1.J20 (Pin 16), GND to U1.J8 (Pin 8).",
+          "3. Enable: U1.J7 (S̅) to GND.",
+          "4. Select: IN.A2->U1.J13 (C), IN.A1->U1.J14 (B), IN.A0->U1.J15 (A).",
+          "5. Data lines: D0(J4)=+5V, D1(J3)=GND, D2(J2)=+5V, D3(J1)=+5V, D4(J19)=GND, D5(J18)=+5V, D6(J17)=GND, D7(J16)=GND.",
+          "6. Outputs: U1.J5 (Y) to OUT.Y0, U1.J6 (W) to OUT.Y1.",
+          "7. Sweep CBA and verify truth table."
+        ],
+        requiredICs: ["74151"],
+        recommendedSocketICs: { U1: "74151" },
+        solutionWiring: [
+          // Power & Ground
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
+          // Strobe S̅ tied to GND (active LOW enable)
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          // Select Lines (C=MSB, B, A=LSB)
+          { from: "IN.A0", to: "U1.J15", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J14", color: "#f5c518" },
+          { from: "IN.A2", to: "U1.J13", color: "#f5c518" },
+          // Data Inputs: D0=1, D1=0, D2=1, D3=1, D4=0, D5=1, D6=0, D7=0
+          { from: "PWR.5V_2", to: "U1.J4", color: "#ef4444" },
+          { from: "PWR.GND_2", to: "U1.J3", color: "#1e293b" },
+          { from: "PWR.5V_3", to: "U1.J2", color: "#ef4444" },
+          { from: "PWR.5V_4", to: "U1.J1", color: "#ef4444" },
+          { from: "PWR.GND_3", to: "U1.J19", color: "#1e293b" },
+          { from: "PWR.5V_1", to: "U1.J18", color: "#ef4444" },
+          { from: "PWR.GND_4", to: "U1.J17", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
+          // Outputs
+          { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+          { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
+        ],
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J15", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J14", color: "#f5c518" },
+          { from: "IN.A2", to: "U1.J13", color: "#f5c518" },
+          { from: "PWR.5V_2", to: "U1.J4", color: "#ef4444" },
+          { from: "PWR.GND_2", to: "U1.J3", color: "#1e293b" },
+          { from: "PWR.5V_3", to: "U1.J2", color: "#ef4444" },
+          { from: "PWR.5V_4", to: "U1.J1", color: "#ef4444" },
+          { from: "PWR.GND_3", to: "U1.J19", color: "#1e293b" },
+          { from: "PWR.5V_1", to: "U1.J18", color: "#ef4444" },
+          { from: "PWR.GND_4", to: "U1.J17", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
+          { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+          { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
+        ],
+        truthTable: {
+          inputs: ["C (A2)", "B (A1)", "A (A0)"],
+          outputs: ["Output Y (Y0)", "Output W (Y1)"],
+          rows: [
+            { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+            { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+            { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+            { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } }
+          ]
+        },
+        tableHeaders: ["C (A2)", "B (A1)", "A (A0)", "Expected Y0", "Observed Y0"],
+        tableRows: [
+          { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ],
+        checker: (testEngine) => {
+          const rows = [
+            { in: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } }
+          ];
+          let pass = true;
+          const failingRows = [];
+          const rowResults = [];
+          rows.forEach((r, idx) => {
+            Object.assign(testEngine.inputs, r.in);
+            testEngine.evaluate();
+            const ok = (testEngine.outputs["OUT.Y0"] === r.exp["OUT.Y0"]);
+            rowResults.push(ok);
+            if (!ok) { pass = false; failingRows.push(idx); }
+          });
+          return { pass, failingRows, rowResults, totalRows: rows.length, details: pass ? "74151 8:1 MUX f(C,B,A)=Σ(0,2,3,5) verified." : `${failingRows.length} rows failed.` };
+        }
+      },
+
+      "mux8_151_4var": {
+        id: "mux8_151_4var",
+        label: "74151: f(I,J,K,L)",
+        title: "8:1 MUX with IC 74151 + 7404: 4-Variable Function f(I,J,K,L) = Σ(0,2,3,7,11,14,15)",
+        apparatusText: "IC 74151 ×1, IC 7404 ×1 (if needed)",
+        procedure: [
+          "1. Insert IC 74151 into socket U1 and IC 7404 (Hex Inverter) into socket U2. Lock both levers.",
+          "2. Power both ICs: Connect +5V to U1.J20 (Pin 16) and U2.J20 (Pin 14); GND to U1.J8 (Pin 8) and U2.J7 (Pin 7).",
+          "3. Enable 74151: Tie strobe S̅ (Pin 7, U1.J7) to GND.",
+          "4. Connect select lines (standard method using 3 MSBs):",
+          "   - IN.A3 (I, MSB) to U1.J13 (Pin 9, Select C)",
+          "   - IN.A2 (J) to U1.J14 (Pin 10, Select B)",
+          "   - IN.A1 (K, LSB) to U1.J15 (Pin 11, Select A)",
+          "5. Route variable L (IN.A0) and inverted L̅ via 7404 inverter:",
+          "   - Connect IN.A0 to U2.J1 (1A); Inverter output U2.J2 (1Y, L̅) connects to U1.J4 (D0).",
+          "   - Connect IN.A0 (L) directly to U1.J1 (D3) and U1.J18 (D5).",
+          "6. Wire remaining fixed data inputs:",
+          "   - D1 (Pin 3, J3) = 1 (+5V)",
+          "   - D2 (Pin 2, J2) = 0 (GND)",
+          "   - D4 (Pin 15, J19) = 0 (GND)",
+          "   - D6 (Pin 13, J17) = 0 (GND)",
+          "   - D7 (Pin 12, J16) = 1 (+5V)",
+          "7. Read true output Y at U1.J5 (Pin 5) connected to OUT.Y0 (and W at U1.J6 to OUT.Y1).",
+          "8. Sweep IJKL from 0000 to 1111 and verify all 16 rows."
+        ],
+        stepByStep: [
+          "1. Insert 74151 in U1, 7404 in U2, close levers.",
+          "2. Power: +5V to U1.J20 and U2.J20; GND to U1.J8 and U2.J7.",
+          "3. Enable: U1.J7 (S̅) to GND.",
+          "4. Select lines: IN.A3->U1.J13 (C), IN.A2->U1.J14 (B), IN.A1->U1.J15 (A).",
+          "5. Variable L: IN.A0->U2.J1; U2.J2 (L̅)->U1.J4 (D0); IN.A0->U1.J1 (D3), IN.A0->U1.J18 (D5).",
+          "6. Fixed inputs: D1(J3)=+5V, D2(J2)=GND, D4(J19)=GND, D6(J17)=GND, D7(J16)=+5V.",
+          "7. Connect U1.J5 to OUT.Y0, U1.J6 to OUT.Y1.",
+          "8. Sweep all 16 combinations."
+        ],
+        requiredICs: ["74151", "7404"],
+        recommendedSocketICs: { U1: "74151", U2: "7404" },
+        solutionWiring: [
+          // Power U1 (74151) & U2 (7404)
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
+          { from: "PWR.5V_2", to: "U2.J20", color: "#ef4444" },
+          { from: "PWR.GND_2", to: "U2.J7", color: "#1e293b" },
+          // Enable S̅ = 0
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          // Select Lines: I->C, J->B, K->A
+          { from: "IN.A1", to: "U1.J15", color: "#f5c518" },
+          { from: "IN.A2", to: "U1.J14", color: "#f5c518" },
+          { from: "IN.A3", to: "U1.J13", color: "#f5c518" },
+          // L & Inverted L̅ via 7404
+          { from: "IN.A0", to: "U2.J1", color: "#3b82f6" },
+          { from: "U2.J2", to: "U1.J4", color: "#3b82f6" },
+          { from: "IN.A0", to: "U1.J1", color: "#3b82f6" },
+          { from: "IN.A0", to: "U1.J18", color: "#3b82f6" },
+          // Fixed data lines: D1=1, D2=0, D4=0, D6=0, D7=1
+          { from: "PWR.5V_3", to: "U1.J3", color: "#ef4444" },
+          { from: "PWR.GND_3", to: "U1.J2", color: "#1e293b" },
+          { from: "PWR.GND_4", to: "U1.J19", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J17", color: "#1e293b" },
+          { from: "PWR.5V_4", to: "U1.J16", color: "#ef4444" },
+          // Outputs
+          { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+          { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
+        ],
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
+          { from: "PWR.5V_2", to: "U2.J20", color: "#ef4444" },
+          { from: "PWR.GND_2", to: "U2.J7", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A1", to: "U1.J15", color: "#f5c518" },
+          { from: "IN.A2", to: "U1.J14", color: "#f5c518" },
+          { from: "IN.A3", to: "U1.J13", color: "#f5c518" },
+          { from: "IN.A0", to: "U2.J1", color: "#3b82f6" },
+          { from: "U2.J2", to: "U1.J4", color: "#3b82f6" },
+          { from: "IN.A0", to: "U1.J1", color: "#3b82f6" },
+          { from: "IN.A0", to: "U1.J18", color: "#3b82f6" },
+          { from: "PWR.5V_3", to: "U1.J3", color: "#ef4444" },
+          { from: "PWR.GND_3", to: "U1.J2", color: "#1e293b" },
+          { from: "PWR.GND_4", to: "U1.J19", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J17", color: "#1e293b" },
+          { from: "PWR.5V_4", to: "U1.J16", color: "#ef4444" },
+          { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+          { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
+        ],
+        truthTable: {
+          inputs: ["I (A3)", "J (A2)", "K (A1)", "L (A0)"],
+          outputs: ["Output Y0"],
+          rows: [
+            { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } }
+          ]
+        },
+        tableHeaders: ["I (A3)", "J (A2)", "K (A1)", "L (A0)", "Expected Y0", "Observed Y0"],
+        tableRows: [
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } }
+        ],
+        checker: (testEngine) => {
+          const rows = [
+            { in: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } }
+          ];
+          let pass = true;
+          const failingRows = [];
+          const rowResults = [];
+          rows.forEach((r, idx) => {
+            Object.assign(testEngine.inputs, r.in);
+            testEngine.evaluate();
+            const ok = (testEngine.outputs["OUT.Y0"] === r.exp["OUT.Y0"]);
+            rowResults.push(ok);
+            if (!ok) { pass = false; failingRows.push(idx); }
+          });
+          return { pass, failingRows, rowResults, totalRows: rows.length, details: pass ? "74151 + 7404 4-Var MUX f(I,J,K,L)=Σ(0,2,3,7,11,14,15) verified." : `${failingRows.length} rows failed.` };
+        }
+      },
+
       "mux8_3var": {
         id: "mux8_3var",
-        label: "f(C,B,A)=Σ(0,2,3,5)",
+        label: "74153: f(C,B,A)",
         title: "8:1 MUX: 3-Variable Function f(C,B,A) = Σ(0,2,3,5)",
         procedure: [
           "1. Insert 74153 into U1, 7404 into U2, 7432 into U3. Lock all levers.",
@@ -710,74 +994,63 @@ const EXPERIMENTS = [
         ]
       }
     },
-    // Default config = 3-variable function
+    // Default config = Approach 1 (IC 74151 3-variable function)
     procedure: [
-      "1. Insert 74153 into U1, 7404 into U2, 7432 into U3. Lock all levers.",
-      "2. Connect power: +5V to U1.J20, U2.J20, U3.J20; GND to U1.J8, U2.J7, U3.J7.",
-      "3. Wire select lines: IN.A0 to U1.J18 (S0), IN.A1 to U1.J2 (S1), IN.A2 to U1.J1 (1G') and U2.J1.",
-      "4. Connect U2.J2 (inverted C) to U1.J19 (2G').",
-      "5. Connect U1.J7 (1Y) to U3.J1, U1.J13 (2Y) to U3.J2, and U3.J3 to OUT.Y0.",
-      "6. Wire data inputs according to minterm expansion.",
-      "7. Click Auto-Check to sweep all combinations."
+      "1. Insert IC 74151 into socket U1 and lock the lever.",
+      "2. Power IC 74151: Connect +5V (PWR.5V_1) to U1.J20 (Pin 16 VCC) and 0V (PWR.GND_1) to U1.J8 (Pin 8 GND).",
+      "3. Enable the multiplexer: Tie active-LOW strobe S̅ (Pin 7, U1.J7) to GND (0V).",
+      "4. Connect select inputs: IN.A2 (C, MSB) to U1.J13 (Pin 9), IN.A1 (B) to U1.J14 (Pin 10), IN.A0 (A, LSB) to U1.J15 (Pin 11).",
+      "5. Wire data inputs D0–D7 for f(C,B,A)=Σ(0,2,3,5):",
+      "   - D0(J4)=+5V, D1(J3)=GND, D2(J2)=+5V, D3(J1)=+5V, D4(J19)=GND, D5(J18)=+5V, D6(J17)=GND, D7(J16)=GND.",
+      "6. Connect output Y (Pin 5, U1.J5) to OUT.Y0 and complementary output W (Pin 6, U1.J6) to OUT.Y1.",
+      "7. Sweep CBA switches from 000 to 111 and verify truth table."
     ],
     stepByStep: [
-      "1. Insert 74153 into U1, 7404 into U2, 7432 into U3. Lock all levers.",
-      "2. Connect power: +5V to U1.J20, U2.J20, U3.J20; GND to U1.J8, U2.J7, U3.J7.",
-      "3. Wire select lines: IN.A0 to U1.J18 (S0), IN.A1 to U1.J2 (S1), IN.A2 to U1.J1 (1G') and U2.J1.",
-      "4. Connect U2.J2 (inverted C) to U1.J19 (2G').",
-      "5. Connect U1.J7 (1Y) to U3.J1, U1.J13 (2Y) to U3.J2, and U3.J3 to OUT.Y0.",
-      "6. Wire data inputs according to minterm expansion.",
-      "7. Click Auto-Check to sweep all combinations."
+      "1. Insert 74151 into U1 and close lever.",
+      "2. Power: +5V to U1.J20 (Pin 16), GND to U1.J8 (Pin 8).",
+      "3. Enable: U1.J7 (S̅) to GND.",
+      "4. Select: IN.A2->U1.J13 (C), IN.A1->U1.J14 (B), IN.A0->U1.J15 (A).",
+      "5. Data lines: D0(J4)=+5V, D1(J3)=GND, D2(J2)=+5V, D3(J1)=+5V, D4(J19)=GND, D5(J18)=+5V, D6(J17)=GND, D7(J16)=GND.",
+      "6. Outputs: U1.J5 (Y) to OUT.Y0, U1.J6 (W) to OUT.Y1.",
+      "7. Sweep CBA and verify truth table."
     ],
-    requiredICs: ["74153", "7404", "7432"],
-    recommendedSocketICs: { U1: "74153", U2: "7404", U3: "7432" },
+    requiredICs: ["74151"],
+    recommendedSocketICs: { U1: "74151" },
     solutionWiring: [
       { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
       { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
-      { from: "PWR.5V_2", to: "U2.J20", color: "#ef4444" },
-      { from: "PWR.GND_2", to: "U2.J7", color: "#1e293b" },
-      { from: "PWR.5V_3", to: "U3.J20", color: "#ef4444" },
-      { from: "PWR.GND_3", to: "U3.J7", color: "#1e293b" },
-      { from: "IN.A0", to: "U1.J18", color: "#f5c518" },
-      { from: "IN.A1", to: "U1.J2", color: "#f5c518" },
-      { from: "IN.A2", to: "U1.J1", color: "#f5c518" },
-      { from: "IN.A2", to: "U2.J1", color: "#3b82f6" },
-      { from: "U2.J2", to: "U1.J19", color: "#3b82f6" },
-      { from: "U1.J7", to: "U3.J1", color: "#10b981" },
-      { from: "U1.J13", to: "U3.J2", color: "#10b981" },
-      { from: "U3.J3", to: "OUT.Y0", color: "#38bdf8" },
-      { from: "PWR.5V_4", to: "U1.J6", color: "#ef4444" },
-      { from: "PWR.GND_4", to: "U1.J5", color: "#1e293b" },
-      { from: "PWR.5V_1", to: "U1.J4", color: "#ef4444" },
-      { from: "PWR.5V_2", to: "U1.J3", color: "#ef4444" },
-      { from: "PWR.GND_1", to: "U1.J14", color: "#1e293b" },
-      { from: "PWR.5V_3", to: "U1.J15", color: "#ef4444" },
-      { from: "PWR.GND_2", to: "U1.J16", color: "#1e293b" },
-      { from: "PWR.GND_3", to: "U1.J17", color: "#1e293b" }
+      { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+      { from: "IN.A0", to: "U1.J15", color: "#f5c518" },
+      { from: "IN.A1", to: "U1.J14", color: "#f5c518" },
+      { from: "IN.A2", to: "U1.J13", color: "#f5c518" },
+      { from: "PWR.5V_2", to: "U1.J4", color: "#ef4444" },
+      { from: "PWR.GND_2", to: "U1.J3", color: "#1e293b" },
+      { from: "PWR.5V_3", to: "U1.J2", color: "#ef4444" },
+      { from: "PWR.5V_4", to: "U1.J1", color: "#ef4444" },
+      { from: "PWR.GND_3", to: "U1.J19", color: "#1e293b" },
+      { from: "PWR.5V_1", to: "U1.J18", color: "#ef4444" },
+      { from: "PWR.GND_4", to: "U1.J17", color: "#1e293b" },
+      { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
+      { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+      { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
     ],
     recommendedWires: [
       { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
       { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
-      { from: "PWR.5V_2", to: "U2.J20", color: "#ef4444" },
-      { from: "PWR.GND_2", to: "U2.J7", color: "#1e293b" },
-      { from: "PWR.5V_3", to: "U3.J20", color: "#ef4444" },
-      { from: "PWR.GND_3", to: "U3.J7", color: "#1e293b" },
-      { from: "IN.A0", to: "U1.J18", color: "#f5c518" },
-      { from: "IN.A1", to: "U1.J2", color: "#f5c518" },
-      { from: "IN.A2", to: "U1.J1", color: "#f5c518" },
-      { from: "IN.A2", to: "U2.J1", color: "#3b82f6" },
-      { from: "U2.J2", to: "U1.J19", color: "#3b82f6" },
-      { from: "U1.J7", to: "U3.J1", color: "#10b981" },
-      { from: "U1.J13", to: "U3.J2", color: "#10b981" },
-      { from: "U3.J3", to: "OUT.Y0", color: "#38bdf8" },
-      { from: "PWR.5V_4", to: "U1.J6", color: "#ef4444" },
-      { from: "PWR.GND_4", to: "U1.J5", color: "#1e293b" },
-      { from: "PWR.5V_1", to: "U1.J4", color: "#ef4444" },
-      { from: "PWR.5V_2", to: "U1.J3", color: "#ef4444" },
-      { from: "PWR.GND_1", to: "U1.J14", color: "#1e293b" },
-      { from: "PWR.5V_3", to: "U1.J15", color: "#ef4444" },
-      { from: "PWR.GND_2", to: "U1.J16", color: "#1e293b" },
-      { from: "PWR.GND_3", to: "U1.J17", color: "#1e293b" }
+      { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+      { from: "IN.A0", to: "U1.J15", color: "#f5c518" },
+      { from: "IN.A1", to: "U1.J14", color: "#f5c518" },
+      { from: "IN.A2", to: "U1.J13", color: "#f5c518" },
+      { from: "PWR.5V_2", to: "U1.J4", color: "#ef4444" },
+      { from: "PWR.GND_2", to: "U1.J3", color: "#1e293b" },
+      { from: "PWR.5V_3", to: "U1.J2", color: "#ef4444" },
+      { from: "PWR.5V_4", to: "U1.J1", color: "#ef4444" },
+      { from: "PWR.GND_3", to: "U1.J19", color: "#1e293b" },
+      { from: "PWR.5V_1", to: "U1.J18", color: "#ef4444" },
+      { from: "PWR.GND_4", to: "U1.J17", color: "#1e293b" },
+      { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
+      { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+      { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
     ],
     truthTable: {
       inputs: ["C (A2)", "B (A1)", "A (A0)"],

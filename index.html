@@ -2287,6 +2287,92 @@ const IC_LIBRARY = {
     }
   },
 
+  "74151": {
+    name: "74151",
+    marking: "SN74LS151N",
+    aliases: ["DM74ALS151N", "74LS151", "151"],
+    keywords: ["mux", "multiplexer", "selector", "8:1", "data selector", "1-of-8"],
+    title: "1-of-8 Data Selector / Multiplexer (complementary outputs)",
+    description: "1-of-8 Data Selector / Multiplexer with full binary decoding to select 1-of-8 data sources (D0–D7) using 3 select lines (C, B, A). Features active-low strobe S̅ and complementary outputs: true output Y (Pin 5) and inverted output W (Pin 6). When S̅ is HIGH, all data inputs are inhibited (Y=0, W=1).",
+    package: "DIP-16",
+    pinCount: 16,
+    vccPin: 16,
+    gndPin: 8,
+    pinNames: {
+      1: "D3", 2: "D2", 3: "D1", 4: "D0", 5: "Y", 6: "W", 7: "S̅", 8: "GND",
+      9: "C", 10: "B", 11: "A", 12: "D7", 13: "D6", 14: "D5", 15: "D4", 16: "VCC"
+    },
+    inputs: [1, 2, 3, 4, 7, 9, 10, 11, 12, 13, 14, 15],
+    outputs: [5, 6],
+    pins: [
+      { pin: 1, name: "D3", type: "in", desc: "data input 3", roleColor: "blue" },
+      { pin: 2, name: "D2", type: "in", desc: "data input 2", roleColor: "blue" },
+      { pin: 3, name: "D1", type: "in", desc: "data input 1", roleColor: "blue" },
+      { pin: 4, name: "D0", type: "in", desc: "data input 0", roleColor: "blue" },
+      { pin: 5, name: "Y", type: "out", desc: "true output", roleColor: "green" },
+      { pin: 6, name: "W", type: "out", desc: "inverted output (complement)", roleColor: "green" },
+      { pin: 7, name: "S̅", type: "in", desc: "strobe, active LOW", roleColor: "blue" },
+      { pin: 8, name: "GND", type: "gnd", desc: "ground (0V)", roleColor: "black" },
+      { pin: 9, name: "C", type: "in", desc: "select, MSB", roleColor: "blue" },
+      { pin: 10, name: "B", type: "in", desc: "select", roleColor: "blue" },
+      { pin: 11, name: "A", type: "in", desc: "select, LSB", roleColor: "blue" },
+      { pin: 12, name: "D7", type: "in", desc: "data input 7", roleColor: "blue" },
+      { pin: 13, name: "D6", type: "in", desc: "data input 6", roleColor: "blue" },
+      { pin: 14, name: "D5", type: "in", desc: "data input 5", roleColor: "blue" },
+      { pin: 15, name: "D4", type: "in", desc: "data input 4", roleColor: "blue" },
+      { pin: 16, name: "VCC", type: "pwr", desc: "supply voltage (+5V)", roleColor: "red" }
+    ],
+    eval: (inMap, state) => {
+      const get = typeof inMap === "function" ? inMap : (p => (inMap[p] === undefined ? 1 : inMap[p]));
+      const s = get(7); // Strobe S̅ (Pin 7, active LOW)
+      const c = get(9); // Select C (Pin 9, MSB)
+      const b = get(10); // Select B (Pin 10)
+      const a = get(11); // Select A (Pin 11, LSB)
+
+      // Data inputs: D0=P4, D1=P3, D2=P2, D3=P1, D4=P15, D5=P14, D6=P13, D7=P12
+      const d = [
+        get(4),  // D0
+        get(3),  // D1
+        get(2),  // D2
+        get(1),  // D3
+        get(15), // D4
+        get(14), // D5
+        get(13), // D6
+        get(12)  // D7
+      ];
+
+      let y, w;
+      if (s === 1) {
+        // Disabled: all data inputs disabled
+        y = 0;
+        w = 1;
+      } else {
+        const index = ((c === 1 ? 1 : 0) * 4) + ((b === 1 ? 1 : 0) * 2) + (a === 1 ? 1 : 0);
+        y = d[index] === 1 ? 1 : 0;
+        w = y === 1 ? 0 : 1;
+      }
+
+      return {
+        outputs: { 5: y, 6: w },
+        nextState: state || {}
+      };
+    },
+    truthTable: {
+      headers: ["Strobe S̅", "Select C", "Select B", "Select A", "Output Y", "Output W"],
+      rows: [
+        ["H", "X", "X", "X", "L", "H"],
+        ["L", "L", "L", "L", "D0", "D0̅"],
+        ["L", "L", "L", "H", "D1", "D1̅"],
+        ["L", "L", "H", "L", "D2", "D2̅"],
+        ["L", "L", "H", "H", "D3", "D3̅"],
+        ["L", "H", "L", "L", "D4", "D4̅"],
+        ["L", "H", "L", "H", "D5", "D5̅"],
+        ["L", "H", "H", "L", "D6", "D6̅"],
+        ["L", "H", "H", "H", "D7", "D7̅"]
+      ]
+    }
+  },
+
   "74153": {
     name: "74153",
     marking: "SN74LS153N",
@@ -2876,6 +2962,8 @@ const IC_LIBRARY = {
 };
 
 // Aliases for standard part numbering
+IC_LIBRARY["74LS151"] = IC_LIBRARY["74151"];
+IC_LIBRARY["DM74ALS151N"] = IC_LIBRARY["74151"];
 IC_LIBRARY["74LS153"] = IC_LIBRARY["74153"];
 IC_LIBRARY["74LS138"] = IC_LIBRARY["74138"];
 IC_LIBRARY["74LS83"] = IC_LIBRARY["7483"];
@@ -3365,24 +3453,308 @@ const EXPERIMENTS = [
   },
 
   // -------------------------------------------------------------
-  // EXPERIMENT 2: 8:1 MUX using 74153 + 7404 + 7432
+  // EXPERIMENT 2: 8:1 MUX using 74151 (Direct) & 74153 (Cascaded)
   // -------------------------------------------------------------
   {
     id: "exp2",
     number: 2,
-    title: "Multiplexer using IC 74153 (8:1 MUX & Function Generator)",
-    aim: "To design and implement an 8:1 Multiplexer using IC 74LS153, 7404, and 7432, and implement logic functions f(C,B,A)=Σ(0,2,3,5) and f(I,J,K,L)=Σ(0,2,3,7,11,14,15).",
+    title: "Multiplexer (8:1 MUX & Function Generator)",
+    aim: "To design and implement an 8:1 Multiplexer using IC 74151 (1-of-8 Data Selector) and IC 74LS153 (dual 4:1 MUX with 7404 & 7432), and implement logic functions f(C,B,A)=Σ(0,2,3,5) and f(I,J,K,L)=Σ(0,2,3,7,11,14,15).",
     apparatus: [
+      { ic: "74151", qty: 1 },
       { ic: "74153", qty: 1 },
       { ic: "7404", qty: 1 },
       { ic: "7432", qty: 1 }
     ],
-    requiredICs: ["74153", "7404", "7432"],
-    theory: "IC 74153 contains two 4:1 multiplexers with common select inputs S1, S0 and separate active-low strobes 1G', 2G'. An 8:1 MUX is constructed by cascading both sections: high-order select line S2 drives 1G' directly and 2G' via an inverter (7404), with outputs 1Y and 2Y OR'ed (7432).",
+    requiredICs: ["74151", "74153", "7404", "7432"],
+    theory: "An 8:1 Multiplexer selects one of eight data lines (D0–D7) based on 3 select lines (C, B, A) and routes it to true output Y and complementary output W.\n\n• Approach 1: Implement directly with IC 74151 (monolithic 1-of-8 data selector in DIP-16). Strobe S̅ (active LOW on Pin 7) enables the multiplexer when tied to 0V (GND). If S̅=1, outputs are inhibited (Y=0, W=1). Select inputs: C=Pin 9 (MSB), B=Pin 10, A=Pin 11 (LSB). Outputs: Y=Pin 5, W=Pin 6. Data inputs: D0=Pin 4, D1=Pin 3, D2=Pin 2, D3=Pin 1, D4=Pin 15, D5=Pin 14, D6=Pin 13, D7=Pin 12. Power: VCC=Pin 16, GND=Pin 8.\n  - 3-Variable Function f(C,B,A) = Σ(0,2,3,5): Connect C, B, A to select lines. Set D0=1, D1=0, D2=1, D3=1, D4=0, D5=1, D6=0, D7=0.\n  - 4-Variable Function f(I,J,K,L) = Σ(0,2,3,7,11,14,15): Connect I, J, K to select lines C, B, A; 4th variable L drives data inputs via IC 7404 (D0=L̅, D1=1, D2=0, D3=L, D4=0, D5=L, D6=0, D7=1).\n\n• Approach 2: Implement with IC 74153 dual 4:1 MUX by cascading sections with an inverter (7404) on strobes 1G'/2G' and OR'ing outputs 1Y and 2Y with 7432.",
     subCircuits: {
+      "mux8_151_3var": {
+        id: "mux8_151_3var",
+        label: "74151: f(C,B,A)=Σ(0,2,3,5)",
+        title: "8:1 MUX with IC 74151: 3-Variable Function f(C,B,A) = Σ(0,2,3,5)",
+        apparatusText: "IC 74151 ×1",
+        procedure: [
+          "1. Insert IC 74151 into socket U1 and lock the lever.",
+          "2. Power IC 74151: Connect +5V (PWR.5V_1) to U1.J20 (Pin 16 VCC) and 0V (PWR.GND_1) to U1.J8 (Pin 8 GND).",
+          "3. Enable the multiplexer: Tie active-LOW strobe S̅ (Pin 7, U1.J7) to GND (0V).",
+          "4. Connect select inputs: IN.A2 (C, MSB) to U1.J13 (Pin 9), IN.A1 (B) to U1.J14 (Pin 10), IN.A0 (A, LSB) to U1.J15 (Pin 11).",
+          "5. Wire data inputs D0–D7 for f(C,B,A)=Σ(0,2,3,5):",
+          "   - D0 (Pin 4, J4) = 1 (+5V)",
+          "   - D1 (Pin 3, J3) = 0 (GND)",
+          "   - D2 (Pin 2, J2) = 1 (+5V)",
+          "   - D3 (Pin 1, J1) = 1 (+5V)",
+          "   - D4 (Pin 15, J19) = 0 (GND)",
+          "   - D5 (Pin 14, J18) = 1 (+5V)",
+          "   - D6 (Pin 13, J17) = 0 (GND)",
+          "   - D7 (Pin 12, J16) = 0 (GND)",
+          "6. Read output Y at U1.J5 (Pin 5) connected to OUT.Y0, and inverted output W at U1.J6 (Pin 6) connected to OUT.Y1.",
+          "7. Sweep CBA switches from 000 to 111 and verify Y0 is HIGH only for minterms 0, 2, 3, 5."
+        ],
+        stepByStep: [
+          "1. Insert 74151 into U1 and close lever.",
+          "2. Power: +5V to U1.J20 (Pin 16), GND to U1.J8 (Pin 8).",
+          "3. Enable: U1.J7 (S̅) to GND.",
+          "4. Select: IN.A2->U1.J13 (C), IN.A1->U1.J14 (B), IN.A0->U1.J15 (A).",
+          "5. Data lines: D0(J4)=+5V, D1(J3)=GND, D2(J2)=+5V, D3(J1)=+5V, D4(J19)=GND, D5(J18)=+5V, D6(J17)=GND, D7(J16)=GND.",
+          "6. Outputs: U1.J5 (Y) to OUT.Y0, U1.J6 (W) to OUT.Y1.",
+          "7. Sweep CBA and verify truth table."
+        ],
+        requiredICs: ["74151"],
+        recommendedSocketICs: { U1: "74151" },
+        solutionWiring: [
+          // Power & Ground
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
+          // Strobe S̅ tied to GND (active LOW enable)
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          // Select Lines (C=MSB, B, A=LSB)
+          { from: "IN.A0", to: "U1.J15", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J14", color: "#f5c518" },
+          { from: "IN.A2", to: "U1.J13", color: "#f5c518" },
+          // Data Inputs: D0=1, D1=0, D2=1, D3=1, D4=0, D5=1, D6=0, D7=0
+          { from: "PWR.5V_2", to: "U1.J4", color: "#ef4444" },
+          { from: "PWR.GND_2", to: "U1.J3", color: "#1e293b" },
+          { from: "PWR.5V_3", to: "U1.J2", color: "#ef4444" },
+          { from: "PWR.5V_4", to: "U1.J1", color: "#ef4444" },
+          { from: "PWR.GND_3", to: "U1.J19", color: "#1e293b" },
+          { from: "PWR.5V_1", to: "U1.J18", color: "#ef4444" },
+          { from: "PWR.GND_4", to: "U1.J17", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
+          // Outputs
+          { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+          { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
+        ],
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A0", to: "U1.J15", color: "#f5c518" },
+          { from: "IN.A1", to: "U1.J14", color: "#f5c518" },
+          { from: "IN.A2", to: "U1.J13", color: "#f5c518" },
+          { from: "PWR.5V_2", to: "U1.J4", color: "#ef4444" },
+          { from: "PWR.GND_2", to: "U1.J3", color: "#1e293b" },
+          { from: "PWR.5V_3", to: "U1.J2", color: "#ef4444" },
+          { from: "PWR.5V_4", to: "U1.J1", color: "#ef4444" },
+          { from: "PWR.GND_3", to: "U1.J19", color: "#1e293b" },
+          { from: "PWR.5V_1", to: "U1.J18", color: "#ef4444" },
+          { from: "PWR.GND_4", to: "U1.J17", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
+          { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+          { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
+        ],
+        truthTable: {
+          inputs: ["C (A2)", "B (A1)", "A (A0)"],
+          outputs: ["Output Y (Y0)", "Output W (Y1)"],
+          rows: [
+            { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+            { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+            { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+            { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1, "OUT.Y1": 0 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } },
+            { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0, "OUT.Y1": 1 } }
+          ]
+        },
+        tableHeaders: ["C (A2)", "B (A1)", "A (A0)", "Expected Y0", "Observed Y0"],
+        tableRows: [
+          { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } }
+        ],
+        checker: (testEngine) => {
+          const rows = [
+            { in: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } }
+          ];
+          let pass = true;
+          const failingRows = [];
+          const rowResults = [];
+          rows.forEach((r, idx) => {
+            Object.assign(testEngine.inputs, r.in);
+            testEngine.evaluate();
+            const ok = (testEngine.outputs["OUT.Y0"] === r.exp["OUT.Y0"]);
+            rowResults.push(ok);
+            if (!ok) { pass = false; failingRows.push(idx); }
+          });
+          return { pass, failingRows, rowResults, totalRows: rows.length, details: pass ? "74151 8:1 MUX f(C,B,A)=Σ(0,2,3,5) verified." : `${failingRows.length} rows failed.` };
+        }
+      },
+
+      "mux8_151_4var": {
+        id: "mux8_151_4var",
+        label: "74151: f(I,J,K,L)",
+        title: "8:1 MUX with IC 74151 + 7404: 4-Variable Function f(I,J,K,L) = Σ(0,2,3,7,11,14,15)",
+        apparatusText: "IC 74151 ×1, IC 7404 ×1 (if needed)",
+        procedure: [
+          "1. Insert IC 74151 into socket U1 and IC 7404 (Hex Inverter) into socket U2. Lock both levers.",
+          "2. Power both ICs: Connect +5V to U1.J20 (Pin 16) and U2.J20 (Pin 14); GND to U1.J8 (Pin 8) and U2.J7 (Pin 7).",
+          "3. Enable 74151: Tie strobe S̅ (Pin 7, U1.J7) to GND.",
+          "4. Connect select lines (standard method using 3 MSBs):",
+          "   - IN.A3 (I, MSB) to U1.J13 (Pin 9, Select C)",
+          "   - IN.A2 (J) to U1.J14 (Pin 10, Select B)",
+          "   - IN.A1 (K, LSB) to U1.J15 (Pin 11, Select A)",
+          "5. Route variable L (IN.A0) and inverted L̅ via 7404 inverter:",
+          "   - Connect IN.A0 to U2.J1 (1A); Inverter output U2.J2 (1Y, L̅) connects to U1.J4 (D0).",
+          "   - Connect IN.A0 (L) directly to U1.J1 (D3) and U1.J18 (D5).",
+          "6. Wire remaining fixed data inputs:",
+          "   - D1 (Pin 3, J3) = 1 (+5V)",
+          "   - D2 (Pin 2, J2) = 0 (GND)",
+          "   - D4 (Pin 15, J19) = 0 (GND)",
+          "   - D6 (Pin 13, J17) = 0 (GND)",
+          "   - D7 (Pin 12, J16) = 1 (+5V)",
+          "7. Read true output Y at U1.J5 (Pin 5) connected to OUT.Y0 (and W at U1.J6 to OUT.Y1).",
+          "8. Sweep IJKL from 0000 to 1111 and verify all 16 rows."
+        ],
+        stepByStep: [
+          "1. Insert 74151 in U1, 7404 in U2, close levers.",
+          "2. Power: +5V to U1.J20 and U2.J20; GND to U1.J8 and U2.J7.",
+          "3. Enable: U1.J7 (S̅) to GND.",
+          "4. Select lines: IN.A3->U1.J13 (C), IN.A2->U1.J14 (B), IN.A1->U1.J15 (A).",
+          "5. Variable L: IN.A0->U2.J1; U2.J2 (L̅)->U1.J4 (D0); IN.A0->U1.J1 (D3), IN.A0->U1.J18 (D5).",
+          "6. Fixed inputs: D1(J3)=+5V, D2(J2)=GND, D4(J19)=GND, D6(J17)=GND, D7(J16)=+5V.",
+          "7. Connect U1.J5 to OUT.Y0, U1.J6 to OUT.Y1.",
+          "8. Sweep all 16 combinations."
+        ],
+        requiredICs: ["74151", "7404"],
+        recommendedSocketICs: { U1: "74151", U2: "7404" },
+        solutionWiring: [
+          // Power U1 (74151) & U2 (7404)
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
+          { from: "PWR.5V_2", to: "U2.J20", color: "#ef4444" },
+          { from: "PWR.GND_2", to: "U2.J7", color: "#1e293b" },
+          // Enable S̅ = 0
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          // Select Lines: I->C, J->B, K->A
+          { from: "IN.A1", to: "U1.J15", color: "#f5c518" },
+          { from: "IN.A2", to: "U1.J14", color: "#f5c518" },
+          { from: "IN.A3", to: "U1.J13", color: "#f5c518" },
+          // L & Inverted L̅ via 7404
+          { from: "IN.A0", to: "U2.J1", color: "#3b82f6" },
+          { from: "U2.J2", to: "U1.J4", color: "#3b82f6" },
+          { from: "IN.A0", to: "U1.J1", color: "#3b82f6" },
+          { from: "IN.A0", to: "U1.J18", color: "#3b82f6" },
+          // Fixed data lines: D1=1, D2=0, D4=0, D6=0, D7=1
+          { from: "PWR.5V_3", to: "U1.J3", color: "#ef4444" },
+          { from: "PWR.GND_3", to: "U1.J2", color: "#1e293b" },
+          { from: "PWR.GND_4", to: "U1.J19", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J17", color: "#1e293b" },
+          { from: "PWR.5V_4", to: "U1.J16", color: "#ef4444" },
+          // Outputs
+          { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+          { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
+        ],
+        recommendedWires: [
+          { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
+          { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
+          { from: "PWR.5V_2", to: "U2.J20", color: "#ef4444" },
+          { from: "PWR.GND_2", to: "U2.J7", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+          { from: "IN.A1", to: "U1.J15", color: "#f5c518" },
+          { from: "IN.A2", to: "U1.J14", color: "#f5c518" },
+          { from: "IN.A3", to: "U1.J13", color: "#f5c518" },
+          { from: "IN.A0", to: "U2.J1", color: "#3b82f6" },
+          { from: "U2.J2", to: "U1.J4", color: "#3b82f6" },
+          { from: "IN.A0", to: "U1.J1", color: "#3b82f6" },
+          { from: "IN.A0", to: "U1.J18", color: "#3b82f6" },
+          { from: "PWR.5V_3", to: "U1.J3", color: "#ef4444" },
+          { from: "PWR.GND_3", to: "U1.J2", color: "#1e293b" },
+          { from: "PWR.GND_4", to: "U1.J19", color: "#1e293b" },
+          { from: "PWR.GND_1", to: "U1.J17", color: "#1e293b" },
+          { from: "PWR.5V_4", to: "U1.J16", color: "#ef4444" },
+          { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+          { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
+        ],
+        truthTable: {
+          inputs: ["I (A3)", "J (A2)", "K (A1)", "L (A0)"],
+          outputs: ["Output Y0"],
+          rows: [
+            { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+            { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } }
+          ]
+        },
+        tableHeaders: ["I (A3)", "J (A2)", "K (A1)", "L (A0)", "Expected Y0", "Observed Y0"],
+        tableRows: [
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, expected: { "OUT.Y0": 0 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, expected: { "OUT.Y0": 1 } },
+          { inputs: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, expected: { "OUT.Y0": 1 } }
+        ],
+        checker: (testEngine) => {
+          const rows = [
+            { in: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 0, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 0, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 0, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 0 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 0, "IN.A0": 1 }, exp: { "OUT.Y0": 0 } },
+            { in: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 0 }, exp: { "OUT.Y0": 1 } },
+            { in: { "IN.A3": 1, "IN.A2": 1, "IN.A1": 1, "IN.A0": 1 }, exp: { "OUT.Y0": 1 } }
+          ];
+          let pass = true;
+          const failingRows = [];
+          const rowResults = [];
+          rows.forEach((r, idx) => {
+            Object.assign(testEngine.inputs, r.in);
+            testEngine.evaluate();
+            const ok = (testEngine.outputs["OUT.Y0"] === r.exp["OUT.Y0"]);
+            rowResults.push(ok);
+            if (!ok) { pass = false; failingRows.push(idx); }
+          });
+          return { pass, failingRows, rowResults, totalRows: rows.length, details: pass ? "74151 + 7404 4-Var MUX f(I,J,K,L)=Σ(0,2,3,7,11,14,15) verified." : `${failingRows.length} rows failed.` };
+        }
+      },
+
       "mux8_3var": {
         id: "mux8_3var",
-        label: "f(C,B,A)=Σ(0,2,3,5)",
+        label: "74153: f(C,B,A)",
         title: "8:1 MUX: 3-Variable Function f(C,B,A) = Σ(0,2,3,5)",
         procedure: [
           "1. Insert 74153 into U1, 7404 into U2, 7432 into U3. Lock all levers.",
@@ -3602,74 +3974,63 @@ const EXPERIMENTS = [
         ]
       }
     },
-    // Default config = 3-variable function
+    // Default config = Approach 1 (IC 74151 3-variable function)
     procedure: [
-      "1. Insert 74153 into U1, 7404 into U2, 7432 into U3. Lock all levers.",
-      "2. Connect power: +5V to U1.J20, U2.J20, U3.J20; GND to U1.J8, U2.J7, U3.J7.",
-      "3. Wire select lines: IN.A0 to U1.J18 (S0), IN.A1 to U1.J2 (S1), IN.A2 to U1.J1 (1G') and U2.J1.",
-      "4. Connect U2.J2 (inverted C) to U1.J19 (2G').",
-      "5. Connect U1.J7 (1Y) to U3.J1, U1.J13 (2Y) to U3.J2, and U3.J3 to OUT.Y0.",
-      "6. Wire data inputs according to minterm expansion.",
-      "7. Click Auto-Check to sweep all combinations."
+      "1. Insert IC 74151 into socket U1 and lock the lever.",
+      "2. Power IC 74151: Connect +5V (PWR.5V_1) to U1.J20 (Pin 16 VCC) and 0V (PWR.GND_1) to U1.J8 (Pin 8 GND).",
+      "3. Enable the multiplexer: Tie active-LOW strobe S̅ (Pin 7, U1.J7) to GND (0V).",
+      "4. Connect select inputs: IN.A2 (C, MSB) to U1.J13 (Pin 9), IN.A1 (B) to U1.J14 (Pin 10), IN.A0 (A, LSB) to U1.J15 (Pin 11).",
+      "5. Wire data inputs D0–D7 for f(C,B,A)=Σ(0,2,3,5):",
+      "   - D0(J4)=+5V, D1(J3)=GND, D2(J2)=+5V, D3(J1)=+5V, D4(J19)=GND, D5(J18)=+5V, D6(J17)=GND, D7(J16)=GND.",
+      "6. Connect output Y (Pin 5, U1.J5) to OUT.Y0 and complementary output W (Pin 6, U1.J6) to OUT.Y1.",
+      "7. Sweep CBA switches from 000 to 111 and verify truth table."
     ],
     stepByStep: [
-      "1. Insert 74153 into U1, 7404 into U2, 7432 into U3. Lock all levers.",
-      "2. Connect power: +5V to U1.J20, U2.J20, U3.J20; GND to U1.J8, U2.J7, U3.J7.",
-      "3. Wire select lines: IN.A0 to U1.J18 (S0), IN.A1 to U1.J2 (S1), IN.A2 to U1.J1 (1G') and U2.J1.",
-      "4. Connect U2.J2 (inverted C) to U1.J19 (2G').",
-      "5. Connect U1.J7 (1Y) to U3.J1, U1.J13 (2Y) to U3.J2, and U3.J3 to OUT.Y0.",
-      "6. Wire data inputs according to minterm expansion.",
-      "7. Click Auto-Check to sweep all combinations."
+      "1. Insert 74151 into U1 and close lever.",
+      "2. Power: +5V to U1.J20 (Pin 16), GND to U1.J8 (Pin 8).",
+      "3. Enable: U1.J7 (S̅) to GND.",
+      "4. Select: IN.A2->U1.J13 (C), IN.A1->U1.J14 (B), IN.A0->U1.J15 (A).",
+      "5. Data lines: D0(J4)=+5V, D1(J3)=GND, D2(J2)=+5V, D3(J1)=+5V, D4(J19)=GND, D5(J18)=+5V, D6(J17)=GND, D7(J16)=GND.",
+      "6. Outputs: U1.J5 (Y) to OUT.Y0, U1.J6 (W) to OUT.Y1.",
+      "7. Sweep CBA and verify truth table."
     ],
-    requiredICs: ["74153", "7404", "7432"],
-    recommendedSocketICs: { U1: "74153", U2: "7404", U3: "7432" },
+    requiredICs: ["74151"],
+    recommendedSocketICs: { U1: "74151" },
     solutionWiring: [
       { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
       { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
-      { from: "PWR.5V_2", to: "U2.J20", color: "#ef4444" },
-      { from: "PWR.GND_2", to: "U2.J7", color: "#1e293b" },
-      { from: "PWR.5V_3", to: "U3.J20", color: "#ef4444" },
-      { from: "PWR.GND_3", to: "U3.J7", color: "#1e293b" },
-      { from: "IN.A0", to: "U1.J18", color: "#f5c518" },
-      { from: "IN.A1", to: "U1.J2", color: "#f5c518" },
-      { from: "IN.A2", to: "U1.J1", color: "#f5c518" },
-      { from: "IN.A2", to: "U2.J1", color: "#3b82f6" },
-      { from: "U2.J2", to: "U1.J19", color: "#3b82f6" },
-      { from: "U1.J7", to: "U3.J1", color: "#10b981" },
-      { from: "U1.J13", to: "U3.J2", color: "#10b981" },
-      { from: "U3.J3", to: "OUT.Y0", color: "#38bdf8" },
-      { from: "PWR.5V_4", to: "U1.J6", color: "#ef4444" },
-      { from: "PWR.GND_4", to: "U1.J5", color: "#1e293b" },
-      { from: "PWR.5V_1", to: "U1.J4", color: "#ef4444" },
-      { from: "PWR.5V_2", to: "U1.J3", color: "#ef4444" },
-      { from: "PWR.GND_1", to: "U1.J14", color: "#1e293b" },
-      { from: "PWR.5V_3", to: "U1.J15", color: "#ef4444" },
-      { from: "PWR.GND_2", to: "U1.J16", color: "#1e293b" },
-      { from: "PWR.GND_3", to: "U1.J17", color: "#1e293b" }
+      { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+      { from: "IN.A0", to: "U1.J15", color: "#f5c518" },
+      { from: "IN.A1", to: "U1.J14", color: "#f5c518" },
+      { from: "IN.A2", to: "U1.J13", color: "#f5c518" },
+      { from: "PWR.5V_2", to: "U1.J4", color: "#ef4444" },
+      { from: "PWR.GND_2", to: "U1.J3", color: "#1e293b" },
+      { from: "PWR.5V_3", to: "U1.J2", color: "#ef4444" },
+      { from: "PWR.5V_4", to: "U1.J1", color: "#ef4444" },
+      { from: "PWR.GND_3", to: "U1.J19", color: "#1e293b" },
+      { from: "PWR.5V_1", to: "U1.J18", color: "#ef4444" },
+      { from: "PWR.GND_4", to: "U1.J17", color: "#1e293b" },
+      { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
+      { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+      { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
     ],
     recommendedWires: [
       { from: "PWR.5V_1", to: "U1.J20", color: "#ef4444" },
       { from: "PWR.GND_1", to: "U1.J8", color: "#1e293b" },
-      { from: "PWR.5V_2", to: "U2.J20", color: "#ef4444" },
-      { from: "PWR.GND_2", to: "U2.J7", color: "#1e293b" },
-      { from: "PWR.5V_3", to: "U3.J20", color: "#ef4444" },
-      { from: "PWR.GND_3", to: "U3.J7", color: "#1e293b" },
-      { from: "IN.A0", to: "U1.J18", color: "#f5c518" },
-      { from: "IN.A1", to: "U1.J2", color: "#f5c518" },
-      { from: "IN.A2", to: "U1.J1", color: "#f5c518" },
-      { from: "IN.A2", to: "U2.J1", color: "#3b82f6" },
-      { from: "U2.J2", to: "U1.J19", color: "#3b82f6" },
-      { from: "U1.J7", to: "U3.J1", color: "#10b981" },
-      { from: "U1.J13", to: "U3.J2", color: "#10b981" },
-      { from: "U3.J3", to: "OUT.Y0", color: "#38bdf8" },
-      { from: "PWR.5V_4", to: "U1.J6", color: "#ef4444" },
-      { from: "PWR.GND_4", to: "U1.J5", color: "#1e293b" },
-      { from: "PWR.5V_1", to: "U1.J4", color: "#ef4444" },
-      { from: "PWR.5V_2", to: "U1.J3", color: "#ef4444" },
-      { from: "PWR.GND_1", to: "U1.J14", color: "#1e293b" },
-      { from: "PWR.5V_3", to: "U1.J15", color: "#ef4444" },
-      { from: "PWR.GND_2", to: "U1.J16", color: "#1e293b" },
-      { from: "PWR.GND_3", to: "U1.J17", color: "#1e293b" }
+      { from: "PWR.GND_1", to: "U1.J7", color: "#1e293b" },
+      { from: "IN.A0", to: "U1.J15", color: "#f5c518" },
+      { from: "IN.A1", to: "U1.J14", color: "#f5c518" },
+      { from: "IN.A2", to: "U1.J13", color: "#f5c518" },
+      { from: "PWR.5V_2", to: "U1.J4", color: "#ef4444" },
+      { from: "PWR.GND_2", to: "U1.J3", color: "#1e293b" },
+      { from: "PWR.5V_3", to: "U1.J2", color: "#ef4444" },
+      { from: "PWR.5V_4", to: "U1.J1", color: "#ef4444" },
+      { from: "PWR.GND_3", to: "U1.J19", color: "#1e293b" },
+      { from: "PWR.5V_1", to: "U1.J18", color: "#ef4444" },
+      { from: "PWR.GND_4", to: "U1.J17", color: "#1e293b" },
+      { from: "PWR.GND_1", to: "U1.J16", color: "#1e293b" },
+      { from: "U1.J5", to: "OUT.Y0", color: "#10b981" },
+      { from: "U1.J6", to: "OUT.Y1", color: "#6ee7b7" }
     ],
     truthTable: {
       inputs: ["C (A2)", "B (A1)", "A (A0)"],
@@ -6827,6 +7188,89 @@ class TTLEngine {
       assert("7474", "Section 2 (2Q, 2Q̅) operates independently on 2CLK rising edge", r.outputs[9] === 1 && r.outputs[8] === 0);
     }
 
+    // 6. 74151 / 74LS151 1-of-8 Data Selector / Multiplexer
+    const mux8Lib = IC_LIBRARY["74151"] || IC_LIBRARY["74LS151"];
+    if (mux8Lib) {
+      // Test 1: With S̅=1: Y=0, W=1 for all select and data combinations
+      let strobeInhibitOk = true;
+      for (let c = 0; c <= 1; c++) {
+        for (let b = 0; b <= 1; b++) {
+          for (let a = 0; a <= 1; a++) {
+            const rAll1 = mux8Lib.eval({ 7: 1, 9: c, 10: b, 11: a, 4: 1, 3: 1, 2: 1, 1: 1, 15: 1, 14: 1, 13: 1, 12: 1 }, null);
+            const rAll0 = mux8Lib.eval({ 7: 1, 9: c, 10: b, 11: a, 4: 0, 3: 0, 2: 0, 1: 0, 15: 0, 14: 0, 13: 0, 12: 0 }, null);
+            if (rAll1.outputs[5] !== 0 || rAll1.outputs[6] !== 1 || rAll0.outputs[5] !== 0 || rAll0.outputs[6] !== 1) {
+              strobeInhibitOk = false;
+            }
+          }
+        }
+      }
+      assert("74151", "With S̅=1: Y=0, W=1 for all select and data combinations", strobeInhibitOk);
+
+      // Test 2: With S̅=0: for every (C,B,A) and for 20 random 8-bit data patterns, Y equals D[index] and W equals the complement
+      let sweepOk = true;
+      const dataPins = [4, 3, 2, 1, 15, 14, 13, 12]; // D0..D7
+      for (let patternIdx = 0; patternIdx < 20; patternIdx++) {
+        const pattern = [];
+        for (let bit = 0; bit < 8; bit++) {
+          pattern.push((patternIdx * 17 + bit * 31 + 7) % 2);
+        }
+        for (let c = 0; c <= 1; c++) {
+          for (let b = 0; b <= 1; b++) {
+            for (let a = 0; a <= 1; a++) {
+              const selIndex = (c * 4) + (b * 2) + a;
+              const inMap = { 7: 0, 9: c, 10: b, 11: a };
+              for (let i = 0; i < 8; i++) {
+                inMap[dataPins[i]] = pattern[i];
+              }
+              const r = mux8Lib.eval(inMap, null);
+              const expY = pattern[selIndex];
+              const expW = expY === 1 ? 0 : 1;
+              if (r.outputs[5] !== expY || r.outputs[6] !== expW) {
+                sweepOk = false;
+              }
+            }
+          }
+        }
+      }
+      assert("74151", "With S̅=0: for every (C,B,A) and 20 data patterns, Y=D[index] and W=NOT D[index]", sweepOk);
+
+      // Test 3: Strict power: remove VCC -> Y and W float and Diagnostics names the missing pin
+      const pwrEngine = this.clone();
+      pwrEngine.reset();
+      pwrEngine.setStrictPowerMode(true);
+      pwrEngine.insertChip("U1", "74151");
+      pwrEngine.setSocketLever("U1", true);
+      // Connect GND only (pin 8 -> J8), omit VCC (pin 16 -> J20)
+      pwrEngine.addWire("PWR.GND_1", "U1.J8");
+      pwrEngine.addWire("PWR.GND_2", "U1.J7"); // S̅=0
+      pwrEngine.addWire("PWR.5V_1", "U1.J4");  // D0=1
+      pwrEngine.evaluate();
+
+      const missingVccDiag = pwrEngine.diagnostics.missingPower.find(d => d.socket === "U1" && d.pin === 16);
+      const u1Outputs = pwrEngine.sockets.U1.lastOutputs || {};
+      const strictPowerPass = !!missingVccDiag && u1Outputs[5] === undefined && u1Outputs[6] === undefined;
+      assert("74151", "Strict power: missing VCC on pin 16 leaves outputs floating ('Z') and logs diagnostic", strictPowerPass, missingVccDiag ? missingVccDiag.message : "Missing diag");
+
+      // Test 4: Floating S̅ reads as 1 (outputs disabled) and the diagnostic fires
+      const floatEngine = this.clone();
+      floatEngine.reset();
+      floatEngine.setStrictPowerMode(false);
+      floatEngine.insertChip("U1", "74151");
+      floatEngine.setSocketLever("U1", true);
+      // Connect D0=1, CBA=000, but leave S̅ (J7) floating
+      floatEngine.addWire("PWR.5V_1", "U1.J4");
+      floatEngine.addWire("PWR.GND_1", "U1.J15");
+      floatEngine.addWire("PWR.GND_2", "U1.J14");
+      floatEngine.addWire("PWR.GND_3", "U1.J13");
+      floatEngine.evaluate();
+
+      const floatDiag = floatEngine.diagnostics.floatingInputs.find(d => d.socket === "U1" && d.pin === 7);
+      const floatOutputs = floatEngine.sockets.U1.lastOutputs || {};
+      // Floating S̅ reads as 1 -> Y=0, W=1
+      const floatPass = !!floatDiag && floatOutputs[5] === 0 && floatOutputs[6] === 1;
+      assert("74151", "Floating S̅ reads as TTL Logic 1 (outputs disabled Y=0, W=1) and flags floating input diagnostic", floatPass, floatDiag ? floatDiag.message : "Missing float diag");
+    }
+
     return results;
   }
 
@@ -7688,7 +8132,7 @@ const SVG_COMPONENTS = {
   },
 
   // 3D Visual IC Package Pinout Diagram (for Reference Tab - matches reference image)
-  drawChipPinoutDiagram(icDef) {
+  drawChipPinoutDiagram(icDef, socketId = null) {
     if (!icDef) return "";
     const pinCount = icDef.pinCount || (icDef.pins ? icDef.pins.length : 14);
     const half = Math.floor(pinCount / 2); // 7 for 14-pin, 8 for 16-pin
@@ -7703,11 +8147,26 @@ const SVG_COMPONENTS = {
     let pinsLeftHtml = "";
     let pinsRightHtml = "";
 
-    const getColorForType = (type, name) => {
-      if (type === "pwr" || name.toUpperCase().includes("VCC")) return { bg: "rgba(239, 68, 68, 0.2)", border: "#ef4444", text: "#fca5a5", tag: "PWR" };
-      if (type === "gnd" || name.toUpperCase().includes("GND")) return { bg: "rgba(59, 130, 246, 0.2)", border: "#3b82f6", text: "#93c5fd", tag: "GND" };
-      if (type === "out" || name.toUpperCase().endsWith("Y") || name.toUpperCase().startsWith("Q")) return { bg: "rgba(16, 185, 129, 0.2)", border: "#10b981", text: "#6ee7b7", tag: "OUT" };
-      if (type === "nc") return { bg: "rgba(100, 116, 139, 0.15)", border: "#64748b", text: "#94a3b8", tag: "NC" };
+    const getColorForType = (pinObj) => {
+      const type = pinObj.type;
+      const name = pinObj.name || "";
+      const roleColor = pinObj.roleColor;
+
+      if (roleColor === "red" || type === "pwr" || name.toUpperCase().includes("VCC")) {
+        return { bg: "rgba(239, 68, 68, 0.2)", border: "#ef4444", text: "#fca5a5", tag: "PWR" };
+      }
+      if (roleColor === "black" || type === "gnd" || name.toUpperCase().includes("GND")) {
+        return { bg: "rgba(0, 0, 0, 0.6)", border: "#475569", text: "#e2e8f0", tag: "GND" };
+      }
+      if (roleColor === "green" || type === "out" || name.toUpperCase().endsWith("Y") || name.toUpperCase() === "W" || name.toUpperCase().startsWith("Q")) {
+        return { bg: "rgba(16, 185, 129, 0.2)", border: "#10b981", text: "#6ee7b7", tag: "OUT" };
+      }
+      if (roleColor === "blue" || type === "in") {
+        return { bg: "rgba(59, 130, 246, 0.2)", border: "#3b82f6", text: "#93c5fd", tag: "IN" };
+      }
+      if (type === "nc") {
+        return { bg: "rgba(100, 116, 139, 0.15)", border: "#64748b", text: "#94a3b8", tag: "NC" };
+      }
       return { bg: "rgba(245, 158, 11, 0.2)", border: "#f5c518", text: "#fde047", tag: "IN" };
     };
 
@@ -7715,24 +8174,30 @@ const SVG_COMPONENTS = {
     for (let i = 1; i <= half; i++) {
       const pinObj = (icDef.pins && icDef.pins.find(p => p.pin === i)) || { pin: i, name: `Pin ${i}`, type: "in" };
       const y = bodyY + 30 + (i - 1) * rowHeight;
-      const c = getColorForType(pinObj.type, pinObj.name);
+      const c = getColorForType(pinObj);
+      const sockStr = socketId ? `${socketId} · ` : "";
+      const descStr = pinObj.desc ? ` (${pinObj.desc})` : "";
+      const tooltip = `${sockStr}pin ${i} · ${pinObj.name}${descStr}`;
 
       pinsLeftHtml += `
-        <!-- Silver Metallic Lead Pin ${i} (realistic shoulder + lead) -->
-        <g class="ref-pin-lead">
-          <!-- Wider shoulder at IC body -->
-          <rect x="${bodyX - 8}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
-          <!-- Extended lead pin -->
-          <rect x="${bodyX - 26}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
-          <line x1="${bodyX - 24}" y1="${y - 3.5}" x2="${bodyX - 2}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
-        </g>
-        <!-- Pin Number Badge -->
-        <rect x="${bodyX + 8}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
-        <text x="${bodyX + 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${i}</text>
-        <!-- Pin Name & Function Pill -->
-        <g transform="translate(${bodyX - 34}, ${y})">
-          <rect x="-96" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
-          <text x="-50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+        <g class="ref-pin" data-pin="${i}" title="${tooltip}" style="cursor: help;">
+          <title>${tooltip}</title>
+          <!-- Silver Metallic Lead Pin ${i} (realistic shoulder + lead) -->
+          <g class="ref-pin-lead">
+            <!-- Wider shoulder at IC body -->
+            <rect x="${bodyX - 8}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
+            <!-- Extended lead pin -->
+            <rect x="${bodyX - 26}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
+            <line x1="${bodyX - 24}" y1="${y - 3.5}" x2="${bodyX - 2}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
+          </g>
+          <!-- Pin Number Badge -->
+          <rect x="${bodyX + 8}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
+          <text x="${bodyX + 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${i}</text>
+          <!-- Pin Name & Function Pill -->
+          <g transform="translate(${bodyX - 34}, ${y})">
+            <rect x="-96" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
+            <text x="-50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+          </g>
         </g>
       `;
     }
@@ -7742,24 +8207,30 @@ const SVG_COMPONENTS = {
       const pinNum = pinCount - i;
       const pinObj = (icDef.pins && icDef.pins.find(p => p.pin === pinNum)) || { pin: pinNum, name: `Pin ${pinNum}`, type: "in" };
       const y = bodyY + 30 + i * rowHeight;
-      const c = getColorForType(pinObj.type, pinObj.name);
+      const c = getColorForType(pinObj);
+      const sockStr = socketId ? `${socketId} · ` : "";
+      const descStr = pinObj.desc ? ` (${pinObj.desc})` : "";
+      const tooltip = `${sockStr}pin ${pinNum} · ${pinObj.name}${descStr}`;
 
       pinsRightHtml += `
-        <!-- Silver Metallic Lead Pin ${pinNum} (realistic shoulder + lead) -->
-        <g class="ref-pin-lead">
-          <!-- Wider shoulder at IC body -->
-          <rect x="${bodyX + bodyWidth - 1}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
-          <!-- Extended lead pin -->
-          <rect x="${bodyX + bodyWidth + 6}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
-          <line x1="${bodyX + bodyWidth + 2}" y1="${y - 3.5}" x2="${bodyX + bodyWidth + 24}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
-        </g>
-        <!-- Pin Number Badge -->
-        <rect x="${bodyX + bodyWidth - 28}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
-        <text x="${bodyX + bodyWidth - 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${pinNum}</text>
-        <!-- Pin Name & Function Pill -->
-        <g transform="translate(${bodyX + bodyWidth + 34}, ${y})">
-          <rect x="4" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
-          <text x="50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+        <g class="ref-pin" data-pin="${pinNum}" title="${tooltip}" style="cursor: help;">
+          <title>${tooltip}</title>
+          <!-- Silver Metallic Lead Pin ${pinNum} (realistic shoulder + lead) -->
+          <g class="ref-pin-lead">
+            <!-- Wider shoulder at IC body -->
+            <rect x="${bodyX + bodyWidth - 1}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
+            <!-- Extended lead pin -->
+            <rect x="${bodyX + bodyWidth + 6}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
+            <line x1="${bodyX + bodyWidth + 2}" y1="${y - 3.5}" x2="${bodyX + bodyWidth + 24}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
+          </g>
+          <!-- Pin Number Badge -->
+          <rect x="${bodyX + bodyWidth - 28}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
+          <text x="${bodyX + bodyWidth - 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${pinNum}</text>
+          <!-- Pin Name & Function Pill -->
+          <g transform="translate(${bodyX + bodyWidth + 34}, ${y})">
+            <rect x="4" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
+            <text x="50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+          </g>
         </g>
       `;
     }
@@ -9975,25 +10446,30 @@ class LabConsole {
   // =========================================================================
   renderDrawerTab() {
     const sockets = ["U1", "U2", "U3", "U4", "U5"];
+    const exp = (typeof EXPERIMENTS !== "undefined" ? EXPERIMENTS.find(e => e.id === this.currentExpId) : null) || EXPERIMENTS[0];
     const activeExp = this.getActiveExpConfig();
-    const expRequiredICs = activeExp.requiredICs || [];
+    const expRequiredICs = Array.from(new Set([...(exp && exp.requiredICs ? exp.requiredICs : []), ...(activeExp && activeExp.requiredICs ? activeExp.requiredICs : [])]));
     const basicGateICs = ["7408", "7432", "7404", "7400", "7402", "7486", "7420"];
 
     const selectedSock = this.engine.sockets[this.selectedSocket] || this.engine.sockets.U1;
     const selectedICDef = selectedSock.chip ? IC_LIBRARY[selectedSock.chip] : null;
     const isSelected40 = (this.selectedSocket === "U5");
 
-    // Filtered chips based on search query
+    // Filtered chips based on search query: deduplicate alias keys so each chip model has exactly 1 card
     const query = (this.chipSearchQuery || "").toLowerCase().trim();
-    let allChips = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE");
+    let allChips = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE" && (IC_LIBRARY[c].name === c || !IC_LIBRARY[c].name));
 
     if (query) {
       allChips = allChips.filter(c => {
         const ic = IC_LIBRARY[c];
+        const matchAliases = ic.aliases && ic.aliases.some(a => a.toLowerCase().includes(query));
+        const matchKeywords = ic.keywords && ic.keywords.some(k => k.toLowerCase().includes(query));
         return c.toLowerCase().includes(query) ||
                (ic.title && ic.title.toLowerCase().includes(query)) ||
                (ic.description && ic.description.toLowerCase().includes(query)) ||
-               (ic.marking && ic.marking.toLowerCase().includes(query));
+               (ic.marking && ic.marking.toLowerCase().includes(query)) ||
+               matchAliases ||
+               matchKeywords;
       });
     }
 
@@ -10008,6 +10484,10 @@ class LabConsole {
       const bExp = expRequiredICs.includes(b);
       if (aExp && !bExp) return -1;
       if (!aExp && bExp) return 1;
+
+      // Keep 74151 and 74153 adjacent
+      if (a === "74151" && b === "74153") return -1;
+      if (a === "74153" && b === "74151") return 1;
 
       return a.localeCompare(b);
     });
@@ -10141,7 +10621,7 @@ class LabConsole {
                     <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                       <span class="chip-title-bold">${c}</span>
                       <span class="chip-marking-pill">${ic.marking || ('SN' + c + 'N')}</span>
-                      ${isExpReq ? '<span class="chip-tag-exp">★ REQUIRED IN LAB</span>' : ''}
+                      ${isExpReq ? '<span class="chip-tag-exp">IN THIS EXPERIMENT</span>' : ''}
                       ${isBasic && !isExpReq ? '<span class="chip-tag-basic">BASIC GATE</span>' : ''}
                     </div>
                     <span class="chip-pkg-badge">${ic.package || ((ic.pinCount || 14) + '-PIN DIP')}</span>
@@ -10179,13 +10659,17 @@ class LabConsole {
   // TAB 2: REFERENCE (Pinout SVG, Function Table, Timing Diagram)
   // =========================================================================
   renderReferenceTab() {
-    const chipNames = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE");
+    const chipNames = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE" && (IC_LIBRARY[c].name === c || !IC_LIBRARY[c].name));
     const ic = IC_LIBRARY[this.currentRefChip] || IC_LIBRARY["7408"];
     const isSequential = ["7490", "74LS90", "7474", "74LS74", "74191", "7493"].includes(ic.name);
 
+    // Active socket where this chip is seated (defaults to selected socket or U2)
+    let activeSocket = Object.keys(this.engine.sockets).find(s => this.engine.sockets[s].chip === ic.name || this.engine.sockets[s].chip === this.currentRefChip);
+    if (!activeSocket) activeSocket = this.selectedSocket || "U2";
+
     // 3D SVG Pinout Diagram
     const pinoutSvg = (SVG_COMPONENTS && typeof SVG_COMPONENTS.drawChipPinoutDiagram === "function")
-      ? SVG_COMPONENTS.drawChipPinoutDiagram(ic)
+      ? SVG_COMPONENTS.drawChipPinoutDiagram(ic, activeSocket)
       : `<div style="text-align: center; color: #94a3b8;">Datasheet pinout for ${ic.name}</div>`;
 
     return `
@@ -10217,8 +10701,8 @@ class LabConsole {
         </div>
         <div style="display: flex; justify-content: center; gap: 14px; font-size: 10px; font-family: var(--font-mono); margin-top: 8px; color: #94a3b8; flex-wrap: wrap;">
           <span><span style="display:inline-block; width:8px; height:8px; background:#ef4444; border-radius:50%; margin-right:4px;"></span>VCC (+5V)</span>
-          <span><span style="display:inline-block; width:8px; height:8px; background:#3b82f6; border-radius:50%; margin-right:4px;"></span>GND (0V)</span>
-          <span><span style="display:inline-block; width:8px; height:8px; background:#f5c518; border-radius:50%; margin-right:4px;"></span>Inputs</span>
+          <span><span style="display:inline-block; width:8px; height:8px; background:#475569; border-radius:50%; margin-right:4px;"></span>GND (0V)</span>
+          <span><span style="display:inline-block; width:8px; height:8px; background:#3b82f6; border-radius:50%; margin-right:4px;"></span>Inputs</span>
           <span><span style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; margin-right:4px;"></span>Outputs</span>
         </div>
       </div>

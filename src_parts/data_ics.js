@@ -572,6 +572,92 @@ const IC_LIBRARY = {
     }
   },
 
+  "74151": {
+    name: "74151",
+    marking: "SN74LS151N",
+    aliases: ["DM74ALS151N", "74LS151", "151"],
+    keywords: ["mux", "multiplexer", "selector", "8:1", "data selector", "1-of-8"],
+    title: "1-of-8 Data Selector / Multiplexer (complementary outputs)",
+    description: "1-of-8 Data Selector / Multiplexer with full binary decoding to select 1-of-8 data sources (D0–D7) using 3 select lines (C, B, A). Features active-low strobe S̅ and complementary outputs: true output Y (Pin 5) and inverted output W (Pin 6). When S̅ is HIGH, all data inputs are inhibited (Y=0, W=1).",
+    package: "DIP-16",
+    pinCount: 16,
+    vccPin: 16,
+    gndPin: 8,
+    pinNames: {
+      1: "D3", 2: "D2", 3: "D1", 4: "D0", 5: "Y", 6: "W", 7: "S̅", 8: "GND",
+      9: "C", 10: "B", 11: "A", 12: "D7", 13: "D6", 14: "D5", 15: "D4", 16: "VCC"
+    },
+    inputs: [1, 2, 3, 4, 7, 9, 10, 11, 12, 13, 14, 15],
+    outputs: [5, 6],
+    pins: [
+      { pin: 1, name: "D3", type: "in", desc: "data input 3", roleColor: "blue" },
+      { pin: 2, name: "D2", type: "in", desc: "data input 2", roleColor: "blue" },
+      { pin: 3, name: "D1", type: "in", desc: "data input 1", roleColor: "blue" },
+      { pin: 4, name: "D0", type: "in", desc: "data input 0", roleColor: "blue" },
+      { pin: 5, name: "Y", type: "out", desc: "true output", roleColor: "green" },
+      { pin: 6, name: "W", type: "out", desc: "inverted output (complement)", roleColor: "green" },
+      { pin: 7, name: "S̅", type: "in", desc: "strobe, active LOW", roleColor: "blue" },
+      { pin: 8, name: "GND", type: "gnd", desc: "ground (0V)", roleColor: "black" },
+      { pin: 9, name: "C", type: "in", desc: "select, MSB", roleColor: "blue" },
+      { pin: 10, name: "B", type: "in", desc: "select", roleColor: "blue" },
+      { pin: 11, name: "A", type: "in", desc: "select, LSB", roleColor: "blue" },
+      { pin: 12, name: "D7", type: "in", desc: "data input 7", roleColor: "blue" },
+      { pin: 13, name: "D6", type: "in", desc: "data input 6", roleColor: "blue" },
+      { pin: 14, name: "D5", type: "in", desc: "data input 5", roleColor: "blue" },
+      { pin: 15, name: "D4", type: "in", desc: "data input 4", roleColor: "blue" },
+      { pin: 16, name: "VCC", type: "pwr", desc: "supply voltage (+5V)", roleColor: "red" }
+    ],
+    eval: (inMap, state) => {
+      const get = typeof inMap === "function" ? inMap : (p => (inMap[p] === undefined ? 1 : inMap[p]));
+      const s = get(7); // Strobe S̅ (Pin 7, active LOW)
+      const c = get(9); // Select C (Pin 9, MSB)
+      const b = get(10); // Select B (Pin 10)
+      const a = get(11); // Select A (Pin 11, LSB)
+
+      // Data inputs: D0=P4, D1=P3, D2=P2, D3=P1, D4=P15, D5=P14, D6=P13, D7=P12
+      const d = [
+        get(4),  // D0
+        get(3),  // D1
+        get(2),  // D2
+        get(1),  // D3
+        get(15), // D4
+        get(14), // D5
+        get(13), // D6
+        get(12)  // D7
+      ];
+
+      let y, w;
+      if (s === 1) {
+        // Disabled: all data inputs disabled
+        y = 0;
+        w = 1;
+      } else {
+        const index = ((c === 1 ? 1 : 0) * 4) + ((b === 1 ? 1 : 0) * 2) + (a === 1 ? 1 : 0);
+        y = d[index] === 1 ? 1 : 0;
+        w = y === 1 ? 0 : 1;
+      }
+
+      return {
+        outputs: { 5: y, 6: w },
+        nextState: state || {}
+      };
+    },
+    truthTable: {
+      headers: ["Strobe S̅", "Select C", "Select B", "Select A", "Output Y", "Output W"],
+      rows: [
+        ["H", "X", "X", "X", "L", "H"],
+        ["L", "L", "L", "L", "D0", "D0̅"],
+        ["L", "L", "L", "H", "D1", "D1̅"],
+        ["L", "L", "H", "L", "D2", "D2̅"],
+        ["L", "L", "H", "H", "D3", "D3̅"],
+        ["L", "H", "L", "L", "D4", "D4̅"],
+        ["L", "H", "L", "H", "D5", "D5̅"],
+        ["L", "H", "H", "L", "D6", "D6̅"],
+        ["L", "H", "H", "H", "D7", "D7̅"]
+      ]
+    }
+  },
+
   "74153": {
     name: "74153",
     marking: "SN74LS153N",
@@ -1161,6 +1247,8 @@ const IC_LIBRARY = {
 };
 
 // Aliases for standard part numbering
+IC_LIBRARY["74LS151"] = IC_LIBRARY["74151"];
+IC_LIBRARY["DM74ALS151N"] = IC_LIBRARY["74151"];
 IC_LIBRARY["74LS153"] = IC_LIBRARY["74153"];
 IC_LIBRARY["74LS138"] = IC_LIBRARY["74138"];
 IC_LIBRARY["74LS83"] = IC_LIBRARY["7483"];

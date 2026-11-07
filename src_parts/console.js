@@ -435,25 +435,30 @@ class LabConsole {
   // =========================================================================
   renderDrawerTab() {
     const sockets = ["U1", "U2", "U3", "U4", "U5"];
+    const exp = (typeof EXPERIMENTS !== "undefined" ? EXPERIMENTS.find(e => e.id === this.currentExpId) : null) || EXPERIMENTS[0];
     const activeExp = this.getActiveExpConfig();
-    const expRequiredICs = activeExp.requiredICs || [];
+    const expRequiredICs = Array.from(new Set([...(exp && exp.requiredICs ? exp.requiredICs : []), ...(activeExp && activeExp.requiredICs ? activeExp.requiredICs : [])]));
     const basicGateICs = ["7408", "7432", "7404", "7400", "7402", "7486", "7420"];
 
     const selectedSock = this.engine.sockets[this.selectedSocket] || this.engine.sockets.U1;
     const selectedICDef = selectedSock.chip ? IC_LIBRARY[selectedSock.chip] : null;
     const isSelected40 = (this.selectedSocket === "U5");
 
-    // Filtered chips based on search query
+    // Filtered chips based on search query: deduplicate alias keys so each chip model has exactly 1 card
     const query = (this.chipSearchQuery || "").toLowerCase().trim();
-    let allChips = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE");
+    let allChips = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE" && (IC_LIBRARY[c].name === c || !IC_LIBRARY[c].name));
 
     if (query) {
       allChips = allChips.filter(c => {
         const ic = IC_LIBRARY[c];
+        const matchAliases = ic.aliases && ic.aliases.some(a => a.toLowerCase().includes(query));
+        const matchKeywords = ic.keywords && ic.keywords.some(k => k.toLowerCase().includes(query));
         return c.toLowerCase().includes(query) ||
                (ic.title && ic.title.toLowerCase().includes(query)) ||
                (ic.description && ic.description.toLowerCase().includes(query)) ||
-               (ic.marking && ic.marking.toLowerCase().includes(query));
+               (ic.marking && ic.marking.toLowerCase().includes(query)) ||
+               matchAliases ||
+               matchKeywords;
       });
     }
 
@@ -468,6 +473,10 @@ class LabConsole {
       const bExp = expRequiredICs.includes(b);
       if (aExp && !bExp) return -1;
       if (!aExp && bExp) return 1;
+
+      // Keep 74151 and 74153 adjacent
+      if (a === "74151" && b === "74153") return -1;
+      if (a === "74153" && b === "74151") return 1;
 
       return a.localeCompare(b);
     });
@@ -601,7 +610,7 @@ class LabConsole {
                     <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                       <span class="chip-title-bold">${c}</span>
                       <span class="chip-marking-pill">${ic.marking || ('SN' + c + 'N')}</span>
-                      ${isExpReq ? '<span class="chip-tag-exp">★ REQUIRED IN LAB</span>' : ''}
+                      ${isExpReq ? '<span class="chip-tag-exp">IN THIS EXPERIMENT</span>' : ''}
                       ${isBasic && !isExpReq ? '<span class="chip-tag-basic">BASIC GATE</span>' : ''}
                     </div>
                     <span class="chip-pkg-badge">${ic.package || ((ic.pinCount || 14) + '-PIN DIP')}</span>
@@ -639,13 +648,17 @@ class LabConsole {
   // TAB 2: REFERENCE (Pinout SVG, Function Table, Timing Diagram)
   // =========================================================================
   renderReferenceTab() {
-    const chipNames = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE");
+    const chipNames = Object.keys(IC_LIBRARY).filter(c => c !== "TEST_GATE" && (IC_LIBRARY[c].name === c || !IC_LIBRARY[c].name));
     const ic = IC_LIBRARY[this.currentRefChip] || IC_LIBRARY["7408"];
     const isSequential = ["7490", "74LS90", "7474", "74LS74", "74191", "7493"].includes(ic.name);
 
+    // Active socket where this chip is seated (defaults to selected socket or U2)
+    let activeSocket = Object.keys(this.engine.sockets).find(s => this.engine.sockets[s].chip === ic.name || this.engine.sockets[s].chip === this.currentRefChip);
+    if (!activeSocket) activeSocket = this.selectedSocket || "U2";
+
     // 3D SVG Pinout Diagram
     const pinoutSvg = (SVG_COMPONENTS && typeof SVG_COMPONENTS.drawChipPinoutDiagram === "function")
-      ? SVG_COMPONENTS.drawChipPinoutDiagram(ic)
+      ? SVG_COMPONENTS.drawChipPinoutDiagram(ic, activeSocket)
       : `<div style="text-align: center; color: #94a3b8;">Datasheet pinout for ${ic.name}</div>`;
 
     return `
@@ -677,8 +690,8 @@ class LabConsole {
         </div>
         <div style="display: flex; justify-content: center; gap: 14px; font-size: 10px; font-family: var(--font-mono); margin-top: 8px; color: #94a3b8; flex-wrap: wrap;">
           <span><span style="display:inline-block; width:8px; height:8px; background:#ef4444; border-radius:50%; margin-right:4px;"></span>VCC (+5V)</span>
-          <span><span style="display:inline-block; width:8px; height:8px; background:#3b82f6; border-radius:50%; margin-right:4px;"></span>GND (0V)</span>
-          <span><span style="display:inline-block; width:8px; height:8px; background:#f5c518; border-radius:50%; margin-right:4px;"></span>Inputs</span>
+          <span><span style="display:inline-block; width:8px; height:8px; background:#475569; border-radius:50%; margin-right:4px;"></span>GND (0V)</span>
+          <span><span style="display:inline-block; width:8px; height:8px; background:#3b82f6; border-radius:50%; margin-right:4px;"></span>Inputs</span>
           <span><span style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; margin-right:4px;"></span>Outputs</span>
         </div>
       </div>

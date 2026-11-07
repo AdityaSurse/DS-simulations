@@ -655,7 +655,7 @@ const SVG_COMPONENTS = {
   },
 
   // 3D Visual IC Package Pinout Diagram (for Reference Tab - matches reference image)
-  drawChipPinoutDiagram(icDef) {
+  drawChipPinoutDiagram(icDef, socketId = null) {
     if (!icDef) return "";
     const pinCount = icDef.pinCount || (icDef.pins ? icDef.pins.length : 14);
     const half = Math.floor(pinCount / 2); // 7 for 14-pin, 8 for 16-pin
@@ -670,11 +670,26 @@ const SVG_COMPONENTS = {
     let pinsLeftHtml = "";
     let pinsRightHtml = "";
 
-    const getColorForType = (type, name) => {
-      if (type === "pwr" || name.toUpperCase().includes("VCC")) return { bg: "rgba(239, 68, 68, 0.2)", border: "#ef4444", text: "#fca5a5", tag: "PWR" };
-      if (type === "gnd" || name.toUpperCase().includes("GND")) return { bg: "rgba(59, 130, 246, 0.2)", border: "#3b82f6", text: "#93c5fd", tag: "GND" };
-      if (type === "out" || name.toUpperCase().endsWith("Y") || name.toUpperCase().startsWith("Q")) return { bg: "rgba(16, 185, 129, 0.2)", border: "#10b981", text: "#6ee7b7", tag: "OUT" };
-      if (type === "nc") return { bg: "rgba(100, 116, 139, 0.15)", border: "#64748b", text: "#94a3b8", tag: "NC" };
+    const getColorForType = (pinObj) => {
+      const type = pinObj.type;
+      const name = pinObj.name || "";
+      const roleColor = pinObj.roleColor;
+
+      if (roleColor === "red" || type === "pwr" || name.toUpperCase().includes("VCC")) {
+        return { bg: "rgba(239, 68, 68, 0.2)", border: "#ef4444", text: "#fca5a5", tag: "PWR" };
+      }
+      if (roleColor === "black" || type === "gnd" || name.toUpperCase().includes("GND")) {
+        return { bg: "rgba(0, 0, 0, 0.6)", border: "#475569", text: "#e2e8f0", tag: "GND" };
+      }
+      if (roleColor === "green" || type === "out" || name.toUpperCase().endsWith("Y") || name.toUpperCase() === "W" || name.toUpperCase().startsWith("Q")) {
+        return { bg: "rgba(16, 185, 129, 0.2)", border: "#10b981", text: "#6ee7b7", tag: "OUT" };
+      }
+      if (roleColor === "blue" || type === "in") {
+        return { bg: "rgba(59, 130, 246, 0.2)", border: "#3b82f6", text: "#93c5fd", tag: "IN" };
+      }
+      if (type === "nc") {
+        return { bg: "rgba(100, 116, 139, 0.15)", border: "#64748b", text: "#94a3b8", tag: "NC" };
+      }
       return { bg: "rgba(245, 158, 11, 0.2)", border: "#f5c518", text: "#fde047", tag: "IN" };
     };
 
@@ -682,24 +697,30 @@ const SVG_COMPONENTS = {
     for (let i = 1; i <= half; i++) {
       const pinObj = (icDef.pins && icDef.pins.find(p => p.pin === i)) || { pin: i, name: `Pin ${i}`, type: "in" };
       const y = bodyY + 30 + (i - 1) * rowHeight;
-      const c = getColorForType(pinObj.type, pinObj.name);
+      const c = getColorForType(pinObj);
+      const sockStr = socketId ? `${socketId} · ` : "";
+      const descStr = pinObj.desc ? ` (${pinObj.desc})` : "";
+      const tooltip = `${sockStr}pin ${i} · ${pinObj.name}${descStr}`;
 
       pinsLeftHtml += `
-        <!-- Silver Metallic Lead Pin ${i} (realistic shoulder + lead) -->
-        <g class="ref-pin-lead">
-          <!-- Wider shoulder at IC body -->
-          <rect x="${bodyX - 8}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
-          <!-- Extended lead pin -->
-          <rect x="${bodyX - 26}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
-          <line x1="${bodyX - 24}" y1="${y - 3.5}" x2="${bodyX - 2}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
-        </g>
-        <!-- Pin Number Badge -->
-        <rect x="${bodyX + 8}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
-        <text x="${bodyX + 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${i}</text>
-        <!-- Pin Name & Function Pill -->
-        <g transform="translate(${bodyX - 34}, ${y})">
-          <rect x="-96" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
-          <text x="-50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+        <g class="ref-pin" data-pin="${i}" title="${tooltip}" style="cursor: help;">
+          <title>${tooltip}</title>
+          <!-- Silver Metallic Lead Pin ${i} (realistic shoulder + lead) -->
+          <g class="ref-pin-lead">
+            <!-- Wider shoulder at IC body -->
+            <rect x="${bodyX - 8}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
+            <!-- Extended lead pin -->
+            <rect x="${bodyX - 26}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
+            <line x1="${bodyX - 24}" y1="${y - 3.5}" x2="${bodyX - 2}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
+          </g>
+          <!-- Pin Number Badge -->
+          <rect x="${bodyX + 8}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
+          <text x="${bodyX + 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${i}</text>
+          <!-- Pin Name & Function Pill -->
+          <g transform="translate(${bodyX - 34}, ${y})">
+            <rect x="-96" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
+            <text x="-50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+          </g>
         </g>
       `;
     }
@@ -709,24 +730,30 @@ const SVG_COMPONENTS = {
       const pinNum = pinCount - i;
       const pinObj = (icDef.pins && icDef.pins.find(p => p.pin === pinNum)) || { pin: pinNum, name: `Pin ${pinNum}`, type: "in" };
       const y = bodyY + 30 + i * rowHeight;
-      const c = getColorForType(pinObj.type, pinObj.name);
+      const c = getColorForType(pinObj);
+      const sockStr = socketId ? `${socketId} · ` : "";
+      const descStr = pinObj.desc ? ` (${pinObj.desc})` : "";
+      const tooltip = `${sockStr}pin ${pinNum} · ${pinObj.name}${descStr}`;
 
       pinsRightHtml += `
-        <!-- Silver Metallic Lead Pin ${pinNum} (realistic shoulder + lead) -->
-        <g class="ref-pin-lead">
-          <!-- Wider shoulder at IC body -->
-          <rect x="${bodyX + bodyWidth - 1}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
-          <!-- Extended lead pin -->
-          <rect x="${bodyX + bodyWidth + 6}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
-          <line x1="${bodyX + bodyWidth + 2}" y1="${y - 3.5}" x2="${bodyX + bodyWidth + 24}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
-        </g>
-        <!-- Pin Number Badge -->
-        <rect x="${bodyX + bodyWidth - 28}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
-        <text x="${bodyX + bodyWidth - 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${pinNum}</text>
-        <!-- Pin Name & Function Pill -->
-        <g transform="translate(${bodyX + bodyWidth + 34}, ${y})">
-          <rect x="4" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
-          <text x="50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+        <g class="ref-pin" data-pin="${pinNum}" title="${tooltip}" style="cursor: help;">
+          <title>${tooltip}</title>
+          <!-- Silver Metallic Lead Pin ${pinNum} (realistic shoulder + lead) -->
+          <g class="ref-pin-lead">
+            <!-- Wider shoulder at IC body -->
+            <rect x="${bodyX + bodyWidth - 1}" y="${y - 7}" width="9" height="14" rx="1" fill="url(#silverLegHorizRef)" stroke="#475569" stroke-width="0.7" />
+            <!-- Extended lead pin -->
+            <rect x="${bodyX + bodyWidth + 6}" y="${y - 5.5}" width="20" height="11" rx="2" fill="url(#silverLegHorizRef)" stroke="#64748b" stroke-width="0.8" filter="url(#shadowBevelRef)" />
+            <line x1="${bodyX + bodyWidth + 2}" y1="${y - 3.5}" x2="${bodyX + bodyWidth + 24}" y2="${y - 3.5}" stroke="#ffffff" stroke-width="1" opacity="0.85" />
+          </g>
+          <!-- Pin Number Badge -->
+          <rect x="${bodyX + bodyWidth - 28}" y="${y - 10}" width="20" height="20" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
+          <text x="${bodyX + bodyWidth - 18}" y="${y + 4}" fill="#f8fafc" font-family="var(--font-mono)" font-size="11" font-weight="800" text-anchor="middle">${pinNum}</text>
+          <!-- Pin Name & Function Pill -->
+          <g transform="translate(${bodyX + bodyWidth + 34}, ${y})">
+            <rect x="4" y="-11" width="92" height="22" rx="4" fill="${c.bg}" stroke="${c.border}" stroke-width="1.2" />
+            <text x="50" y="4" fill="${c.text}" font-family="var(--font-mono)" font-size="11" font-weight="700" text-anchor="middle">${pinObj.name}</text>
+          </g>
         </g>
       `;
     }
